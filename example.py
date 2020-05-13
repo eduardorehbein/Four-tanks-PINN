@@ -1,43 +1,8 @@
-#! Simulator
-#! =====================
-from casadi import *
-from numpy import *
-from pylab import *
+import numpy as np
+import matplotlib.pyplot as plt
+from casadi import SX, integrator, vertcat, sqrt
 
-# Studying Casadi...
-#! We will investigate the working of Simulator with the help of the parametrically exited Duffing equation:
-#!
-
-
-# t = SX.sym('t')
-#
-# u = SX.sym('u')
-# v = SX.sym('v')
-# states = vertcat(u,v)
-#
-# eps   = SX.sym('eps')
-# mu    = SX.sym('mu')
-# alpha = SX.sym('alpha')
-# k     = SX.sym('k')
-# sigma = SX.sym('sigma')
-# Omega = 2 + eps*sigma
-#
-# params = vertcat(eps,mu,alpha,k,sigma)
-# rhs    = vertcat(v,-u-eps*(2*mu*v+alpha*u**3+2*k*u*cos(Omega*t)))
-#
-# #! We will simulate over 50 seconds, 1000 timesteps.
-# dae={'x':states, 'p':params, 't':t, 'ode':rhs}
-# ts = linspace(0, 50, 1000)
-# integrator = integrator('integrator', 'cvodes', dae, {'grid':ts, 'output_t0':True})
-#
-# sol = integrator(x0=[1,0], p=[0.1,0.1,0.1,0.3,0.1])
-#
-# #! Plot the solution
-# plot(array(sol['xf'])[0,:], array(sol['xf'])[1,:])
-# xlabel('u')
-# ylabel('u_dot')
-# show()
-
+# Casadi simulation
 # Time
 t = SX.sym('t')
 
@@ -72,14 +37,14 @@ alpha2 = SX.sym('alpha2')
 k1 = SX.sym('k1')
 k2 = SX.sym('k2')
 
-params = vertcat(g, a1, a2, a3, a4, A1, A2, A3, A4, alpha1, alpha2, k1, k2)
+params = vertcat(g, a1, a2, a3, a4, A1, A2, A3, A4, alpha1, alpha2, k1, k2, v1, v2)
 rhs = vertcat(-(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1,
               -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2,
               -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2,
               -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1)
-dae={'x': states, 'p': params, 't': t, 'ode': rhs}
-ts = linspace(0, 50, 1000)
-integrator = integrator('integrator', 'cvodes', dae, {'grid': ts, 'output_t0': True})
+dae = {'x': states, 'p': params, 't': t, 'ode': rhs}
+np_t = np.linspace(0, 50, 1000)
+integrator = integrator('integrator', 'cvodes', dae, {'grid': np_t, 'output_t0': True})
 sol = integrator(x0=[0, 0, 0, 0], p=[981,  # g [cm/s^2]
                                      0.071,  # a1 [cm^2]
                                      0.057,  # a2 [cm^2]
@@ -92,5 +57,15 @@ sol = integrator(x0=[0, 0, 0, 0], p=[981,  # g [cm/s^2]
                                      0.5,  # alpha1 [adm]
                                      0.5,  # alpha2 [adm]
                                      3.33,  # k1 [cm^3/Vs]
-                                     3.35  # k2 [cm^3/Vs]
+                                     3.35,  # k2 [cm^3/Vs]
+                                     3.0,  # v1 [V]
+                                     3.0  # v2 [V]
                                      ])
+
+np_h = np.array(sol['xf'])
+plt.plot(np_t, np_h[0], label='h1')
+plt.plot(np_t, np_h[1], label='h2')
+plt.plot(np_t, np_h[2], label='h3')
+plt.plot(np_t, np_h[3], label='h4')
+plt.legend()
+plt.show()
