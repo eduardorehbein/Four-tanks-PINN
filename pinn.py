@@ -8,8 +8,28 @@ import numpy as np
 
 class FourTanksPINN:
     def __init__(self, sys_params, hidden_layers, learning_rate, t_normalizer=None, v_normalizer=None, h_normalizer=None):
-        # System parameters
-        self.sys_params = sys_params
+        # System parameters to matrix form
+        self.B = []
+        self.B.append(
+            tf.constant([[sys_params['A1'], 0, 0, 0],
+                         [0, sys_params['A2'], 0, 0],
+                         [0, 0, sys_params['A3'], 0],
+                         [0, 0, 0, sys_params['A4']]], dtype=tf.float32)
+        )  # B[0]
+        self.B.append(
+            tf.constant([[sys_params['a1'], 0, - sys_params['a3'], 0],
+                         [0, sys_params['a2'], 0, - sys_params['a4']],
+                         [0, 0, sys_params['a3'], 0],
+                         [0, 0, 0, sys_params['a4']]], dtype=tf.float32)
+        )  # B[1]
+        self.B.append(
+            tf.constant([[sys_params['alpha1'] * sys_params['k1'], 0],
+                         [0, sys_params['alpha2'] * sys_params['k2']],
+                         [0, (1 - sys_params['alpha2']) * sys_params['k2']],
+                         [(1 - sys_params['alpha1']) * sys_params['k1'], 0]], dtype=tf.float32)
+        )  # B[2]
+
+        self.two_g_sqrt = tf.sqrt(tf.constant(2 * sys_params['g'], dtype=tf.float32))
 
         # Data normalizers
         self.t_normalizer = t_normalizer
@@ -70,18 +90,24 @@ class FourTanksPINN:
         return tf_Y
 
     def f(self, tf_x, tf_v):
-        # ODE: Ldi_dt + Ri = v  TODO: Change this to the four tanks equations
+        # ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1
+        #          dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
+        #          dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
+        #          dh4_dt = -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1
+
         with tf.GradientTape() as gtf:
             gtf.watch(tf_x)
             tf_nn = self.nn(tf_x)
         tf_dnn_dx = gtf.gradient(tf_nn, tf_x)
-        tf_dnn_dt = tf.slice(tf_dnn_dx, [0, 0], [1, tf_dnn_dx.shape[1]])
+        tf_dnn_dt = tf.slice(tf_dnn_dx, [0, 0], [1, tf_dnn_dx.shape[1]])  # TODO: See how to extract dnn_dt
         if self.data_is_normalized:
-            return (self.h_normalizer.std / self.t_normalizer.std) * tf_dnn_dt + \
-                   self.sys_params * self.h_normalizer.denormalize(tf_nn) - \
-                   self.sys_params * self.v_normalizer.denormalize(tf_v)
+            return (self.h_normalizer.std / self.t_normalizer.std) * tf.matmul(self.B[0], tf_dnn_dt) + \
+                   self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(self.h_normalizer.denormalize(tf_nn))) - \
+                   tf.matmul(self.B[2], self.v_normalizer.denormalize(tf_v))
         else:
-            return tf_dnn_dt + self.sys_params * tf_nn - self.sys_params * tf_v
+            return tf.matmul(self.B[0], tf_dnn_dt) + \
+                   self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
+                   tf.matmul(self.B[2], tf_v)
 
     def train(self, np_u_t, np_u_v, np_u_ic, np_f_t, np_f_v, np_f_ic, max_epochs=10000, stop_loss=0.0005):
         train_u_len = int(0.9 * len(np_u_t))
