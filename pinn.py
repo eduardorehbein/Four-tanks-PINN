@@ -97,14 +97,17 @@ class FourTanksPINN:
         #
         # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
 
-        tf_selector = tf.eye(4)
+        tf_nn1_selector = tf.constant([[1.0, 0.0, 0.0, 0.0]], dtype=tf.float32)
+        tf_nn2_selector = tf.constant([[0.0, 1.0, 0.0, 0.0]], dtype=tf.float32)
+        tf_nn3_selector = tf.constant([[0.0, 0.0, 1.0, 0.0]], dtype=tf.float32)
+        tf_nn4_selector = tf.constant([[0.0, 0.0, 0.0, 1.0]], dtype=tf.float32)
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as gtf:
             gtf.watch(tf_x)
             tf_nn = self.nn(tf_x)
-            tf_nn1 = tf.matmul(tf_selector[0], tf_nn)
-            tf_nn2 = tf.matmul(tf_selector[1], tf_nn)
-            tf_nn3 = tf.matmul(tf_selector[2], tf_nn)
-            tf_nn4 = tf.matmul(tf_selector[3], tf_nn)
+            tf_nn1 = tf.matmul(tf_nn1_selector, tf_nn)
+            tf_nn2 = tf.matmul(tf_nn2_selector, tf_nn)
+            tf_nn3 = tf.matmul(tf_nn3_selector, tf_nn)
+            tf_nn4 = tf.matmul(tf_nn4_selector, tf_nn)
         tf_dnn1_dx = gtf.gradient(tf_nn1, tf_x)
         tf_dnn2_dx = gtf.gradient(tf_nn2, tf_x)
         tf_dnn3_dx = gtf.gradient(tf_nn3, tf_x)
