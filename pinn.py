@@ -94,12 +94,25 @@ class FourTanksPINN:
         #          dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
         #          dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
         #          dh4_dt = -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1
+        #
+        # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
 
-        with tf.GradientTape() as gtf:
+        tf_selector = tf.eye(4)
+        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as gtf:
             gtf.watch(tf_x)
             tf_nn = self.nn(tf_x)
-        tf_dnn_dx = gtf.gradient(tf_nn, tf_x)
-        tf_dnn_dt = tf.slice(tf_dnn_dx, [0, 0], [1, tf_dnn_dx.shape[1]])  # TODO: See how to extract dnn_dt
+            tf_nn1 = tf.matmul(tf_selector[0], tf_nn)
+            tf_nn2 = tf.matmul(tf_selector[1], tf_nn)
+            tf_nn3 = tf.matmul(tf_selector[2], tf_nn)
+            tf_nn4 = tf.matmul(tf_selector[3], tf_nn)
+        tf_dnn1_dx = gtf.gradient(tf_nn1, tf_x)
+        tf_dnn2_dx = gtf.gradient(tf_nn2, tf_x)
+        tf_dnn3_dx = gtf.gradient(tf_nn3, tf_x)
+        tf_dnn4_dx = gtf.gradient(tf_nn4, tf_x)
+        tf_dnn_dt = tf.constant([tf_dnn1_dx[0],
+                                 tf_dnn2_dx[0],
+                                 tf_dnn3_dx[0],
+                                 tf_dnn4_dx[0]], dtype=tf.float32)
         if self.data_is_normalized:
             return (self.h_normalizer.std / self.t_normalizer.std) * tf.matmul(self.B[0], tf_dnn_dt) + \
                    self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(self.h_normalizer.denormalize(tf_nn))) - \
