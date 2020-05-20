@@ -104,7 +104,7 @@ class CasadiSimulator:
         self.dae = {'x': self.states, 'p': self.params, 't': self.t, 'ode': self.rhs}
 
     def run(self, np_t, np_v, np_ic):
-        integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': True})
+        integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t[0], 'output_t0': True})
         sol = integrator(x0=np_ic, p=[self.sys_params['g'],  # g [cm/s^2]
                                       self.sys_params['a1'],  # a1 [cm^2]
                                       self.sys_params['a2'],  # a2 [cm^2]

@@ -72,7 +72,9 @@ class FourTanksPINN:
         return tf.Variable(tf.random.truncated_normal([in_dim, out_dim], stddev=xavier_stddev), dtype=tf.float32)
 
     def predict(self, np_prediction_t, np_prediction_v, np_prediction_ic):
-        tf_x = tf.constant(np.array([np_prediction_t, np_prediction_v, np_prediction_ic]), dtype=tf.float32)
+        tf_x = tf.constant(np.concatenate([np_prediction_t,
+                                           np_prediction_v,
+                                           np_prediction_ic], axis=0), dtype=tf.float32)
 
         return self.nn(tf_x).numpy()
 
@@ -112,10 +114,10 @@ class FourTanksPINN:
         tf_dnn2_dx = gtf.gradient(tf_nn2, tf_x)
         tf_dnn3_dx = gtf.gradient(tf_nn3, tf_x)
         tf_dnn4_dx = gtf.gradient(tf_nn4, tf_x)
-        tf_dnn_dt = tf.constant([tf_dnn1_dx[0],
-                                 tf_dnn2_dx[0],
-                                 tf_dnn3_dx[0],
-                                 tf_dnn4_dx[0]], dtype=tf.float32)
+        tf_dnn_dt = tf.concat([tf.slice(tf_dnn1_dx, [0, 0], [1, tf_dnn1_dx.shape[1]]),
+                               tf.slice(tf_dnn2_dx, [0, 0], [1, tf_dnn2_dx.shape[1]]),
+                               tf.slice(tf_dnn3_dx, [0, 0], [1, tf_dnn3_dx.shape[1]]),
+                               tf.slice(tf_dnn4_dx, [0, 0], [1, tf_dnn4_dx.shape[1]])], axis=0)
         if self.data_is_normalized:
             return (self.h_normalizer.std / self.t_normalizer.std) * tf.matmul(self.B[0], tf_dnn_dt) + \
                    self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(self.h_normalizer.denormalize(tf_nn))) - \
@@ -126,52 +128,47 @@ class FourTanksPINN:
                    tf.matmul(self.B[2], tf_v)
 
     def train(self, np_u_t, np_u_v, np_u_ic, np_f_t, np_f_v, np_f_ic, max_epochs=10000, stop_loss=0.0005):
-        train_u_len = int(0.9 * len(np_u_t))
-        train_f_len = int(0.9 * len(np_f_t))
+        train_u_len = int(0.95 * np_u_t.shape[1])
+        train_f_len = int(0.95 * np_f_t.shape[1])
 
         # Train data
-        tf_train_u_x = tf.constant(
-            np.array([
-                np_u_t[:train_u_len],
-                np_u_v[:train_u_len],
-                np_u_ic[:train_u_len]]),
-            dtype=tf.float32)
-        tf_train_u_ic = tf.constant(np.array([np_u_ic[:train_u_len]]), dtype=tf.float32)
+        tf_train_u_x = tf.constant(np.concatenate([np_u_t[:, :train_u_len],
+                                                   np_u_v[:, :train_u_len],
+                                                   np_u_ic[:, :train_u_len]], axis=0), dtype=tf.float32)
+        tf_train_u_ic = tf.constant(np_u_ic[:, :train_u_len], dtype=tf.float32)
 
-        np_train_f_x = np.array([
-            np_f_t[:train_f_len],
-            np_f_v[:train_f_len],
-            np_f_ic[:train_f_len]
-        ])
+        np_train_f_x = np.concatenate([
+            np_f_t[:, :train_f_len],
+            np_f_v[:, :train_f_len],
+            np_f_ic[:, :train_f_len]
+        ], axis=0)
         np.random.shuffle(np.transpose(np_train_f_x))
 
-        tf_train_f_x = tf.constant(np.array(np_train_f_x), dtype=tf.float32)
-        tf_train_f_v = tf.constant(np.array(np_train_f_x[1:3]), dtype=tf.float32)
+        tf_train_f_x = tf.constant(np_train_f_x, dtype=tf.float32)
+        tf_train_f_v = tf.constant(np_train_f_x[1:3], dtype=tf.float32)
 
         # Validation data
-        tf_val_u_x = tf.constant(
-            np.array([
-                np_u_t[train_u_len:],
-                np_u_v[train_u_len:],
-                np_u_ic[train_u_len:]]),
-            dtype=tf.float32)
-        tf_val_u_ic = tf.constant(np.array([np_u_ic[train_u_len:]]), dtype=tf.float32)
+        tf_val_u_x = tf.constant(np.concatenate([np_u_t[:, train_u_len:],
+                                                 np_u_v[:, train_u_len:],
+                                                 np_u_ic[:, train_u_len:]], axis=0), dtype=tf.float32)
+        tf_val_u_ic = tf.constant(np_u_ic[:, train_u_len:], dtype=tf.float32)
 
-        np_val_f_x = np.array([
-            np_f_t[train_f_len:],
-            np_f_v[train_f_len:],
-            np_f_ic[train_f_len:]
-        ])
+        np_val_f_x = np.concatenate([
+            np_f_t[:, train_f_len:],
+            np_f_v[:, train_f_len:],
+            np_f_ic[:, train_f_len:]
+        ], axis=0)
         np.random.shuffle(np.transpose(np_val_f_x))
 
-        tf_val_f_x = tf.constant(np.array(np_val_f_x), dtype=tf.float32)
-        tf_val_f_v = tf.constant(np.array(np_val_f_x[1:3]), dtype=tf.float32)
+        tf_val_f_x = tf.constant(np_val_f_x, dtype=tf.float32)
+        tf_val_f_v = tf.constant(np_val_f_x[1:3], dtype=tf.float32)
 
         # Training process
         epoch = 0
         tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
         tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
-        val_moving_average_queue = Queue(maxsize=100)
+        vmaq_max_size = 100
+        val_moving_average_queue = Queue(maxsize=vmaq_max_size)
         last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
@@ -203,7 +200,7 @@ class FourTanksPINN:
                 val_moving_average_queue.get()
             val_moving_average_queue.put(tf_val_total_loss.numpy())
 
-            if epoch % 100 == 0:
+            if epoch % vmaq_max_size == 0:
                 np_loss = tf_val_total_loss.numpy()
                 self.validation_loss.append(np_loss)
                 print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_loss))
