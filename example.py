@@ -1,8 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from four_tanks_system import ResponseAnalyser, CasadiSimulator
 from normalizer import Normalizer
 from pinn import FourTanksPINN
+from plot import PdfPlotter
 
 # Random seed
 np.random.seed(30)
@@ -28,7 +28,7 @@ train_points = 1000
 np_train_vs = 3.0 * np.random.rand(2, train_points)
 np_train_ics = 20.0 * np.random.rand(4, train_points)
 
-test_points = 100
+test_points = 5
 np_test_vs = 3.0 * np.random.rand(2, test_points)
 np_test_ics = 20.0 * np.random.rand(4, test_points)
 
@@ -110,27 +110,21 @@ for i in range(np_test_vs.shape[1]):
     np_h = simulator.run(np_t, np_v, np_ic)
     sampled_outputs.append(np_h)
 
-np_h = sampled_outputs[0]
+    predictions.append(np_h)
 
 # Plotting
-plt.figure(1)
-plt.title('Levels h1(t) vs nn1(t)')
-plt.plot(np_t[0], np_h[0], label='h1')
-plt.plot(np_t[0], np_h[0], label='nn1')
-plt.legend()
-plt.figure(2)
-plt.title('Levels h2(t) vs nn2(t)')
-plt.plot(np_t[0], np_h[1], label='h2')
-plt.plot(np_t[0], np_h[1], label='nn2')
-plt.legend()
-plt.figure(3)
-plt.title('Levels h3(t) vs nn3(t)')
-plt.plot(np_t[0], np_h[2], label='h3')
-plt.plot(np_t[0], np_h[2], label='nn3')
-plt.legend()
-plt.figure(4)
-plt.title('Levels h4(t) vs nn4(t)')
-plt.plot(np_t[0], np_h[3], label='h4')
-plt.plot(np_t[0], np_h[3], label='nn4')
-plt.legend()
-plt.savefig('./results/plot.pdf')
+plotter = PdfPlotter()
+number_of_plots = test_points
+for i in range(number_of_plots):
+    for j in range(sampled_outputs[i].shape[0]):
+        y_axis_list = [sampled_outputs[i][j], predictions[i][j]]
+        plotter.set_y_range(y_axis_list)
+    for j in range(sampled_outputs[i].shape[0]):
+        y_axis_list = [sampled_outputs[i][j], predictions[i][j]]
+        mse = (np.square(y_axis_list[0] - y_axis_list[1])).mean()
+        plotter.plot(x_axis=np_t[0],
+                     y_axis_list=y_axis_list,
+                     labels=['h' + str(j + 1), 'nn' + str(j + 1)],
+                     title='h' + str(j + 1) + '(t) vs nn' + str(j + 1) + '(t), mse: ' + str(round(mse, 3)),
+                     limit_range=True)
+plotter.save_pdf('./results/plot.pdf')
