@@ -167,8 +167,8 @@ class FourTanksPINN:
         epoch = 0
         tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
         tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
-        vmaq_max_size = 100
-        val_moving_average_queue = Queue(maxsize=vmaq_max_size)
+        epochs_over_analysis = 100
+        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
         last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
@@ -200,7 +200,7 @@ class FourTanksPINN:
                 val_moving_average_queue.get()
             val_moving_average_queue.put(tf_val_total_loss.numpy())
 
-            if epoch % vmaq_max_size == 0:
+            if epoch % epochs_over_analysis == 0:
                 np_loss = tf_val_total_loss.numpy()
                 self.validation_loss.append(np_loss)
                 print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_loss))
