@@ -1,4 +1,5 @@
 import numpy as np
+import datetime
 from four_tanks_system import ResponseAnalyser, CasadiSimulator
 from normalizer import Normalizer
 from pinn import FourTanksPINN
@@ -34,7 +35,8 @@ np_test_ics = 20.0 * np.random.rand(4, test_points)
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
-ol_sample_time = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
+# ol_sample_time = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
+ol_sample_time = 4.0
 np_t = np.array([np.linspace(0, ol_sample_time, 100)])
 
 # Training data
@@ -82,7 +84,7 @@ np_norm_train_f_v = v_normalizer.normalize(np_train_f_v)
 np_norm_train_f_ic = h_normalizer.normalize(np_train_f_ic)
 
 # PINN instancing
-hidden_layers = [10, 10, 10, 10]
+hidden_layers = [15, 15, 15, 15]
 learning_rate = 0.001
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=hidden_layers,
@@ -92,7 +94,7 @@ model = FourTanksPINN(sys_params=sys_params,
                       h_normalizer=h_normalizer)
 
 # Training
-max_epochs = 30000
+max_epochs = 50000
 stop_loss = 0.001
 model.train(np_norm_train_u_t, np_norm_train_u_v, np_norm_train_u_ic, np_norm_train_f_t, np_norm_train_f_v,
             np_norm_train_f_ic, max_epochs=max_epochs, stop_loss=stop_loss)
@@ -145,4 +147,5 @@ for i in range(number_of_plots):
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
                      title=titles[j],
                      limit_range=True)
-plotter.save_pdf('./results/plot.pdf')
+now = datetime.datetime.now()
+plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
