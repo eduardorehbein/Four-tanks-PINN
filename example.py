@@ -84,7 +84,7 @@ np_norm_train_f_v = v_normalizer.normalize(np_train_f_v)
 np_norm_train_f_ic = h_normalizer.normalize(np_train_f_ic)
 
 # PINN instancing
-hidden_layers = [15, 15, 15, 15]
+hidden_layers = [15, 15, 15, 15, 15]
 learning_rate = 0.001
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=hidden_layers,
