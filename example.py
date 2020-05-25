@@ -36,7 +36,7 @@ np_test_ics = 20.0 * np.random.rand(4, test_points)
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
 # ol_sample_time = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
-ol_sample_time = 4.0
+ol_sample_time = 10.0
 np_t = np.array([np.linspace(0, ol_sample_time, 100)])
 
 # Training data
