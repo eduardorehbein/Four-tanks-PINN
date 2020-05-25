@@ -107,8 +107,8 @@ titles = []
 simulator = CasadiSimulator(sys_params)
 np_norm_t = t_normalizer.normalize(np_t)
 for i in range(np_test_vs.shape[1]):
-    np_v = np_test_vs[:, i]
-    np_ic = np_test_ics[:, i]
+    np_v = np_train_vs[:, i]  # np_test_vs[:, i]
+    np_ic = np_train_ics[:, i]  # np_test_ics[:, i]
 
     np_h = simulator.run(np_t, np_v, np_ic)
     sampled_outputs.append(np_h)
@@ -132,7 +132,7 @@ plotter = PdfPlotter()
 plotter.plot(x_axis=np.array([100*i for i in range(len(model.validation_loss))]),
              y_axis_list=[np.array(model.validation_loss)],
              labels=['loss'],
-             title='Epoch vs Validation loss',
+             title='Epoch x Validation loss',
              limit_range=False,
              y_scale='log')
 number_of_plots = test_points
