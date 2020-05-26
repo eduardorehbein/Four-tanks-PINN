@@ -207,7 +207,7 @@ class FourTanksPINN:
 
                 val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
                 if val_moving_average > last_val_moving_average:
-                    loss_rising = True
+                    pass  # loss_rising = True
                 else:
                     last_val_moving_average = val_moving_average
 
