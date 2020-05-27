@@ -49,8 +49,15 @@ class FourTanksPINN:
         # Optimizer
         self.optimizer = tf.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
-        # Training loss
-        self.validation_loss = []
+        # Training losses
+        self.train_f_loss = []
+        self.train_u_loss = []
+        self.train_total_loss = []
+
+        # Validation losses
+        self.validation_f_loss = []
+        self.validation_u_loss = []
+        self.validation_total_loss = []
 
     def initialize_nn(self, layers):
         weights = []
@@ -168,7 +175,7 @@ class FourTanksPINN:
         tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
         tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
         epochs_over_analysis = 100
-        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
+        val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis)
         last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
@@ -185,11 +192,15 @@ class FourTanksPINN:
             # Validation
             tf_val_u_predict = self.nn(tf_val_u_x)
             tf_val_u_loss = tf.reduce_mean(tf.square(tf_val_u_predict - tf_val_u_ic))
+            self.validation_u_loss.append(tf_val_u_loss.numpy())
 
             tf_val_f_predict = self.f(tf_val_f_x, tf_val_f_v)
             tf_val_f_loss = tf.reduce_mean(tf.square(tf_val_f_predict))
+            self.validation_f_loss.append(tf_val_f_loss.numpy())
 
             tf_val_total_loss = tf_val_u_loss + tf_val_f_loss
+            np_val_total_loss = tf_val_total_loss.numpy()
+            self.validation_total_loss.append(np_val_total_loss)
 
             if tf_val_total_loss < tf_val_best_total_loss:
                 tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
@@ -201,9 +212,7 @@ class FourTanksPINN:
             val_moving_average_queue.put(tf_val_total_loss.numpy())
 
             if epoch % epochs_over_analysis == 0:
-                np_loss = tf_val_total_loss.numpy()
-                self.validation_loss.append(np_loss)
-                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_loss))
+                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
 
                 val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
                 if val_moving_average > last_val_moving_average:
@@ -220,16 +229,19 @@ class FourTanksPINN:
         with tf.GradientTape(persistent=True) as gtu:
             tf_u_predict = self.nn(tf_u_x)
             tf_u_loss = tf.reduce_mean(tf.square(tf_u_predict - tf_u_ic))
+            self.train_u_loss.append(tf_u_loss.numpy())
 
             tf_f_predict = self.f(tf_f_x, tf_f_v)
             tf_f_loss = tf.reduce_mean(tf.square(tf_f_predict))
+            self.train_f_loss.append(tf_f_loss.numpy())
 
             tf_total_loss = tf_u_loss + tf_f_loss
+            self.train_total_loss.append(tf_total_loss.numpy())
         grad_weights = gtu.gradient(tf_total_loss, self.weights)
         grad_biases = gtu.gradient(tf_total_loss, self.biases)
 
         return grad_weights, grad_biases
 
-    def reset_NN(self):
+    def reset_nn(self):
         self.weights = copy.deepcopy(self.initial_weights)
         self.biases = copy.deepcopy(self.initial_biases)

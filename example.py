@@ -35,9 +35,9 @@ np_test_ics = 20.0 * np.random.rand(4, test_points)
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
-# ol_sample_time = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
-ol_sample_time = 10.0
-np_t = np.array([np.linspace(0, ol_sample_time, 100)])
+# t_range = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
+t_range = 10.0
+np_t = np.array([np.linspace(0, t_range, 100)])
 
 # Training data
 np_train_u_t = np.zeros((1, np_train_ics.shape[1]))
@@ -94,7 +94,7 @@ model = FourTanksPINN(sys_params=sys_params,
                       h_normalizer=h_normalizer)
 
 # Training
-max_epochs = 20000
+max_epochs = 40000
 stop_loss = 0.0005
 model.train(np_norm_train_u_t, np_norm_train_u_v, np_norm_train_u_ic, np_norm_train_f_t, np_norm_train_f_v,
             np_norm_train_f_ic, max_epochs=max_epochs, stop_loss=stop_loss)
@@ -107,8 +107,8 @@ titles = []
 simulator = CasadiSimulator(sys_params)
 np_norm_t = t_normalizer.normalize(np_t)
 for i in range(np_test_vs.shape[1]):
-    np_v = np_train_vs[:, i]  # np_test_vs[:, i]
-    np_ic = np_train_ics[:, i]  # np_test_ics[:, i]
+    np_v = np_test_vs[:, i]
+    np_ic = np_test_ics[:, i]
 
     np_h = simulator.run(np_t, np_v, np_ic)
     sampled_outputs.append(np_h)
@@ -124,17 +124,39 @@ for i in range(np_test_vs.shape[1]):
     predictions.append(prediction)
 
     mse = (np.square(np_h - prediction)).mean()
-    title = 'h' + str(i + 1) + '(t) vs nn' + str(i + 1) + '(t), MSE: ' + str(round(mse, 3))
+    title = 'Control input v = (' + str(round(np_v[0], 2)) + ', ' + str(round(np_v[1], 2)) + \
+            ') V. Plot MSE: ' + str(round(mse, 2)) + ' cm'
     titles.append(title)
 
-# Plotting
 plotter = PdfPlotter()
-plotter.plot(x_axis=np.array([100*i for i in range(len(model.validation_loss))]),
-             y_axis_list=[np.array(model.validation_loss)],
-             labels=['loss'],
-             title='Epoch x Validation loss',
+
+# Loss plot
+plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
+             y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_total_loss)],
+             labels=['train loss', 'val loss'],
+             title='Train and validation total losses',
+             x_label='Epoch',
+             y_label='Loss',
              limit_range=False,
              y_scale='log')
+plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_loss)),
+             y_axis_list=[np.array(model.train_u_loss), np.array(model.train_f_loss)],
+             labels=['u loss', 'f loss'],
+             title='Train losses',
+             x_label='Epoch',
+             y_label='Loss',
+             limit_range=False,
+             y_scale='log')
+plotter.plot(x_axis=np.linspace(1, len(model.validation_u_loss), len(model.validation_u_loss)),
+             y_axis_list=[np.array(model.validation_u_loss), np.array(model.validation_f_loss)],
+             labels=['u loss', 'f loss'],
+             title='Validation losses',
+             x_label='Epoch',
+             y_label='Loss',
+             limit_range=False,
+             y_scale='log')
+
+# Result plot
 number_of_plots = test_points
 for i in range(number_of_plots):
     for j in range(sampled_outputs[i].shape[0]):
@@ -146,6 +168,8 @@ for i in range(number_of_plots):
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
                      title=titles[j],
+                     x_label='t',
+                     y_label='Level',
                      limit_range=True)
 now = datetime.datetime.now()
 plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
