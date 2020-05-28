@@ -7,7 +7,12 @@ import numpy as np
 
 
 class FourTanksPINN:
-    def __init__(self, sys_params, hidden_layers, learning_rate, t_normalizer=None, v_normalizer=None, h_normalizer=None):
+    def __init__(self, sys_params, hidden_layers, learning_rate,
+                 t_normalizer=None, v_normalizer=None, h_normalizer=None, parallel_threads=8):
+        # Parallel threads config
+        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
+        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
+
         # System parameters to matrix form
         self.B = []
         self.B.append(
@@ -47,6 +52,7 @@ class FourTanksPINN:
         self.initial_weights, self.initial_biases = copy.deepcopy(self.weights), copy.deepcopy(self.biases)
 
         # Optimizer
+        self.learning_rate = learning_rate
         self.optimizer = tf.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
         # Training losses
@@ -174,13 +180,19 @@ class FourTanksPINN:
         epoch = 0
         tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
         tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
-        epochs_over_analysis = 100
-        val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis)
-        last_val_moving_average = tf_val_total_loss.numpy()
+        # epochs_over_analysis = 100  # TODO: Improve validation loss analysis
+        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis)
+        # last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
         loss_rising = False
         while epoch < max_epochs and tf_val_total_loss > stop_loss and not loss_rising:
+            # Learning rate adjustments
+            if epoch % 10000 == 0:
+                self.learning_rate = self.learning_rate / 2
+                self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999,
+                                                    epsilon=1e-07)
+
             # Gradients
             grad_weights, grad_biases = self.get_grads(tf_train_u_x, tf_train_u_ic, tf_train_f_x, tf_train_f_v)
 
@@ -207,18 +219,18 @@ class FourTanksPINN:
                 best_weights = copy.deepcopy(self.weights)
                 best_biases = copy.deepcopy(self.biases)
 
-            if val_moving_average_queue.full():
-                val_moving_average_queue.get()
-            val_moving_average_queue.put(tf_val_total_loss.numpy())
-
-            if epoch % epochs_over_analysis == 0:
-                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
-
-                val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
-                if val_moving_average > last_val_moving_average:
-                    pass  # loss_rising = True
-                else:
-                    last_val_moving_average = val_moving_average
+            # if val_moving_average_queue.full():  # TODO: Improve validation loss analysis
+            #     val_moving_average_queue.get()
+            # val_moving_average_queue.put(tf_val_total_loss.numpy())
+            #
+            # if epoch % epochs_over_analysis == 0:
+            #     print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
+            #
+            #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
+            #     if val_moving_average > last_val_moving_average:
+            #         loss_rising = True
+            #     else:
+            #         last_val_moving_average = val_moving_average
 
             epoch = epoch + 1
         self.weights = best_weights

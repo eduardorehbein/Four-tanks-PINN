@@ -35,6 +35,7 @@ np_test_ics = 20.0 * np.random.rand(4, test_points)
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
+# TODO: Change parameter analysis method
 # t_range = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
 t_range = 10.0
 np_t = np.array([np.linspace(0, t_range, 100)])
@@ -95,7 +96,7 @@ model = FourTanksPINN(sys_params=sys_params,
 
 # Training
 max_epochs = 40000
-stop_loss = 0.0005
+stop_loss = 0.0001
 model.train(np_norm_train_u_t, np_norm_train_u_v, np_norm_train_u_ic, np_norm_train_f_t, np_norm_train_f_v,
             np_norm_train_f_ic, max_epochs=max_epochs, stop_loss=stop_loss)
 
@@ -123,9 +124,8 @@ for i in range(np_test_vs.shape[1]):
     prediction = h_normalizer.denormalize(norm_prediction)
     predictions.append(prediction)
 
-    mse = (np.square(np_h - prediction)).mean()
     title = 'Control input v = (' + str(round(np_v[0], 2)) + ', ' + str(round(np_v[1], 2)) + \
-            ') V. Plot MSE: ' + str(round(mse, 2)) + ' cm'
+            ') V.'
     titles.append(title)
 
 plotter = PdfPlotter()
@@ -164,10 +164,11 @@ for i in range(number_of_plots):
         plotter.set_y_range(y_axis_list)
     for j in range(sampled_outputs[i].shape[0]):
         y_axis_list = [sampled_outputs[i][j], predictions[i][j]]
+        mse = (np.square(y_axis_list[0] - y_axis_list[1])).mean()
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[j],
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)) + ' cm',
                      x_label='t',
                      y_label='Level',
                      limit_range=True)
