@@ -180,8 +180,8 @@ class FourTanksPINN:
         epoch = 0
         tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
         tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
-        # epochs_over_analysis = 100  # TODO: Improve validation loss analysis
-        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis)
+        epochs_over_analysis = 100
+        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis) # TODO: Improve validation loss analysis
         # last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
@@ -194,7 +194,8 @@ class FourTanksPINN:
                                                     epsilon=1e-07)
 
             # Gradients
-            grad_weights, grad_biases = self.get_grads(tf_train_u_x, tf_train_u_ic, tf_train_f_x, tf_train_f_v)
+            grad_weights, grad_biases = self.get_grads(tf_train_u_x, tf_train_u_ic, tf_train_f_x, tf_train_f_v,
+                                                       f_loss_weight=0.5)
 
             # Updating weights and biases
             grads = grad_weights + grad_biases
@@ -223,8 +224,8 @@ class FourTanksPINN:
             #     val_moving_average_queue.get()
             # val_moving_average_queue.put(tf_val_total_loss.numpy())
             #
-            # if epoch % epochs_over_analysis == 0:
-            #     print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
+            if epoch % epochs_over_analysis == 0:
+                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
             #
             #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
             #     if val_moving_average > last_val_moving_average:
@@ -237,7 +238,7 @@ class FourTanksPINN:
         self.biases = best_biases
         print('Validation loss at the training\'s end: ' + str(tf_val_total_loss.numpy()))
 
-    def get_grads(self, tf_u_x, tf_u_ic, tf_f_x, tf_f_v):
+    def get_grads(self, tf_u_x, tf_u_ic, tf_f_x, tf_f_v, u_loss_weight=1.0, f_loss_weight=1.0):
         with tf.GradientTape(persistent=True) as gtu:
             tf_u_predict = self.nn(tf_u_x)
             tf_u_loss = tf.reduce_mean(tf.square(tf_u_predict - tf_u_ic))
@@ -247,7 +248,7 @@ class FourTanksPINN:
             tf_f_loss = tf.reduce_mean(tf.square(tf_f_predict))
             self.train_f_loss.append(tf_f_loss.numpy())
 
-            tf_total_loss = tf_u_loss + tf_f_loss
+            tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
             self.train_total_loss.append(tf_total_loss.numpy())
         grad_weights = gtu.gradient(tf_total_loss, self.weights)
         grad_biases = gtu.gradient(tf_total_loss, self.biases)
