@@ -195,7 +195,7 @@ class FourTanksPINN:
 
             # Gradients
             grad_weights, grad_biases = self.get_grads(tf_train_u_x, tf_train_u_ic, tf_train_f_x, tf_train_f_v,
-                                                       f_loss_weight=0.5)
+                                                       f_loss_weight=0.1)
 
             # Updating weights and biases
             grads = grad_weights + grad_biases

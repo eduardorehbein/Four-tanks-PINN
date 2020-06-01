@@ -35,6 +35,8 @@ class PINN(object):
         for _ in range(hidden_layers):
             self.model.add(Dense(units_per_layers, 'tanh', kernel_initializer="glorot_normal"))
         self.model.add(Dense(n_outputs, None, kernel_initializer="glorot_normal"))
+        self.model.add(tf.keras.layers.Lambda(
+            lambda X: (1 + X) * (u_ub - u_lb) / 2.0 + u_lb))  # to [u_lb,u_ub]
 
         # optimizer = tf.keras.optimizers.RMSprop(0.01)
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9, epsilon=None)  # (0.01)
@@ -46,8 +48,7 @@ class PINN(object):
         :return: u(t)
         '''
         X = self.tensor(X)
-        #return self.model(X)
-        return (1 + self.model(X)) * (self.u_ub - self.u_lb) / 2.0 + self.u_lb
+        return self.model(X)
 
     def set_opt_params(self, lr, beta_1=0.9, epsilon=None):
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=lr, beta_1=beta_1, epsilon=epsilon)
@@ -68,7 +69,7 @@ class PINN(object):
         # self.x_f = self.tensor(X_f[:, 0:1]) # not PDE
         # self.t_f = self.tensor(X_f[:, 1:2])
 
-    def u_fn(self, t): # training=True):
+    def u_fn(self, t):  # training=True):
         return self.model(t, 1)
 
     def mse_u(self, predicted_y, target_y):
@@ -85,7 +86,7 @@ class PINN(object):
         pass
 
     def loss_function(self, predictions, return_all_losses=False):
-        #c = 33775719714212.0
+        # c = 33775719714212.0
         loss_1 = self.mse_u(predictions, self.u)
         loss_2 = [self.mse_f( f ) for f in self.f() ]
         # / c
@@ -96,7 +97,7 @@ class PINN(object):
             return loss, loss_1, loss_2
         return loss
 
-    def train_adam_step(self):  #(inputs, outputs, collocation_inputs, optimizer):
+    def train_adam_step(self):  # (inputs, outputs, collocation_inputs, optimizer):
         with tf.GradientTape() as tape:
             predictions = self.model(self.X_u)  # training=True
             loss, loss_1, loss_2 = self.loss_function(predictions, True)
