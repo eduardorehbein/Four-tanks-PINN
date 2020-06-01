@@ -2,7 +2,7 @@ import numpy as np
 import datetime
 from four_tanks_system import ResponseAnalyser, CasadiSimulator
 from normalizer import Normalizer
-from pinn import FourTanksPINN
+from pinn import OldFourTanksPINN
 from plot import PdfPlotter
 
 # Random seed
@@ -35,7 +35,7 @@ np_test_ics = 20.0 * np.random.rand(4, test_points)
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
-# TODO: Change parameter analysis method
+# TODO: Improve parameter analysis method
 # t_range = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
 t_range = 10.0
 np_t = np.array([np.linspace(0, t_range, 100)])
@@ -87,12 +87,12 @@ np_norm_train_f_ic = h_normalizer.normalize(np_train_f_ic)
 # PINN instancing
 hidden_layers = [15, 15, 15, 15, 15]
 learning_rate = 0.001
-model = FourTanksPINN(sys_params=sys_params,
-                      hidden_layers=hidden_layers,
-                      learning_rate=learning_rate,
-                      t_normalizer=t_normalizer,
-                      v_normalizer=v_normalizer,
-                      h_normalizer=h_normalizer)
+model = OldFourTanksPINN(sys_params=sys_params,
+                         hidden_layers=hidden_layers,
+                         learning_rate=learning_rate,
+                         t_normalizer=t_normalizer,
+                         v_normalizer=v_normalizer,
+                         h_normalizer=h_normalizer)
 
 # Training
 max_epochs = 40000
@@ -168,7 +168,7 @@ for i in range(number_of_plots):
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)) + ' cm',
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)),
                      x_label='t',
                      y_label='Level',
                      limit_range=True)

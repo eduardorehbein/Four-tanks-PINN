@@ -6,7 +6,186 @@ import numpy as np
 # TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
 
-class FourTanksPINN:
+class PINN:
+    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
+                 input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+                 learning_rate=0.001, parallel_threads=8):
+        # Parallel threads config
+        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
+        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
+
+        # Input and output vectors' dimension
+        self.n_inputs = n_inputs
+        self.n_outputs = n_outputs
+
+        # Domain bounds
+        self.input_upper_bounds = input_upper_bounds
+        self.input_lower_bounds = input_lower_bounds
+
+        # Image bounds
+        self.output_lower_bounds = output_lower_bounds
+        self.output_upper_bounds = output_upper_bounds
+
+        # Model
+        self.model = tf.keras.Sequential()
+        self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
+        self.model.add(tf.keras.layers.Lambda(
+            lambda tf_X: 2.0 * (tf_X - input_lower_bounds) /
+                         (input_upper_bounds - input_lower_bounds) - 1.0))  # Normalize to [-1,1]
+        for _ in range(hidden_layers):
+            self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
+        self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
+        self.model.add(tf.keras.layers.Lambda(
+            lambda X: (1 + X) * (output_upper_bounds - output_lower_bounds) /
+                      2.0 + output_lower_bounds))  # Denormalize to [output_lower_bounds, output_upper_bounds]
+
+        # Optimizer
+        self.learning_rate = learning_rate
+        self.optimizer = None
+        self.set_opt_params(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
+
+        # Training losses
+        self.train_f_loss = []
+        self.train_u_loss = []
+        self.train_total_loss = []
+
+        # Validation losses
+        self.validation_f_loss = []
+        self.validation_u_loss = []
+        self.validation_total_loss = []
+
+    def predict(self, np_X):
+        '''
+        Predict the output u(t)
+        :param np_X: data input points representing time t
+        :return: u(t)
+        '''
+
+        tf_NN = self.tensor(np_X)
+        return self.model.predict(tf_NN)  # TODO: Inspect output
+
+    def tensor(self, np_X):
+        return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)
+
+    def set_opt_params(self, learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-7):
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
+                                                  beta_2=beta_2, epsilon=epsilon)
+
+    def train(self, np_u_X, np_u_Y, np_f_X, max_epochs=20000, stop_loss=0.0005):
+        train_u_len = int(0.95 * np_u_X.shape[0])
+        train_f_len = int(0.95 * np_f_X.shape[0])
+
+        # Train data  # TODO: Keras works with line vectors, change to match with it
+        tf_train_u_X = self.tensor(np_u_X[:, :train_u_len])
+        tf_train_u_Y = self.tensor(np_u_Y[:, :train_u_len])
+
+        np_train_f_X = np_f_X[:, :train_f_len]
+        np.random.shuffle(np.transpose(np_train_f_X))
+
+        tf_train_f_X = self.tensor(np_train_f_X)
+
+        # Validation data
+        tf_val_u_X = self.tensor(np_u_X[:, train_u_len:])
+        tf_val_u_Y = self.tensor(np_u_Y[:, train_u_len:])
+
+        np_val_f_X = self.tensor(np_f_X[:, train_f_len:])
+        np.random.shuffle(np.transpose(np_val_f_X))
+
+        tf_val_f_X = self.tensor(np_val_f_X)
+
+        # Training process
+        epoch = 0
+        tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
+        tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
+        epochs_over_analysis = 100
+        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis) # TODO: Improve validation loss analysis
+        # last_val_moving_average = tf_val_total_loss.numpy()
+        best_weights = copy.deepcopy(self.weights)
+        best_biases = copy.deepcopy(self.biases)
+        loss_rising = False
+        while epoch < max_epochs and tf_val_total_loss > stop_loss and not loss_rising:
+            # Learning rate adjustments
+            if epoch % 10000 == 0:
+                self.learning_rate = self.learning_rate / 2
+                self.set_opt_params(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
+
+            # Updating weights and biases
+            grads = self.get_grads(tf_train_u_X, tf_train_u_Y, tf_train_f_X, f_loss_weight=0.1, attach_losses=True)
+            self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
+            # Validation
+            tf_val_u_predict = self.model.predict(tf_val_u_X)
+            tf_val_u_loss = tf.reduce_mean(tf.square(tf_val_u_predict - tf_val_u_Y))
+
+            tf_val_f_predict = self.f(tf_val_f_X)
+            tf_val_f_loss = tf.reduce_mean(tf.square(tf_val_f_predict))
+
+            tf_val_total_loss = tf_val_u_loss + tf_val_f_loss
+            np_val_total_loss = tf_val_total_loss.numpy()
+
+            self.validation_u_loss.append(tf_val_u_loss.numpy())
+            self.validation_f_loss.append(tf_val_f_loss.numpy())
+            self.validation_total_loss.append(np_val_total_loss)
+
+            if tf_val_total_loss < tf_val_best_total_loss:
+                tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
+                best_weights = copy.deepcopy(self.weights)
+                best_biases = copy.deepcopy(self.biases)
+
+            # if val_moving_average_queue.full():  # TODO: Improve validation loss analysis
+            #     val_moving_average_queue.get()
+            # val_moving_average_queue.put(tf_val_total_loss.numpy())
+            #
+            if epoch % epochs_over_analysis == 0:
+                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
+            #
+            #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
+            #     if val_moving_average > last_val_moving_average:
+            #         loss_rising = True
+            #     else:
+            #         last_val_moving_average = val_moving_average
+
+            epoch = epoch + 1
+        self.weights = best_weights
+        self.biases = best_biases
+        print('Validation loss at the training\'s end: ' + str(tf_val_total_loss.numpy()))
+
+    def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=False):
+        with tf.GradientTape(persistent=True) as total_tape:
+            tf_u_predict = self.nn(tf_u_X)
+            tf_u_loss = tf.reduce_mean(tf.square(tf_u_predict - tf_u_Y))
+
+            tf_f_predict = self.f(tf_f_X)
+            tf_f_loss = tf.reduce_mean(tf.square(tf_f_predict))
+
+            tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
+        grads = total_tape.gradient(tf_total_loss, self.model.trainable_variables)
+
+        if attach_losses:
+            self.train_u_loss.append(tf_u_loss.numpy())
+            self.train_f_loss.append(tf_f_loss.numpy())
+            self.train_total_loss.append(tf_total_loss.numpy())
+
+        return grads
+
+    def f(self, tf_X):
+        '''
+        Compute function physics informed f(t) for minimization
+        :return: f(t)
+        '''
+
+        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as gtf:
+            gtf.watch(tf_X)
+            tf_prediction = self.model.predict(tf_X)
+            tf_nn_selector = None  # TODO: Continue here
+            tf_decomposed_prediction = None
+        return self.expression(tf_X, tf_prediction, tf_decomposed_prediction, gtf)
+
+    def expression(self, tf_X, tf_prediction, tf_decomposed_prediction, tape):
+        pass
+
+
+class OldFourTanksPINN:
     def __init__(self, sys_params, hidden_layers, learning_rate,
                  t_normalizer=None, v_normalizer=None, h_normalizer=None, parallel_threads=8):
         # Parallel threads config
