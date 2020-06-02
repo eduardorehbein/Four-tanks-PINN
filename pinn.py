@@ -172,6 +172,63 @@ class PINN:
         return 0
 
 
+class FourTanksPINN(PINN):
+    def __init__(self, sys_params, n_inputs, n_outputs, hidden_layers, units_per_layer,
+                 input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+                 learning_rate=0.001):
+        super().__init__(n_inputs, n_outputs, hidden_layers, units_per_layer,
+                         input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+                         learning_rate)
+
+        # System parameters to matrix form
+        self.B = []
+        self.B.append(
+            tf.constant([[sys_params['A1'], 0, 0, 0],
+                         [0, sys_params['A2'], 0, 0],
+                         [0, 0, sys_params['A3'], 0],
+                         [0, 0, 0, sys_params['A4']]], dtype=tf.float32)
+        )  # B[0]
+        self.B.append(
+            tf.constant([[sys_params['a1'], 0, - sys_params['a3'], 0],
+                         [0, sys_params['a2'], 0, - sys_params['a4']],
+                         [0, 0, sys_params['a3'], 0],
+                         [0, 0, 0, sys_params['a4']]], dtype=tf.float32)
+        )  # B[1]
+        self.B.append(
+            tf.constant([[sys_params['alpha1'] * sys_params['k1'], 0],
+                         [0, sys_params['alpha2'] * sys_params['k2']],
+                         [0, (1 - sys_params['alpha2']) * sys_params['k2']],
+                         [(1 - sys_params['alpha1']) * sys_params['k1'], 0]], dtype=tf.float32)
+        )  # B[2]
+
+        self.two_g_sqrt = tf.sqrt(tf.constant(2 * sys_params['g'], dtype=tf.float32))
+
+    def expression(self, tf_X, tf_prediction, decomposed_prediction, tape):
+        # ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1
+        #          dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
+        #          dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
+        #          dh4_dt = -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1
+        #
+        # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
+
+        tf_v = tf.transpose(tf.slice(tf_X, [0, 1], [tf_X.shape[0], 3]))
+        tf_nn = tf.transpose(tf_prediction)
+
+        tf_dnn1_dx = tape.gradient(decomposed_prediction[0], tf_X)
+        tf_dnn2_dx = tape.gradient(decomposed_prediction[1], tf_X)
+        tf_dnn3_dx = tape.gradient(decomposed_prediction[2], tf_X)
+        tf_dnn4_dx = tape.gradient(decomposed_prediction[3], tf_X)
+
+        tf_dnn_dt = tf.transpose(tf.concat([tf.slice(tf_dnn1_dx, [0, 0], [tf_dnn1_dx.shape[0], 1]),
+                                            tf.slice(tf_dnn2_dx, [0, 0], [tf_dnn2_dx.shape[0], 1]),
+                                            tf.slice(tf_dnn3_dx, [0, 0], [tf_dnn3_dx.shape[0], 1]),
+                                            tf.slice(tf_dnn4_dx, [0, 0], [tf_dnn4_dx.shape[0], 1])], axis=1))
+
+        return tf.matmul(self.B[0], tf_dnn_dt) + \
+               self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
+               tf.matmul(self.B[2], tf_v)
+
+
 class OldFourTanksPINN:
     def __init__(self, sys_params, hidden_layers, learning_rate,
                  t_normalizer=None, v_normalizer=None, h_normalizer=None, parallel_threads=8):
