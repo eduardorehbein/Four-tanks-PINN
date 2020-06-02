@@ -49,10 +49,8 @@ class PINN:
         self.train_u_loss = []
         self.train_total_loss = []
 
-        # Validation losses
-        self.validation_f_loss = []
-        self.validation_u_loss = []
-        self.validation_total_loss = []
+        # Validation loss
+        self.validation_loss = []
 
     def predict(self, np_X):
         '''
@@ -71,73 +69,58 @@ class PINN:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
                                                   beta_2=beta_2, epsilon=epsilon)
 
-    def train(self, np_u_X, np_u_Y, np_f_X, max_epochs=20000, stop_loss=0.0005):
-        train_u_len = int(0.95 * np_u_X.shape[0])
-        train_f_len = int(0.95 * np_f_X.shape[0])
+    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+              max_epochs=20000, stop_loss=0.0005, attach_loss=True):
+        # Train data
+        tf_train_u_X = self.tensor(np_train_u_X)
+        tf_train_u_Y = self.tensor(np_train_u_Y)
 
-        # Train data  # TODO: Keras works with line vectors, change to match with it
-        tf_train_u_X = self.tensor(np_u_X[:, :train_u_len])
-        tf_train_u_Y = self.tensor(np_u_Y[:, :train_u_len])
-
-        np_train_f_X = np_f_X[:, :train_f_len]
-        np.random.shuffle(np.transpose(np_train_f_X))
-
+        np_train_f_X = copy.deepcopy(np_train_f_X)
+        np.random.shuffle(np_train_f_X)
         tf_train_f_X = self.tensor(np_train_f_X)
 
         # Validation data
-        tf_val_u_X = self.tensor(np_u_X[:, train_u_len:])
-        tf_val_u_Y = self.tensor(np_u_Y[:, train_u_len:])
-
-        np_val_f_X = self.tensor(np_f_X[:, train_f_len:])
-        np.random.shuffle(np.transpose(np_val_f_X))
-
-        tf_val_f_X = self.tensor(np_val_f_X)
+        tf_val_X = self.tensor(np_val_X)
+        tf_val_Y = self.tensor(np_val_Y)
 
         # Training process
         epoch = 0
-        tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
-        tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
+        tf_val_loss = tf.constant(np.Inf, dtype=tf.float32)
+        np_val_loss = tf_val_loss.numpy()
+        tf_best_val_loss = copy.deepcopy(tf_val_loss)
         epochs_over_analysis = 100
-        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis) # TODO: Improve validation loss analysis
+        # val_moving_average_queue = Queue(maxsize=epochs_over_analysis) # TODO: Improve validation loss analysis
         # last_val_moving_average = tf_val_total_loss.numpy()
-        best_weights = copy.deepcopy(self.weights)
-        best_biases = copy.deepcopy(self.biases)
+        best_weights = copy.deepcopy(self.model.get_weights())
         loss_rising = False
-        while epoch < max_epochs and tf_val_total_loss > stop_loss and not loss_rising:
+        while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
             # Learning rate adjustments
             if epoch % 10000 == 0:
                 self.learning_rate = self.learning_rate / 2
                 self.set_opt_params(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
             # Updating weights and biases
-            grads = self.get_grads(tf_train_u_X, tf_train_u_Y, tf_train_f_X, f_loss_weight=0.1, attach_losses=True)
+            grads = self.get_grads(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                                   f_loss_weight=0.1, attach_losses=attach_loss)
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Validation
-            tf_val_u_predict = self.model.predict(tf_val_u_X)
-            tf_val_u_loss = tf.reduce_mean(tf.square(tf_val_u_predict - tf_val_u_Y))
+            tf_val_prediction = self.model.predict(tf_val_X)
+            tf_val_loss = tf.reduce_mean(tf.square(tf_val_prediction - tf_val_Y))
+            np_val_loss = tf_val_loss.numpy()
+            if attach_loss:
+                self.validation_loss.append(np_val_loss)
 
-            tf_val_f_predict = self.f(tf_val_f_X)
-            tf_val_f_loss = tf.reduce_mean(tf.square(tf_val_f_predict))
-
-            tf_val_total_loss = tf_val_u_loss + tf_val_f_loss
-            np_val_total_loss = tf_val_total_loss.numpy()
-
-            self.validation_u_loss.append(tf_val_u_loss.numpy())
-            self.validation_f_loss.append(tf_val_f_loss.numpy())
-            self.validation_total_loss.append(np_val_total_loss)
-
-            if tf_val_total_loss < tf_val_best_total_loss:
-                tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
-                best_weights = copy.deepcopy(self.weights)
-                best_biases = copy.deepcopy(self.biases)
+            if tf_val_loss < tf_best_val_loss:
+                tf_best_val_loss = copy.deepcopy(tf_val_loss)
+                best_weights = copy.deepcopy(self.model.get_weights())
 
             # if val_moving_average_queue.full():  # TODO: Improve validation loss analysis
             #     val_moving_average_queue.get()
-            # val_moving_average_queue.put(tf_val_total_loss.numpy())
+            # val_moving_average_queue.put(np_val_loss)
             #
             if epoch % epochs_over_analysis == 0:
-                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
+                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
             #
             #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
             #     if val_moving_average > last_val_moving_average:
@@ -146,17 +129,16 @@ class PINN:
             #         last_val_moving_average = val_moving_average
 
             epoch = epoch + 1
-        self.weights = best_weights
-        self.biases = best_biases
-        print('Validation loss at the training\'s end: ' + str(tf_val_total_loss.numpy()))
+        self.model.set_weights(best_weights)
+        print('Validation loss at the training\'s end: ' + str(np_val_loss))
 
     def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=False):
         with tf.GradientTape(persistent=True) as total_tape:
-            tf_u_predict = self.nn(tf_u_X)
-            tf_u_loss = tf.reduce_mean(tf.square(tf_u_predict - tf_u_Y))
+            tf_u_prediction = self.model.predict(tf_u_X)
+            tf_u_loss = tf.reduce_mean(tf.square(tf_u_prediction - tf_u_Y))
 
-            tf_f_predict = self.f(tf_f_X)
-            tf_f_loss = tf.reduce_mean(tf.square(tf_f_predict))
+            tf_f_prediction = self.f(tf_f_X)
+            tf_f_loss = tf.reduce_mean(tf.square(tf_f_prediction))
 
             tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
         grads = total_tape.gradient(tf_total_loss, self.model.trainable_variables)
@@ -170,19 +152,24 @@ class PINN:
 
     def f(self, tf_X):
         '''
-        Compute function physics informed f(t) for minimization
-        :return: f(t)
+        Compute function physics informed f(X) for minimization
+        :return: f(X)
         '''
 
-        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as gtf:
-            gtf.watch(tf_X)
+        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
+            f_tape.watch(tf_X)
             tf_prediction = self.model.predict(tf_X)
-            tf_nn_selector = None  # TODO: Continue here
-            tf_decomposed_prediction = None
-        return self.expression(tf_X, tf_prediction, tf_decomposed_prediction, gtf)
+            prediction_variables_len = tf_prediction.shape[1]
+            np_nn_selector = np.eye(prediction_variables_len)
+            decomposed_prediction = []
+            for i in range(prediction_variables_len):
+                prediction_variable = tf.matmul(tf_prediction, self.tensor([np_nn_selector[i]]))
+                decomposed_prediction.append(prediction_variable)
 
-    def expression(self, tf_X, tf_prediction, tf_decomposed_prediction, tape):
-        pass
+        return self.expression(tf_X, tf_prediction, decomposed_prediction, f_tape)
+
+    def expression(self, tf_X, tf_prediction, decomposed_prediction, tape):
+        return 0
 
 
 class OldFourTanksPINN:
@@ -239,10 +226,8 @@ class OldFourTanksPINN:
         self.train_u_loss = []
         self.train_total_loss = []
 
-        # Validation losses
-        self.validation_f_loss = []
-        self.validation_u_loss = []
-        self.validation_total_loss = []
+        # Validation loss
+        self.validation_loss = []
 
     def initialize_nn(self, layers):
         weights = []
@@ -319,53 +304,41 @@ class OldFourTanksPINN:
                    self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
                    tf.matmul(self.B[2], tf_v)
 
-    def train(self, np_u_t, np_u_v, np_u_ic, np_f_t, np_f_v, np_f_ic, max_epochs=10000, stop_loss=0.0005):
-        train_u_len = int(0.95 * np_u_t.shape[1])
-        train_f_len = int(0.95 * np_f_t.shape[1])
-
+    def train(self, np_train_u_t, np_train_u_v, np_train_u_ic, np_train_f_t, np_train_f_v, np_train_f_ic,
+              np_validation_t, np_validation_v, np_validation_ic, np_validation_h, max_epochs=10000, stop_loss=0.0005):
         # Train data
-        tf_train_u_x = tf.constant(np.concatenate([np_u_t[:, :train_u_len],
-                                                   np_u_v[:, :train_u_len],
-                                                   np_u_ic[:, :train_u_len]], axis=0), dtype=tf.float32)
-        tf_train_u_ic = tf.constant(np_u_ic[:, :train_u_len], dtype=tf.float32)
+        tf_train_u_x = tf.constant(np.concatenate([np_train_u_t,
+                                                   np_train_u_v,
+                                                   np_train_u_ic], axis=0), dtype=tf.float32)
+        tf_train_u_ic = tf.constant(np_train_u_ic, dtype=tf.float32)
 
         np_train_f_x = np.concatenate([
-            np_f_t[:, :train_f_len],
-            np_f_v[:, :train_f_len],
-            np_f_ic[:, :train_f_len]
-        ], axis=0)
+            np_train_f_t,
+            np_train_f_v,
+            np_train_f_ic], axis=0)
         np.random.shuffle(np.transpose(np_train_f_x))
 
         tf_train_f_x = tf.constant(np_train_f_x, dtype=tf.float32)
         tf_train_f_v = tf.constant(np_train_f_x[1:3], dtype=tf.float32)
 
         # Validation data
-        tf_val_u_x = tf.constant(np.concatenate([np_u_t[:, train_u_len:],
-                                                 np_u_v[:, train_u_len:],
-                                                 np_u_ic[:, train_u_len:]], axis=0), dtype=tf.float32)
-        tf_val_u_ic = tf.constant(np_u_ic[:, train_u_len:], dtype=tf.float32)
-
-        np_val_f_x = np.concatenate([
-            np_f_t[:, train_f_len:],
-            np_f_v[:, train_f_len:],
-            np_f_ic[:, train_f_len:]
-        ], axis=0)
-        np.random.shuffle(np.transpose(np_val_f_x))
-
-        tf_val_f_x = tf.constant(np_val_f_x, dtype=tf.float32)
-        tf_val_f_v = tf.constant(np_val_f_x[1:3], dtype=tf.float32)
+        tf_val_x = tf.constant(np.concatenate([np_validation_t,
+                                               np_validation_v,
+                                               np_validation_ic], axis=0), dtype=tf.float32)
+        tf_val_h = tf.constant(np_validation_h, dtype=tf.float32)
 
         # Training process
         epoch = 0
-        tf_val_total_loss = tf.constant(np.Inf, dtype=tf.float32)
-        tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
+        tf_val_loss = tf.constant(np.Inf, dtype=tf.float32)
+        np_val_loss = tf_val_loss.numpy()
+        tf_best_val_loss = copy.deepcopy(tf_val_loss)
         epochs_over_analysis = 100
-        # val_moving_average_queue = Queue(maxsize=5*epochs_over_analysis) # TODO: Improve validation loss analysis
+        # val_moving_average_queue = Queue(maxsize=epochs_over_analysis) # TODO: Improve validation loss analysis
         # last_val_moving_average = tf_val_total_loss.numpy()
         best_weights = copy.deepcopy(self.weights)
         best_biases = copy.deepcopy(self.biases)
         loss_rising = False
-        while epoch < max_epochs and tf_val_total_loss > stop_loss and not loss_rising:
+        while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
             # Learning rate adjustments
             if epoch % 10000 == 0:
                 self.learning_rate = self.learning_rate / 2
@@ -382,29 +355,22 @@ class OldFourTanksPINN:
             self.optimizer.apply_gradients(zip(grads, vars_to_update))
 
             # Validation
-            tf_val_u_predict = self.nn(tf_val_u_x)
-            tf_val_u_loss = tf.reduce_mean(tf.square(tf_val_u_predict - tf_val_u_ic))
-            self.validation_u_loss.append(tf_val_u_loss.numpy())
+            tf_val_prediction = self.nn(tf_val_x)
+            tf_val_loss = tf.reduce_mean(tf.square(tf_val_prediction - tf_val_h))
+            np_val_loss = tf_val_loss.numpy()
+            self.validation_loss.append(np_val_loss)
 
-            tf_val_f_predict = self.f(tf_val_f_x, tf_val_f_v)
-            tf_val_f_loss = tf.reduce_mean(tf.square(tf_val_f_predict))
-            self.validation_f_loss.append(tf_val_f_loss.numpy())
-
-            tf_val_total_loss = tf_val_u_loss + tf_val_f_loss
-            np_val_total_loss = tf_val_total_loss.numpy()
-            self.validation_total_loss.append(np_val_total_loss)
-
-            if tf_val_total_loss < tf_val_best_total_loss:
-                tf_val_best_total_loss = copy.deepcopy(tf_val_total_loss)
+            if tf_val_loss < tf_best_val_loss:
+                tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.weights)
                 best_biases = copy.deepcopy(self.biases)
 
             # if val_moving_average_queue.full():  # TODO: Improve validation loss analysis
             #     val_moving_average_queue.get()
-            # val_moving_average_queue.put(tf_val_total_loss.numpy())
+            # val_moving_average_queue.put(np_val_loss)
             #
             if epoch % epochs_over_analysis == 0:
-                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_total_loss))
+                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
             #
             #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
             #     if val_moving_average > last_val_moving_average:
@@ -415,16 +381,16 @@ class OldFourTanksPINN:
             epoch = epoch + 1
         self.weights = best_weights
         self.biases = best_biases
-        print('Validation loss at the training\'s end: ' + str(tf_val_total_loss.numpy()))
+        print('Validation loss at the training\'s end: ' + str(np_val_loss))
 
     def get_grads(self, tf_u_x, tf_u_ic, tf_f_x, tf_f_v, u_loss_weight=1.0, f_loss_weight=1.0):
         with tf.GradientTape(persistent=True) as gtu:
-            tf_u_predict = self.nn(tf_u_x)
-            tf_u_loss = tf.reduce_mean(tf.square(tf_u_predict - tf_u_ic))
+            tf_u_prediction = self.nn(tf_u_x)
+            tf_u_loss = tf.reduce_mean(tf.square(tf_u_prediction - tf_u_ic))
             self.train_u_loss.append(tf_u_loss.numpy())
 
-            tf_f_predict = self.f(tf_f_x, tf_f_v)
-            tf_f_loss = tf.reduce_mean(tf.square(tf_f_predict))
+            tf_f_prediction = self.f(tf_f_x, tf_f_v)
+            tf_f_loss = tf.reduce_mean(tf.square(tf_f_prediction))
             self.train_f_loss.append(tf_f_loss.numpy())
 
             tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
