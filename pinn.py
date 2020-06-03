@@ -8,7 +8,7 @@ import numpy as np
 
 class PINN:
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
-                 input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+                 np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
                  learning_rate=0.001, parallel_threads=8):
         # Parallel threads config
         tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
@@ -19,25 +19,25 @@ class PINN:
         self.n_outputs = n_outputs
 
         # Domain bounds
-        self.input_upper_bounds = input_upper_bounds
-        self.input_lower_bounds = input_lower_bounds
+        self.tf_input_upper_bounds = self.tensor(np_input_upper_bounds)
+        self.tf_input_lower_bounds = self.tensor(np_input_lower_bounds)
 
         # Image bounds
-        self.output_lower_bounds = output_lower_bounds
-        self.output_upper_bounds = output_upper_bounds
+        self.tf_output_lower_bounds = self.tensor(np_output_lower_bounds)
+        self.tf_output_upper_bounds = self.tensor(np_output_upper_bounds)
 
         # Model
         self.model = tf.keras.Sequential()
         self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
         self.model.add(tf.keras.layers.Lambda(
-            lambda tf_X: 2.0 * (tf_X - input_lower_bounds) /
-                         (input_upper_bounds - input_lower_bounds) - 1.0))  # Normalize to [-1,1]
+            lambda tf_X: 2.0 * (tf_X - self.tf_input_lower_bounds) /
+                         (self.tf_input_upper_bounds - self.tf_input_lower_bounds) - 1.0))  # Normalize to [-1,1]
         for _ in range(hidden_layers):
             self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
         self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
         self.model.add(tf.keras.layers.Lambda(
-            lambda X: (1 + X) * (output_upper_bounds - output_lower_bounds) /
-                      2.0 + output_lower_bounds))  # Denormalize to [output_lower_bounds, output_upper_bounds]
+            lambda X: (1 + X) * (self.tf_output_upper_bounds - self.tf_output_lower_bounds) /
+                      2.0 + self.tf_output_lower_bounds))  # Denormalize to [output_lower_bounds, output_upper_bounds]
 
         # Optimizer
         self.learning_rate = learning_rate
@@ -59,11 +59,11 @@ class PINN:
         :return: u(t)
         '''
 
-        tf_NN = self.tensor(np_X)
-        return self.model.predict(tf_NN)  # TODO: Inspect output
+        tf_X = self.tensor(np_X)
+        return self.model(tf_X)  # TODO: Inspect output
 
     def tensor(self, np_X):
-        return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)
+        return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float32)
 
     def set_opt_params(self, learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-7):
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
@@ -105,7 +105,7 @@ class PINN:
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Validation
-            tf_val_prediction = self.model.predict(tf_val_X)
+            tf_val_prediction = self.model(tf_val_X)
             tf_val_loss = tf.reduce_mean(tf.square(tf_val_prediction - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
             if attach_loss:
@@ -134,18 +134,21 @@ class PINN:
 
     def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=False):
         with tf.GradientTape(persistent=True) as total_tape:
-            tf_u_prediction = self.model.predict(tf_u_X)
+            tf_u_prediction = self.model(tf_u_X)
             tf_u_loss = tf.reduce_mean(tf.square(tf_u_prediction - tf_u_Y))
 
             tf_f_prediction = self.f(tf_f_X)
             tf_f_loss = tf.reduce_mean(tf.square(tf_f_prediction))
 
-            tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
+            tf_weighted_u_loss = u_loss_weight * tf_u_loss
+            tf_weighted_f_loss = f_loss_weight * tf_f_loss
+
+            tf_total_loss = tf_weighted_u_loss + tf_weighted_f_loss
         grads = total_tape.gradient(tf_total_loss, self.model.trainable_variables)
 
         if attach_losses:
-            self.train_u_loss.append(tf_u_loss.numpy())
-            self.train_f_loss.append(tf_f_loss.numpy())
+            self.train_u_loss.append(tf_weighted_u_loss.numpy())
+            self.train_f_loss.append(tf_weighted_f_loss.numpy())
             self.train_total_loss.append(tf_total_loss.numpy())
 
         return grads
@@ -158,13 +161,13 @@ class PINN:
 
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
-            tf_prediction = self.model.predict(tf_X)
+            tf_prediction = self.model(tf_X)
             prediction_variables_len = tf_prediction.shape[1]
             np_nn_selector = np.eye(prediction_variables_len)
             decomposed_prediction = []
             for i in range(prediction_variables_len):
-                prediction_variable = tf.matmul(tf_prediction, self.tensor([np_nn_selector[i]]))
-                decomposed_prediction.append(prediction_variable)
+                prediction_single_output = tf.matmul(tf_prediction, tf.transpose(self.tensor([np_nn_selector[i]])))
+                decomposed_prediction.append(prediction_single_output)
 
         return self.expression(tf_X, tf_prediction, decomposed_prediction, f_tape)
 
@@ -173,11 +176,11 @@ class PINN:
 
 
 class FourTanksPINN(PINN):
-    def __init__(self, sys_params, n_inputs, n_outputs, hidden_layers, units_per_layer,
-                 input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+    def __init__(self, sys_params, hidden_layers, units_per_layer,
+                 np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
                  learning_rate=0.001):
-        super().__init__(n_inputs, n_outputs, hidden_layers, units_per_layer,
-                         input_lower_bounds, input_upper_bounds, output_lower_bounds, output_upper_bounds,
+        super().__init__(7, 4, hidden_layers, units_per_layer,
+                         np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
                          learning_rate)
 
         # System parameters to matrix form
@@ -211,7 +214,7 @@ class FourTanksPINN(PINN):
         #
         # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
 
-        tf_v = tf.transpose(tf.slice(tf_X, [0, 1], [tf_X.shape[0], 3]))
+        tf_v = tf.transpose(tf.slice(tf_X, [0, 1], [tf_X.shape[0], 2]))
         tf_nn = tf.transpose(tf_prediction)
 
         tf_dnn1_dx = tape.gradient(decomposed_prediction[0], tf_X)
@@ -224,9 +227,10 @@ class FourTanksPINN(PINN):
                                             tf.slice(tf_dnn3_dx, [0, 0], [tf_dnn3_dx.shape[0], 1]),
                                             tf.slice(tf_dnn4_dx, [0, 0], [tf_dnn4_dx.shape[0], 1])], axis=1))
 
-        return tf.matmul(self.B[0], tf_dnn_dt) + \
-               self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
-               tf.matmul(self.B[2], tf_v)
+        tf_f_loss = tf.matmul(self.B[0], tf_dnn_dt) + self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
+                    tf.matmul(self.B[2], tf_v)
+
+        return tf.transpose(tf_f_loss)
 
 
 class OldFourTanksPINN:
