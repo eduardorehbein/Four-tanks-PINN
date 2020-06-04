@@ -1,7 +1,6 @@
 import numpy as np
 import datetime
 from four_tanks_system import ResponseAnalyser, CasadiSimulator
-from normalizer import Normalizer
 from pinn import FourTanksPINN
 from plot import PdfPlotter
 
@@ -25,11 +24,11 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Controls and initial conditions for training and testing
-train_points = 1000
+train_points = 950
 np_train_vs = 3.0 * np.random.rand(2, train_points)
 np_train_ics = 20.0 * np.random.rand(4, train_points)
 
-validation_points = 100
+validation_points = 50
 np_validation_vs = 3.0 * np.random.rand(2, validation_points)
 np_validation_ics = 20 * np.random.rand(4, validation_points)
 

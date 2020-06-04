@@ -11,8 +11,8 @@ class PINN:
                  np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
                  learning_rate=0.001, parallel_threads=8):
         # Parallel threads config
-        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
-        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
+        # tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
+        # tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
 
         # Input and output vectors' dimension
         self.n_inputs = n_inputs
