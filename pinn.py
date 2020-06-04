@@ -81,8 +81,8 @@ class PINN:
         np_val_loss = tf_val_loss.numpy()
         tf_best_val_loss = copy.deepcopy(tf_val_loss)
         epochs_over_analysis = 100
-        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
-        last_val_moving_average = np_val_loss
+        # val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
+        # last_val_moving_average = np_val_loss
         best_weights = copy.deepcopy(self.model.get_weights())
         loss_rising = False
         while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
@@ -97,8 +97,8 @@ class PINN:
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Validation
-            tf_val_prediction = self.model(tf_val_X)
-            tf_val_loss = tf.reduce_mean(tf.square(tf_val_prediction - tf_val_Y))
+            tf_val_NN = self.model(tf_val_X)
+            tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
             if attach_loss:
                 self.validation_loss.append(np_val_loss)
@@ -107,18 +107,18 @@ class PINN:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            if val_moving_average_queue.full():
-                val_moving_average_queue.get()
-            val_moving_average_queue.put(np_val_loss)
+            # if val_moving_average_queue.full():
+            #     val_moving_average_queue.get()
+            # val_moving_average_queue.put(np_val_loss)
 
             if epoch % epochs_over_analysis == 0:
                 print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
 
-                val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
-                if val_moving_average > last_val_moving_average:
-                    loss_rising = True
-                else:
-                    last_val_moving_average = val_moving_average
+                # val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
+                # if val_moving_average > last_val_moving_average:
+                #     loss_rising = True
+                # else:
+                #     last_val_moving_average = val_moving_average
 
             epoch = epoch + 1
         self.model.set_weights(best_weights)
@@ -126,11 +126,11 @@ class PINN:
 
     def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=False):
         with tf.GradientTape(persistent=True) as total_tape:
-            tf_u_prediction = self.model(tf_u_X)
-            tf_u_loss = tf.reduce_mean(tf.square(tf_u_prediction - tf_u_Y))
+            tf_u_NN = self.model(tf_u_X)
+            tf_u_loss = tf.reduce_mean(tf.square(tf_u_NN - tf_u_Y))
 
-            tf_f_prediction = self.f(tf_f_X)
-            tf_f_loss = tf.reduce_mean(tf.square(tf_f_prediction))
+            tf_f_NN = self.f(tf_f_X)
+            tf_f_loss = tf.reduce_mean(tf.square(tf_f_NN))
 
             tf_weighted_u_loss = u_loss_weight * tf_u_loss
             tf_weighted_f_loss = f_loss_weight * tf_f_loss
@@ -153,17 +153,22 @@ class PINN:
 
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
-            tf_prediction = self.model(tf_X)
+            tf_NN = self.model(tf_X)
             np_output_selector = np.eye(self.n_outputs)
-            decomposed_prediction = []
+            decomposed_NN = []
             for i in range(self.n_outputs):
-                tf_prediction_single_output = tf.matmul(tf_prediction,
-                                                        tf.transpose(self.tensor([np_output_selector[i]])))
-                decomposed_prediction.append(tf_prediction_single_output)
+                tf_NN_single_output = tf.matmul(tf_NN, tf.transpose(self.tensor([np_output_selector[i]])))
+                decomposed_NN.append(tf_NN_single_output)
 
-        return self.expression(tf_X, tf_prediction, decomposed_prediction, f_tape)
+        return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
-    def expression(self, tf_X, tf_prediction, decomposed_prediction, tape):
+    def save_model(self, path):
+        self.model.save(path)
+
+    def load_model(self, path):
+        self.model = tf.keras.models.load_model(path)
+
+    def expression(self, tf_X, tf_NN, decomposed_NN, tape):
         return self.tensor(0.0)
 
 
@@ -194,7 +199,7 @@ class FourTanksPINN(PINN):
 
         self.two_g_sqrt = tf.sqrt(tf.constant(2 * sys_params['g'], dtype=tf.float32))
 
-    def expression(self, tf_X, tf_prediction, decomposed_prediction, tape):
+    def expression(self, tf_X, tf_NN, decomposed_NN, tape):
         # ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1
         #          dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
         #          dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
@@ -203,12 +208,12 @@ class FourTanksPINN(PINN):
         # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
 
         tf_v = tf.transpose(tf.slice(tf_X, [0, 1], [tf_X.shape[0], 2]))
-        tf_nn = tf.transpose(tf_prediction)
+        tf_nn = tf.transpose(tf_NN)
 
-        tf_dnn1_dx = tape.gradient(decomposed_prediction[0], tf_X)
-        tf_dnn2_dx = tape.gradient(decomposed_prediction[1], tf_X)
-        tf_dnn3_dx = tape.gradient(decomposed_prediction[2], tf_X)
-        tf_dnn4_dx = tape.gradient(decomposed_prediction[3], tf_X)
+        tf_dnn1_dx = tape.gradient(decomposed_NN[0], tf_X)
+        tf_dnn2_dx = tape.gradient(decomposed_NN[1], tf_X)
+        tf_dnn3_dx = tape.gradient(decomposed_NN[2], tf_X)
+        tf_dnn4_dx = tape.gradient(decomposed_NN[3], tf_X)
 
         tf_dnn_dt = tf.transpose(tf.concat([tf.slice(tf_dnn1_dx, [0, 0], [tf_dnn1_dx.shape[0], 1]),
                                             tf.slice(tf_dnn2_dx, [0, 0], [tf_dnn2_dx.shape[0], 1]),
@@ -404,8 +409,8 @@ class OldFourTanksPINN:
             self.optimizer.apply_gradients(zip(grads, vars_to_update))
 
             # Validation
-            tf_val_prediction = self.nn(tf_val_x)
-            tf_val_loss = tf.reduce_mean(tf.square(tf_val_prediction - tf_val_h))
+            tf_val_nn = self.nn(tf_val_x)
+            tf_val_loss = tf.reduce_mean(tf.square(tf_val_nn - tf_val_h))
             np_val_loss = tf_val_loss.numpy()
             self.validation_loss.append(np_val_loss)
 
@@ -434,12 +439,12 @@ class OldFourTanksPINN:
 
     def get_grads(self, tf_u_x, tf_u_ic, tf_f_x, tf_f_v, u_loss_weight=1.0, f_loss_weight=1.0):
         with tf.GradientTape(persistent=True) as gtu:
-            tf_u_prediction = self.nn(tf_u_x)
-            tf_u_loss = tf.reduce_mean(tf.square(tf_u_prediction - tf_u_ic))
+            tf_u_nn = self.nn(tf_u_x)
+            tf_u_loss = tf.reduce_mean(tf.square(tf_u_nn - tf_u_ic))
             self.train_u_loss.append(tf_u_loss.numpy())
 
-            tf_f_prediction = self.f(tf_f_x, tf_f_v)
-            tf_f_loss = tf.reduce_mean(tf.square(tf_f_prediction))
+            tf_f_nn = self.f(tf_f_x, tf_f_v)
+            tf_f_loss = tf.reduce_mean(tf.square(tf_f_nn))
             self.train_f_loss.append(tf_f_loss.numpy())
 
             tf_total_loss = u_loss_weight * tf_u_loss + f_loss_weight * tf_f_loss
