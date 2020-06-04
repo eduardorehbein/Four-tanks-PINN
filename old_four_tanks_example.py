@@ -25,17 +25,17 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Controls and initial conditions for training and testing
-train_points = 950
-np_train_vs = 3.0 * np.random.rand(2, train_points)
-np_train_ics = 20.0 * np.random.rand(4, train_points)
+train_points = 1000
+np_train_vs = np.random.uniform(low=0.5, high=3.0, size=(2, train_points))
+np_train_ics = np.random.uniform(low=2.0, high=20.0, size=(4, train_points))
 
-validation_points = 50
-np_validation_vs = 3.0 * np.random.rand(2, validation_points)
-np_validation_ics = 20 * np.random.rand(4, validation_points)
+validation_points = 100
+np_validation_vs = np.random.uniform(low=0.5, high=3.0, size=(2, validation_points))
+np_validation_ics = np.random.uniform(low=2.0, high=20.0, size=(4, validation_points))
 
 test_points = 5
-np_test_vs = 3.0 * np.random.rand(2, test_points)
-np_test_ics = 20.0 * np.random.rand(4, test_points)
+np_test_vs = np.random.uniform(low=0.5, high=3.0, size=(2, test_points))
+np_test_ics = np.random.uniform(low=2.0, high=20.0, size=(4, test_points))
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
@@ -100,9 +100,9 @@ for i in range(np_validation_vs.shape[1]):
         np_validation_h = np.append(np_validation_h, np_h, axis=1)
 
 # Normalizers
-t_normalizer = Normalizer()
-v_normalizer = Normalizer()
-h_normalizer = Normalizer()
+t_normalizer = Normalizer(analysis_axis=1)
+v_normalizer = Normalizer(analysis_axis=1)
+h_normalizer = Normalizer(analysis_axis=1)
 
 t_normalizer.parametrize(np_t)
 v_normalizer.parametrize(np_train_vs)

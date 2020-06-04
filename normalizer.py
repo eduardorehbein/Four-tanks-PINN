@@ -1,11 +1,19 @@
+import numpy as np
+
+
 class Normalizer:
-    def __init__(self):
+    def __init__(self, analysis_axis=0):
+        self.analysis_axis = analysis_axis
         self.mean = None
         self.std = None
 
     def parametrize(self, data):
-        self.mean = data.mean()
-        self.std = data.std()
+        self.mean = np.array([data.mean(axis=self.analysis_axis)])
+        self.std = np.array([data.std(axis=self.analysis_axis)])
+
+        if self.analysis_axis == 1:
+            self.mean = np.transpose(self.mean)
+            self.std = np.transpose(self.std)
 
     def normalize(self, data):
         if self.mean is None or self.std is None:

@@ -7,8 +7,7 @@ import numpy as np
 
 
 class PINN:
-    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
-                 np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
+    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer, X_normalizer, Y_normalizer,
                  learning_rate=0.001, parallel_threads=8):
         # Parallel threads config
         # tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
@@ -18,26 +17,18 @@ class PINN:
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
 
-        # Domain bounds
-        self.tf_input_upper_bounds = self.tensor(np_input_upper_bounds)
-        self.tf_input_lower_bounds = self.tensor(np_input_lower_bounds)
-
-        # Image bounds
-        self.tf_output_lower_bounds = self.tensor(np_output_lower_bounds)
-        self.tf_output_upper_bounds = self.tensor(np_output_upper_bounds)
+        # Normalizers
+        self.X_normalizer = X_normalizer
+        self.Y_normalizer = Y_normalizer
 
         # Model
         self.model = tf.keras.Sequential()
         self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
-        self.model.add(tf.keras.layers.Lambda(
-            lambda tf_X: 2.0 * (tf_X - self.tf_input_lower_bounds) /
-                         (self.tf_input_upper_bounds - self.tf_input_lower_bounds) - 1.0))  # Normalize to [-1,1]
+        self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))  # Normalize data
         for _ in range(hidden_layers):
             self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
         self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
-        self.model.add(tf.keras.layers.Lambda(
-            lambda X: (1 + X) * (self.tf_output_upper_bounds - self.tf_output_lower_bounds) /
-                      2.0 + self.tf_output_lower_bounds))  # Denormalize to [output_lower_bounds, output_upper_bounds]
+        self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))  # Denormalize data
 
         # Optimizer
         self.learning_rate = learning_rate
@@ -60,7 +51,8 @@ class PINN:
         '''
 
         tf_X = self.tensor(np_X)
-        return self.model(tf_X)  # TODO: Inspect output
+        tf_NN = self.model(tf_X)
+        return tf_NN.numpy()
 
     def tensor(self, np_X):
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float32)
@@ -89,8 +81,8 @@ class PINN:
         np_val_loss = tf_val_loss.numpy()
         tf_best_val_loss = copy.deepcopy(tf_val_loss)
         epochs_over_analysis = 100
-        # val_moving_average_queue = Queue(maxsize=epochs_over_analysis) # TODO: Improve validation loss analysis
-        # last_val_moving_average = tf_val_total_loss.numpy()
+        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
+        last_val_moving_average = np_val_loss
         best_weights = copy.deepcopy(self.model.get_weights())
         loss_rising = False
         while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
@@ -115,18 +107,18 @@ class PINN:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            # if val_moving_average_queue.full():  # TODO: Improve validation loss analysis
-            #     val_moving_average_queue.get()
-            # val_moving_average_queue.put(np_val_loss)
-            #
+            if val_moving_average_queue.full():
+                val_moving_average_queue.get()
+            val_moving_average_queue.put(np_val_loss)
+
             if epoch % epochs_over_analysis == 0:
                 print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
-            #
-            #     val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
-            #     if val_moving_average > last_val_moving_average:
-            #         loss_rising = True
-            #     else:
-            #         last_val_moving_average = val_moving_average
+
+                val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
+                if val_moving_average > last_val_moving_average:
+                    loss_rising = True
+                else:
+                    last_val_moving_average = val_moving_average
 
             epoch = epoch + 1
         self.model.set_weights(best_weights)
@@ -162,26 +154,22 @@ class PINN:
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
             tf_prediction = self.model(tf_X)
-            prediction_variables_len = tf_prediction.shape[1]
-            np_nn_selector = np.eye(prediction_variables_len)
+            np_output_selector = np.eye(self.n_outputs)
             decomposed_prediction = []
-            for i in range(prediction_variables_len):
-                prediction_single_output = tf.matmul(tf_prediction, tf.transpose(self.tensor([np_nn_selector[i]])))
-                decomposed_prediction.append(prediction_single_output)
+            for i in range(self.n_outputs):
+                tf_prediction_single_output = tf.matmul(tf_prediction,
+                                                        tf.transpose(self.tensor([np_output_selector[i]])))
+                decomposed_prediction.append(tf_prediction_single_output)
 
         return self.expression(tf_X, tf_prediction, decomposed_prediction, f_tape)
 
     def expression(self, tf_X, tf_prediction, decomposed_prediction, tape):
-        return 0
+        return self.tensor(0.0)
 
 
 class FourTanksPINN(PINN):
-    def __init__(self, sys_params, hidden_layers, units_per_layer,
-                 np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
-                 learning_rate=0.001):
-        super().__init__(7, 4, hidden_layers, units_per_layer,
-                         np_input_lower_bounds, np_input_upper_bounds, np_output_lower_bounds, np_output_upper_bounds,
-                         learning_rate)
+    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+        super().__init__(7, 4, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         # System parameters to matrix form
         self.B = []
