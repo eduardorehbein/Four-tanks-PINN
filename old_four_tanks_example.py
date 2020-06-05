@@ -2,7 +2,7 @@ import numpy as np
 import datetime
 from four_tanks_system import ResponseAnalyser, CasadiSimulator
 from normalizer import Normalizer
-from pinn import FourTanksPINN
+from pinn import OldFourTanksPINN
 from plot import PdfPlotter
 
 # Random seed
@@ -26,18 +26,22 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 
 # Controls and initial conditions for training and testing
 train_points = 1000
-np_train_vs = 3.0 * np.random.rand(2, train_points)
-np_train_ics = 20.0 * np.random.rand(4, train_points)
+np_train_vs = np.random.uniform(low=0.5, high=3.0, size=(2, train_points))
+np_train_ics = np.random.uniform(low=2.0, high=20.0, size=(4, train_points))
+
+validation_points = 100
+np_validation_vs = np.random.uniform(low=0.5, high=3.0, size=(2, validation_points))
+np_validation_ics = np.random.uniform(low=2.0, high=20.0, size=(4, validation_points))
 
 test_points = 5
-np_test_vs = 3.0 * np.random.rand(2, test_points)
-np_test_ics = 20.0 * np.random.rand(4, test_points)
+np_test_vs = np.random.uniform(low=0.5, high=3.0, size=(2, test_points))
+np_test_ics = np.random.uniform(low=2.0, high=20.0, size=(4, test_points))
 
 # Neural network's working period
 resp_an = ResponseAnalyser(sys_params)
-# TODO: Change parameter analysis method
+# TODO: Improve parameter analysis method
 # t_range = resp_an.get_ol_sample_time(np.concatenate([np_train_vs, np_test_vs], axis=1))
-t_range = 10.0
+t_range = 15.0
 np_t = np.array([np.linspace(0, t_range, 100)])
 
 # Training data
@@ -49,9 +53,9 @@ np_train_f_t = None
 np_train_f_v = None
 np_train_f_ic = None
 
-for j in range(np_train_vs.shape[1]):
-    np_ic = np.transpose(np.tile(np_train_ics[:, j], (np_t.shape[1], 1)))
-    np_v = np.transpose(np.tile(np_train_vs[:, j], (np_t.shape[1], 1)))
+for i in range(np_train_vs.shape[1]):
+    np_v = np.transpose(np.tile(np_train_vs[:, i], (np_t.shape[1], 1)))
+    np_ic = np.transpose(np.tile(np_train_ics[:, i], (np_t.shape[1], 1)))
 
     if np_train_f_t is None:
         np_train_f_t = np_t
@@ -66,10 +70,39 @@ for j in range(np_train_vs.shape[1]):
     else:
         np_train_f_ic = np.append(np_train_f_ic, np_ic, axis=1)
 
+# Validation data
+np_validation_t = None
+np_validation_v = None
+np_validation_ic = None
+np_validation_h = None
+
+simulator = CasadiSimulator(sys_params)
+for i in range(np_validation_vs.shape[1]):
+    np_v = np.transpose(np.tile(np_validation_vs[:, i], (np_t.shape[1], 1)))
+    np_ic = np.transpose(np.tile(np_validation_ics[:, i], (np_t.shape[1], 1)))
+    np_h = simulator.run(np_t, np_validation_vs[:, i], np_validation_ics[:, i])
+
+    if np_validation_t is None:
+        np_validation_t = np_t
+    else:
+        np_validation_t = np.append(np_validation_t, np_t, axis=1)
+    if np_validation_v is None:
+        np_validation_v = np_v
+    else:
+        np_validation_v = np.append(np_validation_v, np_v, axis=1)
+    if np_validation_ic is None:
+        np_validation_ic = np_ic
+    else:
+        np_validation_ic = np.append(np_validation_ic, np_ic, axis=1)
+    if np_validation_h is None:
+        np_validation_h = np_h
+    else:
+        np_validation_h = np.append(np_validation_h, np_h, axis=1)
+
 # Normalizers
-t_normalizer = Normalizer()
-v_normalizer = Normalizer()
-h_normalizer = Normalizer()
+t_normalizer = Normalizer(analysis_axis=1)
+v_normalizer = Normalizer(analysis_axis=1)
+h_normalizer = Normalizer(analysis_axis=1)
 
 t_normalizer.parametrize(np_t)
 v_normalizer.parametrize(np_train_vs)
@@ -84,28 +117,43 @@ np_norm_train_f_t = t_normalizer.normalize(np_train_f_t)
 np_norm_train_f_v = v_normalizer.normalize(np_train_f_v)
 np_norm_train_f_ic = h_normalizer.normalize(np_train_f_ic)
 
+# Validation data normalization
+np_norm_validation_t = t_normalizer.normalize(np_validation_t)
+np_norm_validation_v = v_normalizer.normalize(np_validation_v)
+np_norm_validation_ic = h_normalizer.normalize(np_validation_ic)
+np_norm_validation_h = h_normalizer.normalize(np_validation_h)
+
 # PINN instancing
 hidden_layers = [15, 15, 15, 15, 15]
 learning_rate = 0.001
-model = FourTanksPINN(sys_params=sys_params,
-                      hidden_layers=hidden_layers,
-                      learning_rate=learning_rate,
-                      t_normalizer=t_normalizer,
-                      v_normalizer=v_normalizer,
-                      h_normalizer=h_normalizer)
+model = OldFourTanksPINN(sys_params=sys_params,
+                         hidden_layers=hidden_layers,
+                         learning_rate=learning_rate,
+                         t_normalizer=t_normalizer,
+                         v_normalizer=v_normalizer,
+                         h_normalizer=h_normalizer)
 
 # Training
 max_epochs = 40000
-stop_loss = 0.0001
-model.train(np_norm_train_u_t, np_norm_train_u_v, np_norm_train_u_ic, np_norm_train_f_t, np_norm_train_f_v,
-            np_norm_train_f_ic, max_epochs=max_epochs, stop_loss=stop_loss)
+stop_loss = 0.0005
+model.train(np_train_u_t=np_norm_train_u_t,
+            np_train_u_v=np_norm_train_u_v,
+            np_train_u_ic=np_norm_train_u_ic,
+            np_train_f_t=np_norm_train_f_t,
+            np_train_f_v=np_norm_train_f_v,
+            np_train_f_ic=np_norm_train_f_ic,
+            np_validation_t=np_norm_validation_t,
+            np_validation_v=np_norm_validation_v,
+            np_validation_ic=np_norm_validation_ic,
+            np_validation_h=np_norm_validation_h,
+            max_epochs=max_epochs,
+            stop_loss=stop_loss)
 
 # Testing
 sampled_outputs = []
 predictions = []
 titles = []
 
-simulator = CasadiSimulator(sys_params)
 np_norm_t = t_normalizer.normalize(np_t)
 for i in range(np_test_vs.shape[1]):
     np_v = np_test_vs[:, i]
@@ -132,7 +180,7 @@ plotter = PdfPlotter()
 
 # Loss plot
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
-             y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_total_loss)],
+             y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
              labels=['train loss', 'val loss'],
              title='Train and validation total losses',
              x_label='Epoch',
@@ -143,14 +191,6 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              y_axis_list=[np.array(model.train_u_loss), np.array(model.train_f_loss)],
              labels=['u loss', 'f loss'],
              title='Train losses',
-             x_label='Epoch',
-             y_label='Loss',
-             limit_range=False,
-             y_scale='log')
-plotter.plot(x_axis=np.linspace(1, len(model.validation_u_loss), len(model.validation_u_loss)),
-             y_axis_list=[np.array(model.validation_u_loss), np.array(model.validation_f_loss)],
-             labels=['u loss', 'f loss'],
-             title='Validation losses',
              x_label='Epoch',
              y_label='Loss',
              limit_range=False,
@@ -168,7 +208,7 @@ for i in range(number_of_plots):
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)) + ' cm',
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)),
                      x_label='t',
                      y_label='Level',
                      limit_range=True)
