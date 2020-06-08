@@ -10,8 +10,8 @@ class PINN:
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer, X_normalizer, Y_normalizer,
                  learning_rate=0.001, parallel_threads=8):
         # Parallel threads config
-        # tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
-        # tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
+        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
+        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
 
         # Input and output vectors' dimension
         self.n_inputs = n_inputs
@@ -162,14 +162,34 @@ class PINN:
 
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
-    def save_model(self, path):
-        self.model.save(path)
+    def save_weights(self, path):
+        self.model.save_weights(path)
 
-    def load_model(self, path):
-        self.model = tf.keras.models.load_model(path)
+    def load_weights(self, path):
+        self.model.load_weights(path)
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
         return self.tensor(0.0)
+
+
+class OneTankPINN(PINN):
+    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+        super().__init__(3, 1, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
+
+        self.k = sys_params['k']
+        self.a = sys_params['a']
+        self.A = sys_params['A']
+        self.two_g_sqrt = tf.sqrt(self.tensor(2 * sys_params['g']))
+
+    def expression(self, tf_X, tf_NN, decomposed_NN, tape):
+        # ODE sys: dh_dt = (k/A)*v - (a/A)*sqrt(2*g*h)
+
+        tf_v = tf.slice(tf_X, [0, 1], [tf_X.shape[0], 1])
+
+        tf_dnn_dx = tape.gradient(tf_NN, tf_X)
+        tf_dnn_dt = tf.slice(tf_dnn_dx, [0, 0], [tf_dnn_dx.shape[0], 1])
+
+        return self.A * tf_dnn_dt + (self.a * self.two_g_sqrt) * tf.sqrt(tf_NN) - self.k * tf_v
 
 
 class FourTanksPINN(PINN):
@@ -197,7 +217,7 @@ class FourTanksPINN(PINN):
                          [(1 - sys_params['alpha1']) * sys_params['k1'], 0]], dtype=tf.float32)
         )  # B[2]
 
-        self.two_g_sqrt = tf.sqrt(tf.constant(2 * sys_params['g'], dtype=tf.float32))
+        self.two_g_sqrt = tf.sqrt(self.tensor(2 * sys_params['g']))
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
         # ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1

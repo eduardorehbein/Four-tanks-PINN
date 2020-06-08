@@ -213,4 +213,4 @@ for i in range(number_of_plots):
                      y_label='Level',
                      limit_range=True)
 now = datetime.datetime.now()
-plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')

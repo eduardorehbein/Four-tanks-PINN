@@ -135,6 +135,7 @@ for i in range(np_test_vs.shape[1]):
             ') V.'
     titles.append(title)
 
+# Plotter
 plotter = PdfPlotter()
 
 # Loss plot
@@ -166,9 +167,12 @@ for i in range(test_points):
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)),
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 3)),
                      x_label='t',
                      y_label='Level',
                      limit_range=True)
 now = datetime.datetime.now()
-plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+
+# Model saving
+model.save_weights('./models/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')
