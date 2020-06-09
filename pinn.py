@@ -25,7 +25,7 @@ class PINN:
         self.model = tf.keras.Sequential()
         self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
         self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))  # Normalize data
-        for _ in range(hidden_layers):
+        for i in range(hidden_layers):
             self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
         self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
         self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))  # Denormalize data
