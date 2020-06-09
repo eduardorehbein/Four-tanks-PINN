@@ -73,7 +73,7 @@ np_val_ic = None
 np_val_h = None
 
 simulator = CasadiSimulator(sys_params)
-for i in range(np_validation_vs.shape[1]):
+for i in range(np_validation_vs.shape[0]):
     np_v = np.tile(np_validation_vs[i, 0], (np_t.shape[0], 1))
     np_ic = np.tile(np_validation_ics[i, 0], (np_t.shape[0], 1))
     np_h = simulator.run(np.transpose(np_t), np_validation_vs[i, 0], np_validation_ics[i, 0])
@@ -82,12 +82,12 @@ for i in range(np_validation_vs.shape[1]):
         np_val_t = np_t
         np_val_v = np_v
         np_val_ic = np_ic
-        np_val_h = np_h
+        np_val_h = np.transpose(np_h)
     else:
         np_val_t = np.append(np_val_t, np_t, axis=0)
         np_val_v = np.append(np_val_v, np_v, axis=0)
         np_val_ic = np.append(np_val_ic, np_ic, axis=0)
-        np_val_h = np.append(np_val_h, np_h, axis=0)
+        np_val_h = np.append(np_val_h, np.transpose(np_h), axis=0)
 
 np_val_X = np.concatenate([np_val_t, np_val_v, np_val_ic], axis=1)
 np_val_Y = np_val_h
