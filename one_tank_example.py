@@ -94,7 +94,7 @@ np_val_Y = np_val_h
 
 # PINN instancing
 model = OneTankPINN(sys_params=sys_params,
-                    hidden_layers=5,
+                    hidden_layers=2,
                     units_per_layer=15,
                     X_normalizer=X_normalizer,
                     Y_normalizer=Y_normalizer)
@@ -157,7 +157,7 @@ for i in range(test_points):
         mse = (np.square(y_axis_list[0] - y_axis_list[1])).mean()
         plotter.plot(x_axis=np.transpose(np_t)[0],
                      y_axis_list=y_axis_list,
-                     labels=['h' + str(j + 1), 'nn' + str(j + 1)],
+                     labels=['h', 'nn'],
                      title=titles[i] + ' Plot MSE: ' + str(round(mse, round_in_title)),
                      x_label='t',
                      y_label='Level',

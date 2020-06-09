@@ -23,7 +23,7 @@ class CasadiSimulator:
         self.k = cs.SX.sym('k')
 
         self.params = cs.vertcat(self.g, self.a, self.A, self.k, self.v)
-        self.rhs = cs.vertcat(-(self.a / self.A) * cs.sqrt(2 * self.g * self.h) + (self.k / self.A) * self.v)
+        self.rhs = cs.vertcat((self.k / self.A) * self.v - (self.a / self.A) * cs.sqrt(2 * self.g * self.h))
         self.dae = {'x': self.h, 'p': self.params, 't': self.t, 'ode': self.rhs}
 
     def run(self, np_t, np_v, np_ic):
