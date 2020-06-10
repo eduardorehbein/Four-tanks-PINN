@@ -1,9 +1,9 @@
 import numpy as np
 import datetime
-from one_tank_system import CasadiSimulator
-from normalizer import Normalizer
-from pinn import OneTankPINN
-from plot import PdfPlotter
+from util.systems.one_tank_system import CasadiSimulator
+from util.normalizer import Normalizer
+from util.pinn import OneTankPINN
+from util.plot import PdfPlotter
 
 # Random seed
 np.random.seed(30)
@@ -32,7 +32,7 @@ np_test_ics = np.random.uniform(low=2.0, high=20.0, size=(test_points, 1))
 t_range = 15.0
 np_t = np.transpose(np.array([np.linspace(0, t_range, 100)]))
 
-# Training data
+# Train data
 np_train_u_t = np.zeros((np_train_ics.shape[0], 1))
 np_train_u_v = np_train_vs
 np_train_u_ic = np_train_ics
@@ -76,7 +76,7 @@ simulator = CasadiSimulator(sys_params)
 for i in range(np_validation_vs.shape[0]):
     np_v = np.tile(np_validation_vs[i, 0], (np_t.shape[0], 1))
     np_ic = np.tile(np_validation_ics[i, 0], (np_t.shape[0], 1))
-    np_h = simulator.run(np.transpose(np_t), np_validation_vs[i, 0], np_validation_ics[i, 0])
+    np_h = simulator.run(np_t[0, :], np_validation_vs[i, 0], np_validation_ics[i, 0])
 
     if i == 0:
         np_val_t = np_t
@@ -112,7 +112,7 @@ for i in range(np_test_vs.shape[0]):
     np_v = np_test_vs[i, 0]
     np_ic = np_test_ics[i, 0]
 
-    np_h = simulator.run(np.transpose(np_t), np_v, np_ic)
+    np_h = simulator.run(np_t[0, :], np_v, np_ic)
     sampled_outputs.append(np_h)
 
     np_test_v = np.tile(np_v, (np_t.shape[0], 1))
