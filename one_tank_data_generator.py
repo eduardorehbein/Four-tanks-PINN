@@ -15,7 +15,8 @@ highest_v = 3.0
 lowest_h = 2.0
 highest_h = 20.0
 
-file_name = 'rand_seed_' + str(random_seed) + '_' + \
+file_name = 'rand_seed_' + str(random_seed) + \
+            '_t_range_' + str(t_range) + '_' + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
