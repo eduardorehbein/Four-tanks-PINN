@@ -39,14 +39,14 @@ ics = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios,))
 t = np.linspace(0, t_range, collocation_points)
 
 # Data
-data = {'scenario': np.tile(0, (collocation_points,)),
+data = {'scenario': np.tile(1, (collocation_points,)),
         't': t,
         'v': np.tile(vs[0], (collocation_points,)),
         'ic': np.tile(ics[0], (collocation_points,)),
         'h': simulator.run(t, vs[0], ics[0])}
 
 for i in range(1, scenarios):
-    scenario = np.tile(i, (collocation_points,))
+    scenario = np.tile(i + 1, (collocation_points,))
     v = np.tile(vs[i], (collocation_points,))
     ic = np.tile(ics[i], (collocation_points,))
     h = simulator.run(t, vs[i], ics[i])

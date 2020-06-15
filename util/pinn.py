@@ -52,7 +52,11 @@ class PINN:
 
         tf_X = self.tensor(np_X)
         tf_NN = self.model(tf_X)
-        return tf_NN.numpy()
+
+        if tf_NN.shape[1] == 1:
+            return np.transpose(tf_NN.numpy())[0]
+        else:
+            return tf_NN.numpy()
 
     def tensor(self, np_X):
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float32)
@@ -62,13 +66,10 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_epochs=20000, stop_loss=0.0005, attach_loss=True):
+              max_epochs=20e3, stop_loss=5e-4, attach_loss=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(np_train_u_Y)
-
-        np_train_f_X = copy.deepcopy(np_train_f_X)
-        np.random.shuffle(np_train_f_X)
         tf_train_f_X = self.tensor(np_train_f_X)
 
         # Validation data
