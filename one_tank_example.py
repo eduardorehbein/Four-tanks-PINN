@@ -101,7 +101,7 @@ model = OneTankPINN(sys_params=sys_params,
 
 # Training
 model.load_weights('models/one_tank/2020-06-09-10-41-32-2l-15n.h5')
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=10, stop_loss=0.00001)
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=15000, stop_loss=0.00001)
 
 # Testing
 sampled_outputs = []
