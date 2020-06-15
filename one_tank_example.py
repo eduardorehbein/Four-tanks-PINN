@@ -101,7 +101,7 @@ model = OneTankPINN(sys_params=sys_params,
 
 # Training
 model.load_weights('models/one_tank/2020-06-09-10-41-32-2l-15n.h5')
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=10000, stop_loss=0.00001)
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=10, stop_loss=0.00001)
 
 # Testing
 sampled_outputs = []
@@ -113,7 +113,7 @@ for i in range(np_test_vs.shape[0]):
     np_v = np_test_vs[i, 0]
     np_ic = np_test_ics[i, 0]
 
-    np_h = simulator.run(np_t[0, :], np_v, np_ic)
+    np_h = simulator.run(np_t[:, 0], np_v, np_ic)
     sampled_outputs.append(np_h)
 
     np_test_v = np.tile(np_v, (np_t.shape[0], 1))
