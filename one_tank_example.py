@@ -26,7 +26,7 @@ np_train_u_Y = train_u_df['h'].to_numpy()
 np_train_f_X = train_df[['t', 'v', 'ic']].sample(frac=1).to_numpy()
 
 # Validation data
-val_df = df[(df['scenario'] > 1000) & (df['scenario'] <= 1100)].sample(frac=1)
+val_df = df[(df['scenario'] > 1000) & (df['scenario'] <= 1100)]#.sample(frac=1)
 np_val_X = val_df[['t', 'v', 'ic']].to_numpy()
 np_val_Y = val_df['h'].to_numpy()
 
@@ -43,11 +43,11 @@ model = OneTankPINN(sys_params=sys_params,
                     units_per_layer=15,
                     X_normalizer=X_normalizer,
                     Y_normalizer=Y_normalizer,
-                    learning_rate=1e-4)
+                    learning_rate=1e-5)
 
 # Training
 model.load_weights('models/one_tank/2020-06-15-11-55-47-2l-15n.h5')
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=20e3, stop_loss=1e-7)
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=20e3, stop_loss=1e-6)
 
 # Testing
 sampled_outputs = []
