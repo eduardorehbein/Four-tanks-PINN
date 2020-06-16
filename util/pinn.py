@@ -1,7 +1,9 @@
 import copy
 from queue import Queue
 import tensorflow as tf
+import tensorflow_probability as tfp
 import numpy as np
+from factory_lbfgs import function_factory
 
 # TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
@@ -66,7 +68,7 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_epochs=20e3, stop_loss=5e-4, attach_loss=True):
+              max_epochs=20e3, stop_loss=5e-4, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(np_train_u_Y)
@@ -77,6 +79,14 @@ class PINN:
         tf_val_Y = self.tensor(np_val_Y)
 
         # Training process
+        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                        max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
+        self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                         max_epochs/1e2, stop_loss/1e2, u_loss_weight, f_loss_weight, attach_losses)
+
+    def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                   max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+        # Train with Adam
         epoch = 0
         tf_val_loss = tf.constant(np.Inf, dtype=tf.float32)
         np_val_loss = tf_val_loss.numpy()
@@ -94,14 +104,14 @@ class PINN:
 
             # Updating weights and biases
             grads = self.get_grads(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                                   f_loss_weight=0.1, attach_losses=attach_loss)
+                                   u_loss_weight, f_loss_weight, attach_losses)
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Validation
             tf_val_NN = self.model(tf_val_X)
             tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
-            if attach_loss:
+            if attach_losses:
                 self.validation_loss.append(np_val_loss)
 
             if tf_val_loss < tf_best_val_loss:
@@ -123,28 +133,33 @@ class PINN:
 
             epoch = epoch + 1
         self.model.set_weights(best_weights)
-        print('Validation loss at the training\'s end: ' + str(np_val_loss))
+        print('Validation loss at the Adam\'s end: ' + str(np_val_loss))
 
-    def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=False):
+    def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses):
         with tf.GradientTape(persistent=True) as total_tape:
-            tf_u_NN = self.model(tf_u_X)
-            tf_u_loss = tf.reduce_mean(tf.square(tf_u_NN - tf_u_Y))
-
-            tf_f_NN = self.f(tf_f_X)
-            tf_f_loss = tf.reduce_mean(tf.square(tf_f_NN))
-
-            tf_weighted_u_loss = u_loss_weight * tf_u_loss
-            tf_weighted_f_loss = f_loss_weight * tf_f_loss
-
-            tf_total_loss = tf_weighted_u_loss + tf_weighted_f_loss
+            tf_total_loss = self.get_loss(tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses)
         grads = total_tape.gradient(tf_total_loss, self.model.trainable_variables)
+
+        return grads
+
+    def get_loss(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses):
+        tf_u_NN = self.model(tf_u_X)
+        tf_u_loss = tf.reduce_mean(tf.square(tf_u_NN - tf_u_Y))
+
+        tf_f_NN = self.f(tf_f_X)
+        tf_f_loss = tf.reduce_mean(tf.square(tf_f_NN))
+
+        tf_weighted_u_loss = u_loss_weight * tf_u_loss
+        tf_weighted_f_loss = f_loss_weight * tf_f_loss
+
+        tf_total_loss = tf_weighted_u_loss + tf_weighted_f_loss
 
         if attach_losses:
             self.train_u_loss.append(tf_weighted_u_loss.numpy())
             self.train_f_loss.append(tf_weighted_f_loss.numpy())
             self.train_total_loss.append(tf_total_loss.numpy())
 
-        return grads
+        return tf_total_loss
 
     def f(self, tf_X):
         '''
@@ -162,6 +177,30 @@ class PINN:
                 decomposed_NN.append(tf_NN_single_output)
 
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
+
+    def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                    max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+        # Train with L-BFGS
+        func = function_factory(self.model,
+                                lambda: self.get_loss(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                                              u_loss_weight, f_loss_weight, attach_losses))
+
+        # Convert initial model parameters to a 1D tf.Tensor
+        init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
+        results = tfp.optimizer.lbfgs_minimize(value_and_gradients_function=func, initial_position=init_params,
+                                               max_iterations=max_epochs, tolerance=stop_loss)
+
+        # After training, the final optimized parameters are still in results.position
+        # So we have to manually put them back to the model
+        func.assign_new_model_parameters(results.position)
+
+        # Validation
+        tf_val_NN = self.model(tf_val_X)
+        tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
+        np_val_loss = tf_val_loss.numpy()
+        print('Validation loss after L-BFGS: ' + str(np_val_loss))
+        if attach_losses:
+            self.validation_loss.append(np_val_loss)
 
     def save_weights(self, path):
         self.model.save_weights(path)

@@ -1,7 +1,6 @@
 import numpy
 import tensorflow as tf
-import tensorflow_probability as tfp
-from matplotlib import pyplot
+
 
 def function_factory(model, loss):  # train_x, train_y, collocation_inputs):
     """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
@@ -80,56 +79,3 @@ def function_factory(model, loss):  # train_x, train_y, collocation_inputs):
     f.assign_new_model_parameters = assign_new_model_parameters
 
     return f
-
-def plot_helper(inputs, outputs, title, fname):
-    """Plot helper"""
-    pyplot.figure()
-    pyplot.tricontourf(inputs[:, 0], inputs[:, 1], outputs.flatten(), 100)
-    pyplot.xlabel("x")
-    pyplot.ylabel("y")
-    pyplot.title(title)
-    pyplot.colorbar()
-    pyplot.savefig(fname)
-
-if __name__ == "__main__":
-
-    # use float64 by default
-    tf.keras.backend.set_floatx("float64")
-
-    # prepare training data
-    x_1d = numpy.linspace(-1., 1., 11)
-    x1, x2 = numpy.meshgrid(x_1d, x_1d)
-    inps = numpy.stack((x1.flatten(), x2.flatten()), 1)
-    outs = numpy.reshape(inps[:, 0]**2+inps[:, 1]**2, (x_1d.size**2, 1))
-
-    # prepare prediction model, loss function, and the function passed to L-BFGS solver
-    pred_model = tf.keras.Sequential(
-        [tf.keras.Input(shape=[2,]),
-         tf.keras.layers.Dense(64, "tanh"),
-         tf.keras.layers.Dense(64, "tanh"),
-         tf.keras.layers.Dense(1, None)])
-
-    loss_fun = tf.keras.losses.MeanSquaredError()
-    func = function_factory(pred_model, loss_fun, inps, outs)
-
-    # convert initial model parameters to a 1D tf.Tensor
-    init_params = tf.dynamic_stitch(func.idx, pred_model.trainable_variables)
-
-    # train the model with L-BFGS solver
-    results = tfp.optimizer.lbfgs_minimize(
-        value_and_gradients_function=func, initial_position=init_params, max_iterations=500)
-
-    # after training, the final optimized parameters are still in results.position
-    # so we have to manually put them back to the model
-    func.assign_new_model_parameters(results.position)
-
-    # do some prediction
-    pred_outs = pred_model.predict(inps)
-    err = numpy.abs(pred_outs-outs)
-    print("L2-error norm: {}".format(numpy.linalg.norm(err)/numpy.sqrt(11)))
-
-    # plot figures
-    plot_helper(inps, outs, "Exact solution", "ext_soln.png")
-    plot_helper(inps, pred_outs, "Predicted solution", "pred_soln.png")
-    plot_helper(inps, err, "Absolute error", "abs_err.png")
-    pyplot.show()
