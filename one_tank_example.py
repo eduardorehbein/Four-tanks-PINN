@@ -42,13 +42,12 @@ model = OneTankPINN(sys_params=sys_params,
                     hidden_layers=2,
                     units_per_layer=15,
                     X_normalizer=X_normalizer,
-                    Y_normalizer=Y_normalizer,
-                    learning_rate=1e-5)
+                    Y_normalizer=Y_normalizer)
 
 # Training
-model.load_weights('models/one_tank/2020-06-15-11-55-47-2l-15n.h5')
+# model.load_weights('models/one_tank/2020-06-16-10-29-13-2l-15n.h5')
 model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-            max_epochs=2e2, stop_loss=1e-7, f_loss_weight=0.1)
+            max_epochs=40000, f_loss_weight=0.1)
 
 # Testing
 sampled_outputs = []
@@ -107,7 +106,7 @@ for h, nn, title in zip(sampled_outputs, predictions, titles):
                  y_label='Level',
                  limit_range=True)
 now = datetime.datetime.now()
-# plotter.save_pdf('./results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
-#
-# # Model saving
-# model.save_weights('./models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')
+plotter.save_pdf('./results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+
+# Model saving
+model.save_weights('./models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')

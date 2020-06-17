@@ -24,6 +24,7 @@ class PINN:
         self.Y_normalizer = Y_normalizer
 
         # Model
+        tf.keras.backend.set_floatx('float64')
         self.model = tf.keras.Sequential()
         self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
         self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))  # Normalize data
@@ -61,7 +62,7 @@ class PINN:
             return tf_NN.numpy()
 
     def tensor(self, np_X):
-        return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float32)
+        return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)
 
     def set_opt_params(self, learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-7):
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
@@ -78,71 +79,92 @@ class PINN:
         tf_val_X = self.tensor(np_val_X)
         tf_val_Y = self.tensor(np_val_Y)
 
-        # Training process
-        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                        max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
+        # Train with Adam
+        trained_epochs = self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                                         max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
+
+        # Train with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                         max_epochs/1e2, stop_loss/1e2, u_loss_weight, f_loss_weight, attach_losses)
+                         max_epochs - trained_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                    max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
-        # Train with Adam
+        # Train states and variables
         epoch = 0
-        tf_val_loss = tf.constant(np.Inf, dtype=tf.float32)
+        epochs_over_analysis = 100  # TODO: make it a method parameter
+        grads = None
+        loss_rising = False
+
+        tf_val_loss = self.tensor(np.Inf)
         np_val_loss = tf_val_loss.numpy()
         tf_best_val_loss = copy.deepcopy(tf_val_loss)
-        epochs_over_analysis = 100
-        # val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
-        # last_val_moving_average = np_val_loss
+        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
+        last_val_moving_average = np_val_loss
+
         best_weights = copy.deepcopy(self.model.get_weights())
-        loss_rising = False
+
+        # Train process
         while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
+            # Updating weights and biases
+            if grads is not None:
+                self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+
             # Learning rate adjustments
             if epoch % 10000 == 0:
                 self.learning_rate = self.learning_rate / 2
                 self.set_opt_params(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
-            # Updating weights and biases
-            grads = self.get_grads(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                                   u_loss_weight, f_loss_weight, attach_losses)
-            self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
+            # Network's gradients
+            with tf.GradientTape(persistent=True) as tape:
+                tf_total_loss, tf_u_loss, tf_f_loss = self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                                                                      u_loss_weight, f_loss_weight)
+            grads = tape.gradient(tf_total_loss, self.model.trainable_variables)
 
             # Validation
             tf_val_NN = self.model(tf_val_X)
             tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
-            if attach_losses:
-                self.validation_loss.append(np_val_loss)
 
             if tf_val_loss < tf_best_val_loss:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            # if val_moving_average_queue.full():
-            #     val_moving_average_queue.get()
-            # val_moving_average_queue.put(np_val_loss)
+            # Updating validation moving average
+            if val_moving_average_queue.full():
+                val_moving_average_queue.get()
+            val_moving_average_queue.put(np_val_loss)
 
+            # Saving loss values
+            if attach_losses:
+                self.train_total_loss.append(tf_total_loss.numpy())
+                self.train_u_loss.append(tf_u_loss.numpy())
+                self.train_f_loss.append(tf_f_loss.numpy())
+
+                self.validation_loss.append(np_val_loss)
+
+            # Stop analysis
             if epoch % epochs_over_analysis == 0:
                 print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
 
-                # val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
-                # if val_moving_average > last_val_moving_average:
-                #     loss_rising = True
-                # else:
-                #     last_val_moving_average = val_moving_average
+                val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
+                if val_moving_average > last_val_moving_average:
+                    loss_rising = True
+                else:
+                    last_val_moving_average = val_moving_average
 
+            # Epoch count
             epoch = epoch + 1
+
+        # Setting best weights
         self.model.set_weights(best_weights)
-        print('Validation loss at the Adam\'s end: ' + str(np_val_loss))
 
-    def get_grads(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses):
-        with tf.GradientTape(persistent=True) as total_tape:
-            tf_total_loss = self.get_loss(tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses)
-        grads = total_tape.gradient(tf_total_loss, self.model.trainable_variables)
+        # Printing final validation loss
+        print('Validation loss at the Adam\'s end: ' + str(tf_best_val_loss.numpy()))
 
-        return grads
+        # Returning trained epochs
+        return epoch - 1
 
-    def get_loss(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight, attach_losses):
+    def get_losses(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight):
         tf_u_NN = self.model(tf_u_X)
         tf_u_loss = tf.reduce_mean(tf.square(tf_u_NN - tf_u_Y))
 
@@ -151,15 +173,9 @@ class PINN:
 
         tf_weighted_u_loss = u_loss_weight * tf_u_loss
         tf_weighted_f_loss = f_loss_weight * tf_f_loss
-
         tf_total_loss = tf_weighted_u_loss + tf_weighted_f_loss
 
-        if attach_losses:
-            self.train_u_loss.append(tf_weighted_u_loss.numpy())
-            self.train_f_loss.append(tf_weighted_f_loss.numpy())
-            self.train_total_loss.append(tf_total_loss.numpy())
-
-        return tf_total_loss
+        return tf_total_loss, tf_weighted_u_loss, tf_weighted_f_loss
 
     def f(self, tf_X):
         '''
@@ -180,10 +196,9 @@ class PINN:
 
     def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                     max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
-        # Train with L-BFGS
         func = function_factory(self.model,
-                                lambda: self.get_loss(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                                              u_loss_weight, f_loss_weight, attach_losses))
+                                lambda: self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                                                        u_loss_weight, f_loss_weight)[0])
 
         # Convert initial model parameters to a 1D tf.Tensor
         init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
@@ -200,6 +215,12 @@ class PINN:
         np_val_loss = tf_val_loss.numpy()
         print('Validation loss after L-BFGS: ' + str(np_val_loss))
         if attach_losses:
+            tf_total_loss, tf_u_loss, tf_f_loss = self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                                                                  u_loss_weight, f_loss_weight)
+            self.train_total_loss.append(tf_total_loss.numpy())
+            self.train_u_loss.append(tf_u_loss.numpy())
+            self.train_f_loss.append(tf_f_loss.numpy())
+
             self.validation_loss.append(np_val_loss)
 
     def save_weights(self, path):
@@ -246,22 +267,22 @@ class FourTanksPINN(PINN):
         # System parameters to matrix form
         self.B = []
         self.B.append(
-            tf.constant([[sys_params['A1'], 0, 0, 0],
+            self.tensor([[sys_params['A1'], 0, 0, 0],
                          [0, sys_params['A2'], 0, 0],
                          [0, 0, sys_params['A3'], 0],
-                         [0, 0, 0, sys_params['A4']]], dtype=tf.float32)
+                         [0, 0, 0, sys_params['A4']]])
         )  # B[0]
         self.B.append(
-            tf.constant([[sys_params['a1'], 0, - sys_params['a3'], 0],
+            self.tensor([[sys_params['a1'], 0, - sys_params['a3'], 0],
                          [0, sys_params['a2'], 0, - sys_params['a4']],
                          [0, 0, sys_params['a3'], 0],
-                         [0, 0, 0, sys_params['a4']]], dtype=tf.float32)
+                         [0, 0, 0, sys_params['a4']]])
         )  # B[1]
         self.B.append(
-            tf.constant([[sys_params['alpha1'] * sys_params['k1'], 0],
+            self.tensor([[sys_params['alpha1'] * sys_params['k1'], 0],
                          [0, sys_params['alpha2'] * sys_params['k2']],
                          [0, (1 - sys_params['alpha2']) * sys_params['k2']],
-                         [(1 - sys_params['alpha1']) * sys_params['k1'], 0]], dtype=tf.float32)
+                         [(1 - sys_params['alpha1']) * sys_params['k1'], 0]])
         )  # B[2]
 
         self.two_g_sqrt = tf.sqrt(self.tensor(2 * sys_params['g']))
