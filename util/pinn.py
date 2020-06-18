@@ -69,7 +69,7 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_epochs=20e3, adams_epochs_over_analysis=100, stop_loss=5e-4,
+              max_epochs=20000, epochs_over_analysis=100, stop_loss=5e-4,
               u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
@@ -82,12 +82,14 @@ class PINN:
 
         # Train with Adam
         trained_epochs = self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                                         max_epochs, adams_epochs_over_analysis, stop_loss,
+                                         int(0.02 * max_epochs), epochs_over_analysis, stop_loss,
                                          u_loss_weight, f_loss_weight, attach_losses)
 
         # Train with L-BFGS
+        iterations = max_epochs - trained_epochs
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                         max_epochs - trained_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
+                         iterations, epochs_over_analysis, stop_loss,
+                         u_loss_weight, f_loss_weight, attach_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                    max_epochs, epochs_over_analysis, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
@@ -106,7 +108,7 @@ class PINN:
 
         # Train process
         while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
-            # Updating weights and biases
+            # Update weights and biases
             if grads is not None:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
@@ -130,12 +132,12 @@ class PINN:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            # Updating validation moving average
+            # Update validation moving average
             if val_moving_average_queue.full():
                 val_moving_average_queue.get()
             val_moving_average_queue.put(np_val_loss)
 
-            # Saving loss values
+            # Save loss values
             if attach_losses:
                 self.train_total_loss.append(tf_total_loss.numpy())
                 self.train_u_loss.append(tf_u_loss.numpy())
@@ -155,15 +157,18 @@ class PINN:
 
             # Epoch count
             epoch = epoch + 1
+        # Epoch adjustment
+        epoch = epoch - 1
 
-        # Setting best weights
+        # Set best weights
         self.model.set_weights(best_weights)
 
-        # Printing final validation loss
-        print('Validation loss at the Adam\'s end: ' + str(tf_best_val_loss.numpy()))
+        # Print final validation loss
+        print('Validation loss at the Adam\'s end -> Epoch:', str(epoch), '-',
+              'validation loss:', tf_best_val_loss.numpy())
 
-        # Returning trained epochs
-        return epoch - 1
+        # Return trained epochs
+        return epoch
 
     def get_losses(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight):
         tf_u_NN = self.model(tf_u_X)
@@ -196,9 +201,9 @@ class PINN:
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
     def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                    max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+                    max_epochs, epochs_over_analysis,  stop_loss, u_loss_weight, f_loss_weight, attach_losses):
         func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                                u_loss_weight, f_loss_weight, attach_losses)
+                                epochs_over_analysis, u_loss_weight, f_loss_weight, attach_losses)
 
         # Convert initial model parameters to a 1D tf.Tensor
         init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)

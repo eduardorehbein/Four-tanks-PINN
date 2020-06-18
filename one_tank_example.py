@@ -40,14 +40,13 @@ Y_normalizer.parametrize(np_train_u_Y)
 # PINN instancing
 model = OneTankPINN(sys_params=sys_params,
                     hidden_layers=2,
-                    units_per_layer=15,
+                    units_per_layer=10,
                     X_normalizer=X_normalizer,
                     Y_normalizer=Y_normalizer)
 
 # Training
 # model.load_weights('models/one_tank/2020-06-16-10-29-13-2l-15n.h5')
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-            max_epochs=40000, f_loss_weight=0.1)
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, stop_loss=5e-6, f_loss_weight=0.1)
 
 # Testing
 sampled_outputs = []

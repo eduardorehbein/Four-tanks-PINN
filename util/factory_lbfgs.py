@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                     u_loss_weight, f_loss_weight, attach_losses):
+                     epochs_over_analysis, u_loss_weight, f_loss_weight, attach_losses):
     """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
     Args:
         model [in]: an instance of `tf.keras.Model` or its subclasses.
@@ -68,11 +68,12 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, t
         grads = tf.dynamic_stitch(idx, grads)
 
         # Validation
-        f.iter.assign_add(1)
+        epoch = f.iter.numpy()
         tf_val_NN = pinn.model(tf_val_X)
         tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
         np_val_loss = tf_val_loss.numpy()
-        print('Epoch:', str(f.iter.numpy()), '-', 'L-BFGS\' validation loss:', str(np_val_loss))
+        if epoch % epochs_over_analysis == 0:
+            print('Epoch:', str(epoch), '-', 'L-BFGS\' validation loss:', str(np_val_loss))
 
         # Save losses
         if attach_losses:
@@ -81,6 +82,8 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, t
             pinn.train_f_loss.append(tf_f_loss.numpy())
 
             pinn.validation_loss.append(np_val_loss)
+
+        f.iter.assign_add(1)
 
         return tf_total_loss, grads
 

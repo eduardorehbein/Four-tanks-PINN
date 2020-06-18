@@ -6,7 +6,7 @@ from util.systems.one_tank_system import CasadiSimulator
 # Hyperparameters
 random_seed = 30
 
-scenarios = 1105
+scenarios = 2000
 collocation_points = 100
 t_range = 15.0
 
