@@ -3,7 +3,7 @@ from queue import Queue
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
-from factory_lbfgs import function_factory
+from util.factory_lbfgs import function_factory
 
 # TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
@@ -69,7 +69,8 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_epochs=20e3, stop_loss=5e-4, u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=True):
+              max_epochs=20e3, adams_epochs_over_analysis=100, stop_loss=5e-4,
+              u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(np_train_u_Y)
@@ -81,17 +82,17 @@ class PINN:
 
         # Train with Adam
         trained_epochs = self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                                         max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
+                                         max_epochs, adams_epochs_over_analysis, stop_loss,
+                                         u_loss_weight, f_loss_weight, attach_losses)
 
         # Train with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                          max_epochs - trained_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                   max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+                   max_epochs, epochs_over_analysis, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
         # Train states and variables
         epoch = 0
-        epochs_over_analysis = 100  # TODO: make it a method parameter
         grads = None
         loss_rising = False
 
@@ -144,7 +145,7 @@ class PINN:
 
             # Stop analysis
             if epoch % epochs_over_analysis == 0:
-                print('Validation loss on epoch ' + str(epoch) + ': ' + str(np_val_loss))
+                print('Epoch:', str(epoch), '-', 'Adam\'s validation loss:', str(np_val_loss))
 
                 val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
                 if val_moving_average > last_val_moving_average:
@@ -196,9 +197,8 @@ class PINN:
 
     def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                     max_epochs, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
-        func = function_factory(self.model,
-                                lambda: self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                                                        u_loss_weight, f_loss_weight)[0])
+        func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                                u_loss_weight, f_loss_weight, attach_losses)
 
         # Convert initial model parameters to a 1D tf.Tensor
         init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
@@ -208,20 +208,6 @@ class PINN:
         # After training, the final optimized parameters are still in results.position
         # So we have to manually put them back to the model
         func.assign_new_model_parameters(results.position)
-
-        # Validation
-        tf_val_NN = self.model(tf_val_X)
-        tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
-        np_val_loss = tf_val_loss.numpy()
-        print('Validation loss after L-BFGS: ' + str(np_val_loss))
-        if attach_losses:
-            tf_total_loss, tf_u_loss, tf_f_loss = self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                                                                  u_loss_weight, f_loss_weight)
-            self.train_total_loss.append(tf_total_loss.numpy())
-            self.train_u_loss.append(tf_u_loss.numpy())
-            self.train_f_loss.append(tf_f_loss.numpy())
-
-            self.validation_loss.append(np_val_loss)
 
     def save_weights(self, path):
         self.model.save_weights(path)
