@@ -2,17 +2,11 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from typing import Any, Union
-
 import tensorflow as tf
 import tensorflow_probability as tfp
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import plot, show
-import sys, os
-from data_esp import prepare_data
 
 from tensorflow.keras.layers import Dense
-import factory_lbfgs
+from util import factory_lbfgs
 
 
 class PINN(object):

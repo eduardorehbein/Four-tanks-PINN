@@ -42,12 +42,12 @@ model = OneTankPINN(sys_params=sys_params,
                     hidden_layers=2,
                     units_per_layer=15,
                     X_normalizer=X_normalizer,
-                    Y_normalizer=Y_normalizer,
-                    learning_rate=1e-5)
+                    Y_normalizer=Y_normalizer)
 
 # Training
-model.load_weights('models/one_tank/2020-06-15-11-55-47-2l-15n.h5')
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=20e3, stop_loss=1e-6)
+# model.load_weights('models/one_tank/2020-06-16-10-29-13-2l-15n.h5')
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+            max_epochs=40000, f_loss_weight=0.1)
 
 # Testing
 sampled_outputs = []
