@@ -69,8 +69,8 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_epochs=20000, epochs_over_analysis=100, stop_loss=5e-4,
-              u_loss_weight=1.0, f_loss_weight=1.0, attach_losses=True):
+              max_adam_epochs=500, max_lbfgs_iterations=2000, epochs_per_print=100,
+              u_loss_weight=1.0, f_loss_weight=1.0, save_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(np_train_u_Y)
@@ -81,33 +81,26 @@ class PINN:
         tf_val_Y = self.tensor(np_val_Y)
 
         # Train with Adam
-        trained_epochs = self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                                         int(0.02 * max_epochs), epochs_over_analysis, stop_loss,
-                                         u_loss_weight, f_loss_weight, attach_losses)
+        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+                        max_adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
-        iterations = max_epochs - trained_epochs
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                         iterations, epochs_over_analysis, stop_loss,
-                         u_loss_weight, f_loss_weight, attach_losses)
+                         max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                   max_epochs, epochs_over_analysis, stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+                   max_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         # Train states and variables
         epoch = 0
         grads = None
-        loss_rising = False
 
         tf_val_loss = self.tensor(np.Inf)
-        np_val_loss = tf_val_loss.numpy()
         tf_best_val_loss = copy.deepcopy(tf_val_loss)
-        val_moving_average_queue = Queue(maxsize=epochs_over_analysis)
-        last_val_moving_average = np_val_loss
 
         best_weights = copy.deepcopy(self.model.get_weights())
 
         # Train process
-        while epoch < max_epochs and tf_val_loss > stop_loss and not loss_rising:
+        while epoch <= max_epochs:
             # Update weights and biases
             if grads is not None:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
@@ -132,31 +125,20 @@ class PINN:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            # Update validation moving average
-            if val_moving_average_queue.full():
-                val_moving_average_queue.get()
-            val_moving_average_queue.put(np_val_loss)
-
             # Save loss values
-            if attach_losses:
+            if save_losses:
                 self.train_total_loss.append(tf_total_loss.numpy())
                 self.train_u_loss.append(tf_u_loss.numpy())
                 self.train_f_loss.append(tf_f_loss.numpy())
 
                 self.validation_loss.append(np_val_loss)
 
-            # Stop analysis
-            if epoch % epochs_over_analysis == 0:
+            if epoch % epochs_per_print == 0:
                 print('Epoch:', str(epoch), '-', 'Adam\'s validation loss:', str(np_val_loss))
-
-                val_moving_average = sum(val_moving_average_queue.queue) / val_moving_average_queue.qsize()
-                if val_moving_average > last_val_moving_average:
-                    loss_rising = True
-                else:
-                    last_val_moving_average = val_moving_average
 
             # Epoch count
             epoch = epoch + 1
+
         # Epoch adjustment
         epoch = epoch - 1
 
@@ -166,9 +148,6 @@ class PINN:
         # Print final validation loss
         print('Validation loss at the Adam\'s end -> Epoch:', str(epoch), '-',
               'validation loss:', tf_best_val_loss.numpy())
-
-        # Return trained epochs
-        return epoch
 
     def get_losses(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight):
         tf_u_NN = self.model(tf_u_X)
@@ -201,18 +180,18 @@ class PINN:
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
     def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                    max_epochs, epochs_over_analysis,  stop_loss, u_loss_weight, f_loss_weight, attach_losses):
+                    max_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                                epochs_over_analysis, u_loss_weight, f_loss_weight, attach_losses)
+                                epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Convert initial model parameters to a 1D tf.Tensor
         init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
-        results = tfp.optimizer.lbfgs_minimize(value_and_gradients_function=func, initial_position=init_params,
-                                               max_iterations=max_epochs, tolerance=stop_loss)
+        res = tfp.optimizer.lbfgs_minimize(value_and_gradients_function=func, initial_position=init_params,
+                                           max_iterations=max_iterations)  # Each iteration is equivalent to 2-4 epochs
 
-        # After training, the final optimized parameters are still in results.position
+        # After training, the final optimized parameters are still in res.position
         # So we have to manually put them back to the model
-        func.assign_new_model_parameters(results.position)
+        func.assign_new_model_parameters(res.position)
 
     def save_weights(self, path):
         self.model.save_weights(path)

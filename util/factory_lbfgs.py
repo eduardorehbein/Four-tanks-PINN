@@ -3,13 +3,19 @@ import tensorflow as tf
 
 
 def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                     epochs_over_analysis, u_loss_weight, f_loss_weight, attach_losses):
+                     epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
     """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
     Args:
-        model [in]: an instance of `tf.keras.Model` or its subclasses.
-        loss [in]: a function with signature loss_value = loss(model, train_x, train_y, collocation_inputs).
-        train_x [in]: the input part of training data.
-        train_y [in]: the output part of training data.
+        pinn [in]: an instance of a `pinn.PINN` subclasses.
+        tf_train_u_X [in]: tensorflow train inputs for MSEu.
+        tf_train_u_Y [in]: tensorflow train outputs for MSEu.
+        tf_train_f_X [in]: tensorflow train inputs for MSEf.
+        tf_val_X [in]: tensorflow validation inputs.
+        tf_val_Y [in]: tensorflow validation outputs.
+        epochs_per_print [in]: the number of epochs between loss printings.
+        u_loss_weight [in]: MSEu weight in total loss.
+        f_loss_weight [in]: MSEf weight in total loss.
+        save_losses [in]: to save or not MSE, MSEu and MSEf status in the PINN object.
     Returns:
         A function that has a signature of:
             loss_value, gradients = f(model_parameters).
@@ -72,11 +78,11 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, t
         tf_val_NN = pinn.model(tf_val_X)
         tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
         np_val_loss = tf_val_loss.numpy()
-        if epoch % epochs_over_analysis == 0:
+        if epoch % epochs_per_print == 0:
             print('Epoch:', str(epoch), '-', 'L-BFGS\' validation loss:', str(np_val_loss))
 
         # Save losses
-        if attach_losses:
+        if save_losses:
             pinn.train_total_loss.append(tf_total_loss.numpy())
             pinn.train_u_loss.append(tf_u_loss.numpy())
             pinn.train_f_loss.append(tf_f_loss.numpy())
@@ -87,7 +93,7 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, t
 
         return tf_total_loss, grads
 
-    # store these information as members so we can use them outside the scope
+    # Store these information as members so we can use them outside the scope
     f.iter = tf.Variable(0)
     f.idx = idx
     f.part = part

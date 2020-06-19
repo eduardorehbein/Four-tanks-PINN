@@ -54,7 +54,7 @@ model = OneTankPINN(sys_params=sys_params,
                     Y_normalizer=Y_normalizer)
 
 # Model loading
-model.load_weights('models/one_tank/2020-06-18-10-51-14-2l-10n.h5')
+model.load_weights('models/one_tank/2020-06-18-15-09-38-2l-10n-best-model.h5')
 
 # Weights p file
 weights = model.get_weights()
