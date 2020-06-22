@@ -11,7 +11,7 @@ collocation_points = 100
 t_range = 15.0
 
 lowest_v = 0.5
-highest_v = 3.0
+highest_v = 4.45
 lowest_h = 2.0
 highest_h = 20.0
 

@@ -6,6 +6,11 @@ class PdfPlotter:
     def __init__(self):
         self.y_range = float('-inf')
 
+    def text_page(self, text):
+        firstPage = plt.figure(figsize=(11.69, 8.27))
+        firstPage.clf()
+        firstPage.text(0.5, 0.5, text, transform=firstPage.transFigure, size=24, ha="center")
+
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label, limit_range=False, y_scale='linear'):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')

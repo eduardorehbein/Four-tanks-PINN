@@ -227,7 +227,7 @@ class OneTankPINN(PINN):
         tf_dnn_dx = tape.gradient(tf_NN, tf_X)
         tf_dnn_dt = tf.slice(tf_dnn_dx, [0, 0], [tf_dnn_dx.shape[0], 1])
 
-        return self.A * tf_dnn_dt + (self.a * self.two_g_sqrt) * tf.sqrt(tf_NN) - self.k * tf_v
+        return self.A * tf_dnn_dt + (self.a * self.two_g_sqrt) * tf.sqrt(tf.maximum(tf_NN, 0.0)) - self.k * tf_v
 
 
 class FourTanksPINN(PINN):
