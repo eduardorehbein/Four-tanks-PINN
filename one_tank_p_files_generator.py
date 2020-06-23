@@ -15,7 +15,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Data loading
-df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0_1105_scenarios_100_collocation_points.csv')
+df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_1105_scenarios_100_collocation_points.csv')
 
 # Train data
 train_df = df[df['scenario'] <= 1000]
@@ -54,7 +54,7 @@ model = OneTankPINN(sys_params=sys_params,
                     Y_normalizer=Y_normalizer)
 
 # Model loading
-model.load_weights('models/one_tank/2020-06-18-15-09-38-2l-10n-best-model.h5')
+model.load_weights('models/one_tank/2020-06-18-15-09-38-15s-2l-10n-best-model.h5')
 
 # Weights p file
 weights = model.get_weights()

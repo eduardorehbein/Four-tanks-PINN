@@ -11,7 +11,8 @@ class PdfPlotter:
         firstPage.clf()
         firstPage.text(0.5, 0.5, text, transform=firstPage.transFigure, size=24, ha="center")
 
-    def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label, limit_range=False, y_scale='linear'):
+    def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
+             limit_range=False, x_scale='linear', y_scale='linear'):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -19,6 +20,7 @@ class PdfPlotter:
             plt.title(title)
             plt.xlabel(x_label)
             plt.ylabel(y_label)
+            plt.xscale(x_scale)
             plt.yscale(y_scale)
             y_min = float('inf')
             for i in range(len(y_axis_list)):

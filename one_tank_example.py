@@ -21,7 +21,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Data loading
-df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0_1105_scenarios_100_collocation_points.csv')
+df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_1105_scenarios_100_collocation_points.csv')
 
 # Train data
 train_df = df[df['scenario'] <= 1000]
@@ -109,7 +109,7 @@ for h, nn, title in zip(sampled_outputs, predictions, titles):
                  y_label='Level',
                  limit_range=True)
 now = datetime.datetime.now()
-plotter.save_pdf('./results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
 
 # Model saving
-model.save_weights('./models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')
+model.save_weights('models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')

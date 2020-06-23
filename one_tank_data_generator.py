@@ -6,9 +6,9 @@ from util.systems.one_tank_system import CasadiSimulator
 # Hyperparameters
 random_seed = 30
 
-scenarios = 2000
+scenarios = 1105
 collocation_points = 100
-t_range = 15.0
+t_range = 50.0
 
 lowest_v = 0.5
 highest_v = 4.45
@@ -16,7 +16,7 @@ lowest_h = 2.0
 highest_h = 20.0
 
 file_name = 'rand_seed_' + str(random_seed) + \
-            '_t_range_' + str(t_range) + '_' + \
+            '_t_range_' + str(t_range) + 's_' + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
