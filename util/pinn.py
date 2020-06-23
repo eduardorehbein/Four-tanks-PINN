@@ -1,5 +1,4 @@
 import copy
-from queue import Queue
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
@@ -10,11 +9,7 @@ from util.factory_lbfgs import function_factory
 
 class PINN:
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer, X_normalizer, Y_normalizer,
-                 learning_rate=0.001, parallel_threads=8):
-        # Parallel threads config
-        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
-        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
-
+                 learning_rate=0.001):
         # Input and output vectors' dimension
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -286,11 +281,7 @@ class FourTanksPINN(PINN):
 
 class OldFourTanksPINN:
     def __init__(self, sys_params, hidden_layers, learning_rate,
-                 t_normalizer=None, v_normalizer=None, h_normalizer=None, parallel_threads=8):
-        # Parallel threads config
-        tf.config.threading.set_inter_op_parallelism_threads(parallel_threads)
-        tf.config.threading.set_intra_op_parallelism_threads(parallel_threads)
-
+                 t_normalizer=None, v_normalizer=None, h_normalizer=None):
         # System parameters to matrix form
         self.B = []
         self.B.append(

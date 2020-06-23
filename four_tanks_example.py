@@ -1,9 +1,14 @@
 import numpy as np
+import tensorflow as tf
 import datetime
 from util.systems.four_tanks_system import CasadiSimulator
 from util.normalizer import Normalizer
 from util.pinn import FourTanksPINN
 from util.plot import PdfPlotter
+
+# Parallel threads config
+tf.config.threading.set_inter_op_parallelism_threads(8)
+tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Random seed
 np.random.seed(30)
