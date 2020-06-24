@@ -26,17 +26,23 @@ dfs = [pd.read_csv('data/one_tank/rand_seed_30_t_range_' + str(working_period) +
                    's_1105_scenarios_100_collocation_points.csv') for working_period in working_periods_to_test]
 
 # Train parameters
-max_adam_epochs = 10 # 500
-max_lbfgs_iterations = 10 # 1000
+max_adam_epochs = 500
+max_lbfgs_iterations = 1000
 
 # Plotter
 plotter = PdfPlotter()
 plotter.text_page('One tank neural network\'s working period test:' +
-                      '\nMax adam epochs -> ' + str(max_adam_epochs) +
-                      '\nMax L-BFGS iterations -> ' + str(max_lbfgs_iterations))
+                  '\nAdam epochs -> ' + str(max_adam_epochs) +
+                  '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
+                  '\nTrain Nu -> 1e3' +
+                  '\nTrain Nf -> 100e3' +
+                  '\nValidation points -> 10e3' +
+                  '\nTest points -> ' + str(100*len(working_periods_to_test)))
 
 plot_dict = {'final train u losses': [], 'final train f losses': [],
-             'final train total losses': [], 'final val losses': []}
+             'final train total losses': [], 'final val losses': [],
+             'ts': [], 'hs': [], 'nns': [], 'titles': []}
+
 for df in dfs:
     # Current working period
     working_period = df['t'].max()
@@ -72,30 +78,56 @@ for df in dfs:
     model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
                 max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
 
-    # Save plot data
+    # Test
+    test_df = df[df['scenario'] == 1]
+
+    plot_dict['ts'].append(test_df['t'].to_numpy())
+    plot_dict['hs'].append(test_df['h'].to_numpy())
+
+    np_test_X = test_df[['t', 'v', 'ic']].to_numpy()
+    nn = model.predict(np_test_X)
+    plot_dict['nns'].append(nn)
+
+    v = test_df['v'].min()
+    title = 'Control input v = ' + str(round(v, 3)) + ' V.'
+    plot_dict['titles'].append(title)
+
+    # Final losses
     plot_dict['final train u losses'].append(model.train_u_loss[-1])
     plot_dict['final train f losses'].append(model.train_f_loss[-1])
     plot_dict['final train total losses'].append(model.train_total_loss[-1])
     plot_dict['final val losses'].append(model.validation_loss[-1])
 
+# Loss plot
 plotter.plot(x_axis=np.array(working_periods_to_test),
              y_axis_list=[np.array(plot_dict['final train total losses']), np.array(plot_dict['final val losses'])],
              labels=['train loss', 'val loss'],
              title='Train and validation total losses',
-             x_label='Working period',
-             y_label='Loss',
+             x_label='Working period [s]',
+             y_label='Loss [cm²]',
              x_scale='log',
              y_scale='log')
 plotter.plot(x_axis=np.array(working_periods_to_test),
              y_axis_list=[np.array(plot_dict['final train u losses']), np.array(plot_dict['final train f losses'])],
              labels=['u loss', 'f loss'],
              title='Train losses',
-             x_label='Working period',
-             y_label='Loss',
+             x_label='Working period [s]',
+             y_label='Loss [cm²]',
              x_scale='log',
              y_scale='log')
 
-# TODO: One test plot for each model
+# Result plot
+y_axis_list = np.concatenate(plot_dict['hs'] + plot_dict['nns'])
+plotter.set_y_range(y_axis_list)
+for t, h, nn, title in zip(plot_dict['ts'], plot_dict['hs'], plot_dict['nns'], plot_dict['titles']):
+    mse = (np.square(h - nn)).mean()
+    plotter.plot(x_axis=t,
+                 y_axis_list=[h, nn],
+                 labels=['h', 'nn'],
+                 title=title + ' Plot MSE: ' + str(round(mse, 3)) + ' cm²',
+                 x_label='Time [s]',
+                 y_label='Level [cm]',
+                 limit_range=True)
 
 now = datetime.datetime.now()
 plotter.save_pdf('./results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-working-period-test.pdf')

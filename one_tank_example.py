@@ -82,7 +82,7 @@ plotter.plot(x_axis=np.linspace(1, train_total_loss_len, train_total_loss_len),
              labels=['train loss', 'val loss'],
              title='Train and validation total losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 train_u_loss_len = len(model.train_u_loss)
@@ -91,7 +91,7 @@ plotter.plot(x_axis=np.linspace(1, train_u_loss_len, train_u_loss_len),
              labels=['u loss', 'f loss'],
              title='Train losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 
@@ -104,9 +104,9 @@ for h, nn, title in zip(sampled_outputs, predictions, titles):
     plotter.plot(x_axis=np_t,
                  y_axis_list=[h, nn],
                  labels=['h', 'nn'],
-                 title=title + ' Plot MSE: ' + str(round(mse, round_in_title)),
-                 x_label='t',
-                 y_label='Level',
+                 title=title + ' Plot MSE: ' + str(round(mse, round_in_title)) + ' cm²',
+                 x_label='Time [s]',
+                 y_label='Level [cm]',
                  limit_range=True)
 now = datetime.datetime.now()
 plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')

@@ -149,7 +149,7 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_
              labels=['train loss', 'val loss'],
              title='Train and validation total losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_loss)),
@@ -157,7 +157,7 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              labels=['u loss', 'f loss'],
              title='Train losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 
@@ -172,9 +172,9 @@ for i in range(test_points):
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 3)),
-                     x_label='t',
-                     y_label='Level',
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 3)) + ' cm²',
+                     x_label='Time [s]',
+                     y_label='Level [cm]',
                      limit_range=True)
 now = datetime.datetime.now()
 plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')

@@ -52,8 +52,11 @@ max_lbfgs_iterations = 1000
 # Plotter
 plotter = PdfPlotter()
 plotter.text_page('One tank neural network\'s structural test:' +
-                  '\nMax adam epochs -> ' + str(max_adam_epochs) +
-                  '\nMax L-BFGS iterations -> ' + str(max_lbfgs_iterations))
+                  '\nAdam epochs -> ' + str(max_adam_epochs) +
+                  '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
+                  '\nTrain Nu -> 1e3' +
+                  '\nTrain Nf -> 100e3' +
+                  '\nValidation points -> 10e3')
 
 # Structural test
 plot_dict = dict()
@@ -87,28 +90,28 @@ plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              labels=[str(layers) + ' layers' for layers in layers_to_test],
              title='Final validation loss',
              x_label='Neurons per layer',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              y_scale='log')
 plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              y_axis_list=[np.array(plot_dict[layers]['final train total losses']) for layers in layers_to_test],
              labels=[str(layers) + ' layers' for layers in layers_to_test],
              title='Final train total loss',
              x_label='Neurons per layer',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              y_scale='log')
 plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              y_axis_list=[np.array(plot_dict[layers]['final train u losses']) for layers in layers_to_test],
              labels=[str(layers) + ' layers' for layers in layers_to_test],
              title='Final train u loss',
              x_label='Neurons per layer',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              y_scale='log')
 plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              y_axis_list=[np.array(plot_dict[layers]['final train f losses']) for layers in layers_to_test],
              labels=[str(layers) + ' layers' for layers in layers_to_test],
              title='Final train f loss',
              x_label='Neurons per layer',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              y_scale='log')
 
 now = datetime.datetime.now()
