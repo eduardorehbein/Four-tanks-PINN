@@ -105,7 +105,6 @@ plotter.plot(x_axis=np.array(working_periods_to_test),
              title='Train and validation total losses',
              x_label='Working period [s]',
              y_label='Loss [cm²]',
-             x_scale='log',
              y_scale='log')
 plotter.plot(x_axis=np.array(working_periods_to_test),
              y_axis_list=[np.array(plot_dict['final train u losses']), np.array(plot_dict['final train f losses'])],
@@ -113,7 +112,6 @@ plotter.plot(x_axis=np.array(working_periods_to_test),
              title='Train losses',
              x_label='Working period [s]',
              y_label='Loss [cm²]',
-             x_scale='log',
              y_scale='log')
 
 # Result plot
