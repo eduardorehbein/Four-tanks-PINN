@@ -21,7 +21,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Data loading
-working_periods_to_test = (0.001, 0.01, 0.1, 1.0, 10.0, 50.0, 100.0, 200.0)
+working_periods_to_test = (5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0)
 dfs = [pd.read_csv('data/one_tank/rand_seed_30_t_range_' + str(working_period) +
                    's_1105_scenarios_100_collocation_points.csv') for working_period in working_periods_to_test]
 
@@ -79,7 +79,7 @@ for df in dfs:
                 max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
 
     # Test
-    test_df = df[df['scenario'] == 1]
+    test_df = df[df['scenario'] == 1101]
 
     plot_dict['ts'].append(test_df['t'].to_numpy())
     plot_dict['hs'].append(test_df['h'].to_numpy())
