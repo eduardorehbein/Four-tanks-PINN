@@ -32,7 +32,7 @@ plotter = PdfPlotter()
 plotter.text_page('One tank neural network\'s Nu/Nf test:' +
                   '\nAdam epochs -> ' + str(max_adam_epochs) +
                   '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
-                  '\nNeural network\'s T -> 15s' +
+                  '\nNeural network\'s T -> 10s' +
                   '\nNeural network\'s structure -> 2 hidden layers of 10 neurons' +
                   '\nValidation points -> 10% of Nf')
 
@@ -46,8 +46,8 @@ for nf in nfs_to_test:
 
     for nu in nus_to_test:
         # Data loading
-        df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_' + str(int(1.1*nu)) +
-                         '_scenarios_' + str(nf/nu) + '_collocation_points.csv')
+        df = pd.read_csv('data/one_tank/rand_seed_30_t_range_10.0s_' + str(int(1.1*nu)) +
+                         '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
 
         # Train data
         train_df = df[df['scenario'] <= nu]
