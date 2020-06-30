@@ -41,20 +41,56 @@ class PINN:
         # Validation loss
         self.validation_loss = []
 
-    def predict(self, np_X):
+    def predict(self, np_X, np_ic=None, working_period=None, time_column=0):
         '''
-        Predict the output u(t)
-        :param np_X: data input points representing time t
-        :return: u(t)
+        Predict the output NN(X)
+        :param np_X: numpy data input points X
+        :return: NN(X)
         '''
 
-        tf_X = self.tensor(np_X)
-        tf_NN = self.model(tf_X)
+        if np_ic is None:
+            tf_X = self.tensor(np_X)
+            tf_NN = self.model(tf_X)
 
-        if tf_NN.shape[1] == 1:
-            return np.transpose(tf_NN.numpy())[0]
+            np_NN = tf_NN.numpy()
+            if np_NN.shape[1] == 1:
+                return np.transpose(np_NN)[0]
+            else:
+                return np_NN
+        elif np_X.shape[1] + np_ic.shape[0] == self.n_inputs:
+            if working_period is not None:
+                np_Z = self.process_input(np_X, np_ic, working_period, time_column)
+                tf_X = self.tensor(np_Z)
+                tf_NN = self.model(tf_X)
+
+                np_NN = tf_NN.numpy()
+                if np_NN.shape[1] == 1:
+                    return np.transpose(np_NN)[0]
+                else:
+                    return np_NN
+            else:
+                raise Exception('Missing neural network\'s working period.')
         else:
-            return tf_NN.numpy()
+            raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
+
+    def process_input(self, np_X, np_ic, working_period, time_column):
+        # TODO: Make it works with time steps bigger than working period
+        np_Z = copy.deepcopy(np_X)
+        np_Z[:, time_column] = np_Z[:, time_column] % working_period
+
+        previous_t = 0.0
+        np_y0 = copy.deepcopy(np_ic)
+        new_columns = []
+        for i, np_z in enumerate(np_Z):
+            if np_z[time_column] >= previous_t:
+                previous_t = np_z[time_column]
+            else:
+                np_w = copy.deepcopy(np_Z[i-1, :])
+                np_w[time_column] = working_period
+                np_y0 = self.predict(np.array([np.append(np_w, np_ic)]))
+            new_columns.append(np_y0)
+
+        return np.append(np_Z, np.append(new_columns), axis=1)
 
     def tensor(self, np_X):
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)
@@ -64,8 +100,8 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_adam_epochs=500, max_lbfgs_iterations=2000, epochs_per_print=100,
-              u_loss_weight=1.0, f_loss_weight=1.0, save_losses=True):
+              max_adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
+              u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(np_train_u_Y)

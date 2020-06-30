@@ -114,7 +114,7 @@ model = FourTanksPINN(sys_params=sys_params,
                       Y_normalizer=Y_normalizer)
 
 # Training
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, f_loss_weight=0.1)
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y)
 
 # Testing
 sampled_outputs = []

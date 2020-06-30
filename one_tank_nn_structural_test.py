@@ -77,7 +77,7 @@ for layers in layers_to_test:
         # Train
         print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
         model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
+                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
         # Save plot data
         plot_dict[layers]['final train u losses'].append(model.train_u_loss[-1])

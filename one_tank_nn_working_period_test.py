@@ -76,7 +76,7 @@ for df in dfs:
     # Train
     print('Model training with working period of ' + str(working_period) + ' seconds:')
     model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
+                max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
     # Test
     test_df = df[df['scenario'] == 1101]
