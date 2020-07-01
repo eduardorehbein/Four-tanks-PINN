@@ -19,7 +19,7 @@ file_name = 'long_signal_rand_seed_' + str(random_seed) + \
             '_t_range_' + str(t_range) + 's_' + \
             str(collocation_points) + '_collocation_points'
 
-# Setting random seed
+# Set random seed
 np.random.seed(random_seed)
 
 # System simulator
@@ -31,11 +31,11 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 simulator = CasadiSimulator(sys_params)
 
 # Controls and initial conditions for training and testing
-vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(t_range / v_change_t) - 1,))
+vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(t_range / v_change_t),))
 ic = (highest_h - lowest_h)*np.random.rand() + lowest_h
 
 # Time
-t = np.array([(t_range/collocation_points)*i for i in range(collocation_points)])
+t = np.linspace(0, t_range, collocation_points)
 t_change_index_step = int(v_change_t/(t_range/collocation_points))
 
 # Data
@@ -43,7 +43,7 @@ data = {'t': t,
         'v': np.tile(vs[0], (t_change_index_step,)),
         'h': simulator.run(t[:t_change_index_step], vs[0], ic)[0]}
 
-for i in range(len(vs)):
+for i in range(1, len(vs)):
     v = np.tile(vs[i], (t_change_index_step,))
     h = simulator.run(t[:t_change_index_step], vs[i], data['h'][-1])[0]
 

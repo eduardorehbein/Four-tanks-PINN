@@ -46,14 +46,14 @@ validation_data = [np_val_X, np_val_Y]
 with open('p_files/one_tank/validation_data.p', 'wb') as validation_p_file:
     pickle.dump(validation_data, validation_p_file)
 
-# PINN instancing
+# Instance PINN
 model = OneTankPINN(sys_params=sys_params,
                     hidden_layers=2,
                     units_per_layer=10,
                     X_normalizer=X_normalizer,
                     Y_normalizer=Y_normalizer)
 
-# Model loading
+# Load model
 model.load_weights('models/one_tank/2020-06-18-15-09-38-15s-2l-10n-best-model.h5')
 
 # Weights p file

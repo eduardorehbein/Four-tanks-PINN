@@ -20,7 +20,7 @@ file_name = 'rand_seed_' + str(random_seed) + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
-# Setting random seed
+# Set random seed
 np.random.seed(random_seed)
 
 # System simulator

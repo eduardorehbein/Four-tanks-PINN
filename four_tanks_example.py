@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import FourTanksPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -106,17 +106,17 @@ for i in range(np_validation_vs.shape[1]):
 np_val_X = np.transpose(np.concatenate([np_val_t, np_val_v, np_val_ic], axis=0))
 np_val_Y = np.transpose(np_val_h)
 
-# PINN instancing
+# Instance PINN
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=5,
                       units_per_layer=15,
                       X_normalizer=X_normalizer,
                       Y_normalizer=Y_normalizer)
 
-# Training
+# Train
 model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y)
 
-# Testing
+# Test
 sampled_outputs = []
 predictions = []
 titles = []
@@ -143,7 +143,7 @@ for i in range(np_test_vs.shape[1]):
 # Plotter
 plotter = PdfPlotter()
 
-# Loss plot
+# Plot losses
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
              y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
              labels=['train loss', 'val loss'],
@@ -161,7 +161,7 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              limit_range=False,
              y_scale='log')
 
-# Result plot
+# Plot test results
 for i in range(test_points):
     for j in range(sampled_outputs[i].shape[0]):
         y_axis_list = [sampled_outputs[i][j], predictions[i][j]]
@@ -176,8 +176,10 @@ for i in range(test_points):
                      x_label='Time [s]',
                      y_label='Level [cm]',
                      limit_range=True)
+
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
 
-# Model saving
+# Save model
 model.save_weights('./models/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')

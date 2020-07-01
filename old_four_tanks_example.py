@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import OldFourTanksPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -128,7 +128,7 @@ np_norm_validation_v = v_normalizer.normalize(np_validation_v)
 np_norm_validation_ic = h_normalizer.normalize(np_validation_ic)
 np_norm_validation_h = h_normalizer.normalize(np_validation_h)
 
-# PINN instancing
+# Instance PINN
 hidden_layers = [15, 15, 15, 15, 15]
 learning_rate = 0.001
 model = OldFourTanksPINN(sys_params=sys_params,
@@ -138,7 +138,7 @@ model = OldFourTanksPINN(sys_params=sys_params,
                          v_normalizer=v_normalizer,
                          h_normalizer=h_normalizer)
 
-# Training
+# Train
 max_epochs = 40000
 stop_loss = 0.0005
 model.train(np_train_u_t=np_norm_train_u_t,
@@ -154,7 +154,7 @@ model.train(np_train_u_t=np_norm_train_u_t,
             max_epochs=max_epochs,
             stop_loss=stop_loss)
 
-# Testing
+# Test
 sampled_outputs = []
 predictions = []
 titles = []
@@ -183,7 +183,7 @@ for i in range(np_test_vs.shape[1]):
 
 plotter = PdfPlotter()
 
-# Loss plot
+# Plot losses
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
              y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
              labels=['train loss', 'val loss'],
@@ -201,7 +201,7 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              limit_range=False,
              y_scale='log')
 
-# Result plot
+# Plot test results
 number_of_plots = test_points
 for i in range(number_of_plots):
     for j in range(sampled_outputs[i].shape[0]):
@@ -217,5 +217,7 @@ for i in range(number_of_plots):
                      x_label='t',
                      y_label='Level',
                      limit_range=True)
+
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')

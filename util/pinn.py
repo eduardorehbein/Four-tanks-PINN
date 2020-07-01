@@ -78,19 +78,20 @@ class PINN:
         np_Z = copy.deepcopy(np_X)
         np_Z[:, time_column] = np_Z[:, time_column] % working_period
 
-        previous_t = 0.0
+        previous_t = np_Z[0, time_column]
         np_y0 = copy.deepcopy(np_ic)
         new_columns = []
-        for i, np_z in enumerate(np_Z):
-            if np_z[time_column] >= previous_t:
-                previous_t = np_z[time_column]
-            else:
-                np_w = copy.deepcopy(np_Z[i-1, :])
+        for index, row in enumerate(np_Z):
+            if row[time_column] < previous_t:
+                np_w = copy.deepcopy(np_Z[index-1, :])
                 np_w[time_column] = working_period
-                np_y0 = self.predict(np.array([np.append(np_w, np_ic)]))
+                prediction_input = np.array([np.append(np_w, np_y0)])
+                np_y0 = self.predict(prediction_input)
+            previous_t = row[time_column]
             new_columns.append(np_y0)
+        np_new_columns = np.array(new_columns)
 
-        return np.append(np_Z, np.append(new_columns), axis=1)
+        return np.append(np_Z, np_new_columns, axis=1)
 
     def tensor(self, np_X):
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)

@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -20,7 +20,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Data loading
+# Load data
 working_periods_to_test = (5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 45.0)
 dfs = [pd.read_csv('data/one_tank/rand_seed_30_t_range_' + str(working_period) +
                    's_1105_scenarios_100_collocation_points.csv') for working_period in working_periods_to_test]
@@ -66,7 +66,7 @@ for df in dfs:
     X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X], axis=0))
     Y_normalizer.parametrize(np_train_u_Y)
 
-    # PINN instance
+    # Instance PINN
     model = OneTankPINN(sys_params=sys_params,
                         hidden_layers=2,
                         units_per_layer=10,
@@ -98,7 +98,7 @@ for df in dfs:
     plot_dict['final train total losses'].append(model.train_total_loss[-1])
     plot_dict['final val losses'].append(model.validation_loss[-1])
 
-# Loss plot
+# Plot losses
 plotter.plot(x_axis=np.array(working_periods_to_test),
              y_axis_list=[np.array(plot_dict['final train total losses']), np.array(plot_dict['final val losses'])],
              labels=['train loss', 'val loss'],
@@ -114,7 +114,7 @@ plotter.plot(x_axis=np.array(working_periods_to_test),
              y_label='Loss [cm²]',
              y_scale='log')
 
-# Result plot
+# Plot test results
 y_axis_list = np.concatenate(plot_dict['hs'] + plot_dict['nns'])
 plotter.set_y_range(y_axis_list)
 for t, h, nn, title in zip(plot_dict['ts'], plot_dict['hs'], plot_dict['nns'], plot_dict['titles']):
@@ -127,5 +127,6 @@ for t, h, nn, title in zip(plot_dict['ts'], plot_dict['hs'], plot_dict['nns'], p
                  y_label='Level [cm]',
                  limit_range=True)
 
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('./results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-working-period-test.pdf')
