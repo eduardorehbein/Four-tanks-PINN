@@ -69,8 +69,8 @@ best_model = OneTankPINN(sys_params=sys_params,
                          Y_normalizer=best_model_Y_normalizer)
 
 worst_model = OneTankPINN(sys_params=sys_params,
-                          hidden_layers=1,
-                          units_per_layer=2,
+                          hidden_layers=2,
+                          units_per_layer=10,
                           X_normalizer=worst_model_X_normalizer,
                           Y_normalizer=worst_model_Y_normalizer)
 
@@ -98,6 +98,11 @@ np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic, workin
 
 # Plotter
 plotter = PdfPlotter()
+plotter.text_page('One tank best and worst model:' +
+                  '\nAdam epochs -> ' + str(max_adam_epochs) +
+                  '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
+                  '\nNeural networks\' structure -> 2 hidden layers of 10 neurons' +
+                  '\nTest points -> ' + str(len(test_df)))
 
 # Plot train and validation losses
 loss_len = min(len(best_model.train_total_loss), len(worst_model.train_total_loss))
