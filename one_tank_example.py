@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -20,8 +20,8 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Data loading
-df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_1105_scenarios_100_collocation_points.csv')
+# Load data
+df = pd.read_csv('data/one_tank/rand_seed_30_t_range_10.0s_1105_scenarios_100_collocation_points.csv')
 
 # Train data
 train_df = df[df['scenario'] <= 1000]
@@ -42,17 +42,17 @@ Y_normalizer = Normalizer()
 X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X], axis=0))
 Y_normalizer.parametrize(np_train_u_Y)
 
-# PINN instancing
+# Instance PINN
 model = OneTankPINN(sys_params=sys_params,
                     hidden_layers=2,
                     units_per_layer=10,
                     X_normalizer=X_normalizer,
                     Y_normalizer=Y_normalizer)
 
-# Training
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, f_loss_weight=0.1)
+# Train
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_lbfgs_iterations=10000)
 
-# Testing
+# Test
 sampled_outputs = []
 predictions = []
 titles = []
@@ -75,7 +75,7 @@ for scenario in range(scenarios - 4, scenarios + 1):
 # Plotter
 plotter = PdfPlotter()
 
-# Loss plot
+# Plot losses
 train_total_loss_len = len(model.train_total_loss)
 plotter.plot(x_axis=np.linspace(1, train_total_loss_len, train_total_loss_len),
              y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
@@ -95,7 +95,7 @@ plotter.plot(x_axis=np.linspace(1, train_u_loss_len, train_u_loss_len),
              limit_range=False,
              y_scale='log')
 
-# Result plot
+# Plot test results
 y_axis_list = np.concatenate(sampled_outputs + predictions)
 plotter.set_y_range(y_axis_list)
 np_t = df[df['scenario'] == 1]['t'].to_numpy()
@@ -108,8 +108,10 @@ for h, nn, title in zip(sampled_outputs, predictions, titles):
                  x_label='Time [s]',
                  y_label='Level [cm]',
                  limit_range=True)
+
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
 
-# Model saving
+# Save model
 model.save_weights('models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')

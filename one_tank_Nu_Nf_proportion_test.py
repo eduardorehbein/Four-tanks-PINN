@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -45,7 +45,7 @@ for nf in nfs_to_test:
                      'final val losses': []}
 
     for nu in nus_to_test:
-        # Data loading
+        # Load data
         df = pd.read_csv('data/one_tank/rand_seed_30_t_range_10.0s_' + str(int(1.1*nu)) +
                          '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
 
@@ -68,7 +68,7 @@ for nf in nfs_to_test:
         X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X], axis=0))
         Y_normalizer.parametrize(np_train_u_Y)
 
-        # PINN instance
+        # Instance PINN
         model = OneTankPINN(sys_params=sys_params,
                             hidden_layers=2,
                             units_per_layer=10,
@@ -78,7 +78,7 @@ for nf in nfs_to_test:
         # Train
         print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
         model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
+                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
         # Save plot data
         plot_dict[nf]['final train u losses'].append(model.train_u_loss[-1])
@@ -86,6 +86,7 @@ for nf in nfs_to_test:
         plot_dict[nf]['final train total losses'].append(model.train_total_loss[-1])
         plot_dict[nf]['final val losses'].append(model.validation_loss[-1])
 
+# Plot results
 plotter.plot(x_axis=np.array(nus_to_test),
              y_axis_list=[np.array(plot_dict[nf]['final val losses']) for nf in nfs_to_test],
              labels=['Nf = ' + str(nf) for nf in nfs_to_test],
@@ -119,5 +120,6 @@ plotter.plot(x_axis=np.array(nus_to_test),
              x_scale='log',
              y_scale='log')
 
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nu-Nf-proportion-test.pdf')

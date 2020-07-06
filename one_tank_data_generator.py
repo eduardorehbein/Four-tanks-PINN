@@ -7,8 +7,8 @@ from util.systems.one_tank_system import CasadiSimulator
 random_seed = 30
 
 scenarios = 1100
-collocation_points = 100
-t_range = 10.0
+collocation_points = 2
+t_range = 0.001
 
 lowest_v = 0.5
 highest_v = 4.45
@@ -20,7 +20,7 @@ file_name = 'rand_seed_' + str(random_seed) + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
-# Setting random seed
+# Set random seed
 np.random.seed(random_seed)
 
 # System simulator
@@ -57,5 +57,5 @@ for i in range(1, scenarios):
     data['ic'] = np.append(data['ic'], ic)
     data['h'] = np.append(data['h'], h)
 
-train_df = pd.DataFrame(data)
-train_df.to_csv('data/one_tank/' + file_name + '.csv', index=False)
+df = pd.DataFrame(data)
+df.to_csv('data/one_tank/' + file_name + '.csv', index=False)

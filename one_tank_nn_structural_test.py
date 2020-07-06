@@ -6,7 +6,7 @@ from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
 from util.plot import PdfPlotter
 
-# Parallel threads config
+# Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -20,7 +20,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Data loading
+# Load data
 df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_2000_scenarios_100_collocation_points.csv')
 
 # Train data
@@ -67,7 +67,7 @@ for layers in layers_to_test:
                          'final val losses': []}
 
     for neurons in neurons_per_layer_to_test:
-        # PINN instance
+        # Instance PINN
         model = OneTankPINN(sys_params=sys_params,
                             hidden_layers=layers,
                             units_per_layer=neurons,
@@ -77,7 +77,7 @@ for layers in layers_to_test:
         # Train
         print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
         model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations, f_loss_weight=0.1)
+                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
         # Save plot data
         plot_dict[layers]['final train u losses'].append(model.train_u_loss[-1])
@@ -85,6 +85,7 @@ for layers in layers_to_test:
         plot_dict[layers]['final train total losses'].append(model.train_total_loss[-1])
         plot_dict[layers]['final val losses'].append(model.validation_loss[-1])
 
+# Plot results
 plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              y_axis_list=[np.array(plot_dict[layers]['final val losses']) for layers in layers_to_test],
              labels=[str(layers) + ' layers' for layers in layers_to_test],
@@ -114,5 +115,6 @@ plotter.plot(x_axis=np.array(neurons_per_layer_to_test),
              y_label='Loss [cm²]',
              y_scale='log')
 
+# Save results
 now = datetime.datetime.now()
 plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
