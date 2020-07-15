@@ -1,9 +1,14 @@
 import numpy as np
+import tensorflow as tf
 import datetime
-from four_tanks_system import ResponseAnalyser, CasadiSimulator
-from normalizer import Normalizer
-from pinn import FourTanksPINN
-from plot import PdfPlotter
+from util.systems.four_tanks_system import CasadiSimulator
+from util.normalizer import Normalizer
+from util.pinn import FourTanksPINN
+from util.plot import PdfPlotter
+
+# Configure parallel threads
+tf.config.threading.set_inter_op_parallelism_threads(8)
+tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Random seed
 np.random.seed(30)
@@ -41,7 +46,7 @@ np_test_ics = np.random.uniform(low=2.0, high=20.0, size=(4, test_points))
 t_range = 15.0
 np_t = np.array([np.linspace(0, t_range, 100)])
 
-# Training data
+# Train data
 np_train_u_t = np.zeros((1, np_train_ics.shape[1]))
 np_train_u_v = np_train_vs
 np_train_u_ic = np_train_ics
@@ -85,7 +90,7 @@ simulator = CasadiSimulator(sys_params)
 for i in range(np_validation_vs.shape[1]):
     np_v = np.transpose(np.tile(np_validation_vs[:, i], (np_t.shape[1], 1)))
     np_ic = np.transpose(np.tile(np_validation_ics[:, i], (np_t.shape[1], 1)))
-    np_h = simulator.run(np_t, np_validation_vs[:, i], np_validation_ics[:, i])
+    np_h = simulator.run(np_t[0], np_validation_vs[:, i], np_validation_ics[:, i])
 
     if i == 0:
         np_val_t = np_t
@@ -101,17 +106,17 @@ for i in range(np_validation_vs.shape[1]):
 np_val_X = np.transpose(np.concatenate([np_val_t, np_val_v, np_val_ic], axis=0))
 np_val_Y = np.transpose(np_val_h)
 
-# PINN instancing
+# Instance PINN
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=5,
                       units_per_layer=15,
                       X_normalizer=X_normalizer,
                       Y_normalizer=Y_normalizer)
 
-# Training
-model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, max_epochs=40000)
+# Train
+model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y)
 
-# Testing
+# Test
 sampled_outputs = []
 predictions = []
 titles = []
@@ -120,7 +125,7 @@ for i in range(np_test_vs.shape[1]):
     np_v = np_test_vs[:, i]
     np_ic = np_test_ics[:, i]
 
-    np_h = simulator.run(np_t, np_v, np_ic)
+    np_h = simulator.run(np_t[0], np_v, np_ic)
     sampled_outputs.append(np_h)
 
     np_test_v = np.transpose(np.tile(np_v, (np_t.shape[1], 1)))
@@ -135,15 +140,16 @@ for i in range(np_test_vs.shape[1]):
             ') V.'
     titles.append(title)
 
+# Plotter
 plotter = PdfPlotter()
 
-# Loss plot
+# Plot losses
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
              y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
              labels=['train loss', 'val loss'],
              title='Train and validation total losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_loss)),
@@ -151,11 +157,11 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              labels=['u loss', 'f loss'],
              title='Train losses',
              x_label='Epoch',
-             y_label='Loss',
+             y_label='Loss [cm²]',
              limit_range=False,
              y_scale='log')
 
-# Result plot
+# Plot test results
 for i in range(test_points):
     for j in range(sampled_outputs[i].shape[0]):
         y_axis_list = [sampled_outputs[i][j], predictions[i][j]]
@@ -166,9 +172,14 @@ for i in range(test_points):
         plotter.plot(x_axis=np_t[0],
                      y_axis_list=y_axis_list,
                      labels=['h' + str(j + 1), 'nn' + str(j + 1)],
-                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 2)),
-                     x_label='t',
-                     y_label='Level',
+                     title=titles[i] + ' Plot MSE: ' + str(round(mse, 3)) + ' cm²',
+                     x_label='Time [s]',
+                     y_label='Level [cm]',
                      limit_range=True)
+
+# Save results
 now = datetime.datetime.now()
-plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+
+# Save model
+model.save_weights('./models/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.h5')

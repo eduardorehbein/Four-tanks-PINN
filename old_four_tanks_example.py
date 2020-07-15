@@ -1,9 +1,14 @@
 import numpy as np
+import tensorflow as tf
 import datetime
-from four_tanks_system import ResponseAnalyser, CasadiSimulator
-from normalizer import Normalizer
-from pinn import OldFourTanksPINN
-from plot import PdfPlotter
+from util.systems.four_tanks_system import ResponseAnalyser, CasadiSimulator
+from util.normalizer import Normalizer
+from util.pinn import OldFourTanksPINN
+from util.plot import PdfPlotter
+
+# Configure parallel threads
+tf.config.threading.set_inter_op_parallelism_threads(8)
+tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Random seed
 np.random.seed(30)
@@ -44,7 +49,7 @@ resp_an = ResponseAnalyser(sys_params)
 t_range = 15.0
 np_t = np.array([np.linspace(0, t_range, 100)])
 
-# Training data
+# Train data
 np_train_u_t = np.zeros((1, np_train_ics.shape[1]))
 np_train_u_v = np_train_vs
 np_train_u_ic = np_train_ics
@@ -80,7 +85,7 @@ simulator = CasadiSimulator(sys_params)
 for i in range(np_validation_vs.shape[1]):
     np_v = np.transpose(np.tile(np_validation_vs[:, i], (np_t.shape[1], 1)))
     np_ic = np.transpose(np.tile(np_validation_ics[:, i], (np_t.shape[1], 1)))
-    np_h = simulator.run(np_t, np_validation_vs[:, i], np_validation_ics[:, i])
+    np_h = simulator.run(np_t[0], np_validation_vs[:, i], np_validation_ics[:, i])
 
     if np_validation_t is None:
         np_validation_t = np_t
@@ -123,7 +128,7 @@ np_norm_validation_v = v_normalizer.normalize(np_validation_v)
 np_norm_validation_ic = h_normalizer.normalize(np_validation_ic)
 np_norm_validation_h = h_normalizer.normalize(np_validation_h)
 
-# PINN instancing
+# Instance PINN
 hidden_layers = [15, 15, 15, 15, 15]
 learning_rate = 0.001
 model = OldFourTanksPINN(sys_params=sys_params,
@@ -133,7 +138,7 @@ model = OldFourTanksPINN(sys_params=sys_params,
                          v_normalizer=v_normalizer,
                          h_normalizer=h_normalizer)
 
-# Training
+# Train
 max_epochs = 40000
 stop_loss = 0.0005
 model.train(np_train_u_t=np_norm_train_u_t,
@@ -149,7 +154,7 @@ model.train(np_train_u_t=np_norm_train_u_t,
             max_epochs=max_epochs,
             stop_loss=stop_loss)
 
-# Testing
+# Test
 sampled_outputs = []
 predictions = []
 titles = []
@@ -159,7 +164,7 @@ for i in range(np_test_vs.shape[1]):
     np_v = np_test_vs[:, i]
     np_ic = np_test_ics[:, i]
 
-    np_h = simulator.run(np_t, np_v, np_ic)
+    np_h = simulator.run(np_t[0], np_v, np_ic)
     sampled_outputs.append(np_h)
 
     np_test_v = np.transpose(np.tile(np_v, (np_t.shape[1], 1)))
@@ -178,7 +183,7 @@ for i in range(np_test_vs.shape[1]):
 
 plotter = PdfPlotter()
 
-# Loss plot
+# Plot losses
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
              y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
              labels=['train loss', 'val loss'],
@@ -196,7 +201,7 @@ plotter.plot(x_axis=np.linspace(1, len(model.train_u_loss), len(model.train_u_lo
              limit_range=False,
              y_scale='log')
 
-# Result plot
+# Plot test results
 number_of_plots = test_points
 for i in range(number_of_plots):
     for j in range(sampled_outputs[i].shape[0]):
@@ -212,5 +217,7 @@ for i in range(number_of_plots):
                      x_label='t',
                      y_label='Level',
                      limit_range=True)
+
+# Save results
 now = datetime.datetime.now()
-plotter.save_pdf('./results/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
+plotter.save_pdf('./results/four_tanks/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '.pdf')
