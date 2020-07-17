@@ -75,16 +75,16 @@ worst_model = OneTankPINN(sys_params=sys_params,
                           Y_normalizer=worst_model_Y_normalizer)
 
 # Train
-max_adam_epochs = 500
+adam_epochs = 500
 max_lbfgs_iterations = 10000
 
 best_model.train(best_model_np_train_u_X, best_model_np_train_u_Y, best_model_np_train_f_X,
                  best_model_np_val_X, best_model_np_val_Y,
-                 max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
+                 adam_epochs=adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
 worst_model.train(worst_model_np_train_u_X, worst_model_np_train_u_Y, worst_model_np_train_f_X,
                   worst_model_np_val_X, worst_model_np_val_Y,
-                  max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
+                  adam_epochs=adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
 # Load test data
 test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_160000_collocation_points.csv')
@@ -99,7 +99,7 @@ np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic, workin
 # Plotter
 plotter = PdfPlotter()
 plotter.text_page('One tank best and worst model:' +
-                  '\nAdam epochs -> ' + str(max_adam_epochs) +
+                  '\nAdam epochs -> ' + str(adam_epochs) +
                   '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
                   '\nNeural networks\' structure -> 2 hidden layers of 10 neurons' +
                   '\nTest points -> ' + str(len(test_df)))

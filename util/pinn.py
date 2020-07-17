@@ -101,7 +101,7 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
+              adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
@@ -114,14 +114,14 @@ class PINN:
 
         # Train with Adam
         self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                        max_adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
+                        adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                   max_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
+                   epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         # Train states and variables
         epoch = 0
         grads = None
@@ -132,7 +132,7 @@ class PINN:
         best_weights = copy.deepcopy(self.model.get_weights())
 
         # Train process
-        while epoch <= max_epochs:
+        while epoch <= epochs:
             # Update weights and biases
             if grads is not None:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))

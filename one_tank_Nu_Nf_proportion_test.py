@@ -78,7 +78,7 @@ for nf in nfs_to_test:
         # Train
         print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
         model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                    max_adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
+                    adam_epochs=max_adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
 
         # Save plot data
         plot_dict[nf]['final train u losses'].append(model.train_u_loss[-1])

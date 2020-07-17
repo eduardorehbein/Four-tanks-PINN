@@ -9,7 +9,7 @@ layers_to_test = (1, 2, 3)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
-max_adam_epochs = 500
+adam_epochs = 500
 max_lbfgs_iterations = 1000
 
 # Directory under 'results' where the plots are going to be saved
@@ -45,5 +45,5 @@ np_val_X = val_df[['t', 'v', 'ic']].to_numpy()
 np_val_Y = val_df[['h']].to_numpy()
 
 # Test
-tester = StructTester(layers_to_test, neurons_per_layer_to_test, max_adam_epochs, max_lbfgs_iterations)
+tester = StructTester(layers_to_test, neurons_per_layer_to_test, adam_epochs, max_lbfgs_iterations)
 tester.test(OneTankPINN, sys_params, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory)
