@@ -167,7 +167,7 @@ class WorkingPeriodTester:
             nn = model.predict(np_test_X, test_ic, working_period)
             plot_dict['nns'].append(nn)
 
-            plot_dict['titles'].append('Working period = ' + str(round(working_period, 3)))
+            plot_dict['titles'].append('Working period = ' + str(round(working_period, 3)) + ' s.')
 
             # Final losses
             plot_dict['final train u losses'].append(model.train_u_loss[-1])
@@ -196,9 +196,10 @@ class WorkingPeriodTester:
         # Plot test results
         for nn, title in zip(plot_dict['nns'], plot_dict['titles']):
             if len(nn.shape) == 1:
-                mse = (np.square(plot_dict['y'] - nn)).mean()
+                plot_y = np.reshape(plot_dict['y'], (plot_dict['y'].shape[0],))
+                mse = (np.square(plot_y - nn)).mean()
                 plotter.plot(x_axis=plot_dict['t'],
-                             y_axis_list=[plot_dict['y'], nn],
+                             y_axis_list=[plot_y, nn],
                              labels=[self.df_Y_var[0], 'nn'],
                              title=title + ' Plot MSE: ' + str(round(mse, 3)) + ' u',
                              x_label='Time [s]',
