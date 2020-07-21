@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.tests import WorkingPeriodTester
+from util.tests import WorkingPeriodTester, WorkingPeriodTestContainer
 from util.pinn import OneTankPINN
 
 # Parameters
@@ -20,13 +20,6 @@ results_subdirectory = 'one_tank'
 adam_epochs = 500
 max_lbfgs_iterations = 1000
 
-# Dataframe parameters
-df_time_var = 't'
-df_scenario_var = 'scenario'
-df_X_var = ['t', 'v', 'ic']
-df_Y_var = ['h']
-df_ic_var = ['ic']
-
 # Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
@@ -42,14 +35,40 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Load data
-train_dfs = [pd.read_csv('data/one_tank/rand_seed_' + str(random_seed) + '_t_range_' + str(working_period) +
-                         's_1105_scenarios_100_collocation_points.csv') for working_period in working_periods_to_test]
+# Load data into a container
+data_container = WorkingPeriodTestContainer()
+
 test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_' + str(random_seed) +
-                      '_t_range_160.0s_160000_collocation_points.csv')
+                      '_t_range_160.0s_1600_collocation_points.csv')
+data_container.test_t = test_df['t'].to_numpy()
+data_container.test_X = test_df[['t', 'v']].to_numpy()
+data_container.test_Y = test_df[['h']].to_numpy()
+data_container.test_ic = np.array([test_df['h'].to_numpy()[0]])
+
+for working_period in working_periods_to_test:
+    df = pd.read_csv('data/one_tank/rand_seed_' + str(random_seed) + '_t_range_' + str(working_period) +
+                     's_1105_scenarios_100_collocation_points.csv')
+
+    # Train data
+    train_df = df[df['scenario'] <= train_scenarios]
+    train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
+    np_train_u_X = train_u_df[['t', 'v', 'ic']].to_numpy()
+    np_train_u_Y = train_u_df[['h']].to_numpy()
+    np_train_f_X = train_df[['t', 'v', 'ic']].sample(frac=1).to_numpy()
+
+    data_container.set_train_u_X(working_period, np_train_u_X)
+    data_container.set_train_u_Y(working_period, np_train_u_Y)
+    data_container.set_train_f_X(working_period, np_train_f_X)
+
+    # Validation data
+    val_df = df[(df['scenario'] > train_scenarios) &
+                (df['scenario'] <= (train_scenarios + val_scenarios))].sample(frac=1)
+    np_val_X = val_df[['t', 'v', 'ic']].to_numpy()
+    np_val_Y = val_df[['h']].to_numpy()
+
+    data_container.set_val_X(working_period, np_val_X)
+    data_container.set_val_Y(working_period, np_val_Y)
 
 # Test
-tester = WorkingPeriodTester(df_time_var, df_scenario_var, df_X_var, df_Y_var, df_ic_var,
-                             adam_epochs, max_lbfgs_iterations)
-tester.test(OneTankPINN, sys_params, hidden_layers, units_per_layer, train_dfs, test_df, train_scenarios, val_scenarios,
-            results_subdirectory)
+tester = WorkingPeriodTester(working_periods_to_test, adam_epochs, max_lbfgs_iterations)
+tester.test(OneTankPINN, sys_params, hidden_layers, units_per_layer, data_container, results_subdirectory)
