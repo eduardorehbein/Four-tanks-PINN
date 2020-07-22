@@ -262,6 +262,37 @@ class OneTankPINN(PINN):
         return self.A * tf_dnn_dt + (self.a * self.two_g_sqrt) * tf.sqrt(tf.maximum(tf_NN, 0.0)) - self.k * tf_v
 
 
+class VanDerPolPINN(PINN):
+    def __init__(self, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+        super().__init__(4, 2, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
+
+        # System parameters for matrix form
+        self.A = self.tensor([[1, 1],
+                              [-1, 0]])
+        self.b = self.tensor([[1, 0]])
+
+    def expression(self, tf_X, tf_NN, decomposed_NN, tape):
+        # ODE sys: d2x_dt2 = (1 - x^2) * dx_dt - x + u
+        #
+        # As 2 states system: dx1_dt = (1 - x2^2) * x1 - x2 + u
+        #                     dx2_dt = x1
+        #
+        # (x2 is the position variable)
+        #
+        # In matrix form: dX_dt = X*A + (u - x2^2 * x1)*b
+
+        tf_u = tf.slice(tf_X, [0, 1], [tf_X.shape[0], 1])
+
+        tf_dnn1_dx = tape.gradient(decomposed_NN[0], tf_X)
+        tf_dnn2_dx = tape.gradient(decomposed_NN[1], tf_X)
+
+        tf_dnn_dt = tf.concat([tf.slice(tf_dnn1_dx, [0, 0], [tf_dnn1_dx.shape[0], 1]),
+                               tf.slice(tf_dnn2_dx, [0, 0], [tf_dnn2_dx.shape[0], 1])], axis=1)
+
+        return tf_dnn_dt - tf.matmul(tf_NN, self.A) + \
+               tf.matmul((tf.square(decomposed_NN[1]) * decomposed_NN[0] - tf_u), self.b)
+
+
 class FourTanksPINN(PINN):
     def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
         super().__init__(7, 4, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)

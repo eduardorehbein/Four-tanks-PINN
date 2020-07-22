@@ -4,7 +4,7 @@ import pandas as pd
 from util.pinn import OneTankPINN
 from util.tests import StructTester
 
-# Structural parameters
+# Structural test's parameters
 layers_to_test = (1, 2, 3)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
