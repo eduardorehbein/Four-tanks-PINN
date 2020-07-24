@@ -9,8 +9,8 @@ layers_to_test = (2, 3, 4)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
-adam_epochs = 5#00
-max_lbfgs_iterations = 10#00
+adam_epochs = 500
+max_lbfgs_iterations = 1000
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
