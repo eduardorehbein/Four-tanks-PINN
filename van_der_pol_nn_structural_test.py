@@ -22,9 +22,6 @@ tf.config.threading.set_intra_op_parallelism_threads(8)
 # Random seed
 np.random.seed(30)
 
-# System parameters' dictionary
-sys_params = None
-
 # Load data
 df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_1.0s_1100_scenarios_100_collocation_points.csv')
 
@@ -42,5 +39,4 @@ np_val_Y = val_df[['x1', 'x2']].to_numpy()
 
 # Test
 tester = StructTester(layers_to_test, neurons_per_layer_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(VanDerPolPINN, sys_params, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-            results_subdirectory)
+tester.test(VanDerPolPINN, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory)

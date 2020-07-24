@@ -11,9 +11,8 @@ class StructTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, sys_params,
-             np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-             results_subdirectory):
+    def test(self, PINNModelClass, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+             results_subdirectory, sys_params=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -103,7 +102,8 @@ class WorkingPeriodTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, sys_params, hidden_layers, units_per_layer, data_container, results_subdirectory):
+    def test(self, PINNModelClass, hidden_layers, units_per_layer, data_container,
+             results_subdirectory, sys_params=None):
         nu = data_container.get_train_u_X(self.working_periods[0]).shape[0]
         nf = data_container.get_train_f_X(self.working_periods[0]).shape[0]
         val_scenarios = data_container.get_val_X(self.working_periods[0]).shape[0]
@@ -222,7 +222,8 @@ class NfNuTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, sys_params, hidden_layers, units_per_layer, data_container, results_subdirectory):
+    def test(self, PINNModelClass, hidden_layers, units_per_layer, data_container,
+             results_subdirectory, sys_params=None):
         # Plotter
         plotter = PdfPlotter()
         plotter.text_page('One tank neural network\'s Nf/Nu test:' +
@@ -259,7 +260,10 @@ class NfNuTester:
                 Y_normalizer.parametrize(np_train_u_Y)
 
                 # Instance PINN
-                model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+                if sys_params is None:
+                    model = PINNModelClass(hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+                else:
+                    model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
