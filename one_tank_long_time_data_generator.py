@@ -3,7 +3,7 @@ import pandas as pd
 from util.systems.one_tank_system import CasadiSimulator
 
 
-# Hyperparameters
+# Parameters
 random_seed = 30
 
 collocation_points = 1600

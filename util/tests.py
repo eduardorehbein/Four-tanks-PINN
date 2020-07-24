@@ -40,11 +40,10 @@ class StructTester:
 
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
-                model = PINNModelClass(sys_params=sys_params,
-                                       hidden_layers=layers,
-                                       units_per_layer=neurons,
-                                       X_normalizer=X_normalizer,
-                                       Y_normalizer=Y_normalizer)
+                if sys_params is None:
+                    model = PINNModelClass(layers, neurons, X_normalizer, Y_normalizer)
+                else:
+                    model = PINNModelClass(sys_params, layers, neurons, X_normalizer, Y_normalizer)
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
@@ -143,7 +142,10 @@ class WorkingPeriodTester:
             Y_normalizer.parametrize(np_train_u_Y)
 
             # Instance PINN
-            model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+            if sys_params is None:
+                model = PINNModelClass(hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+            else:
+                model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
 
             # Train
             print('Model training with working period of ' + str(working_period) + ' seconds:')
