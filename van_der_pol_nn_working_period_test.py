@@ -5,15 +5,15 @@ from util.tests import WorkingPeriodTester, WorkingPeriodTestContainer
 from util.pinn import VanDerPolPINN
 
 # Working period test's parameters
-working_periods_to_test = (0.001, 0.01, 0.1, 1, 2, 4, 8)
+working_periods_to_test = (0.01, 0.1, 1.0, 2.0, 4.0, 8.0)
 
 # Neural network's parameters
-hidden_layers = 2
-units_per_layer = 10
+hidden_layers = 4
+units_per_layer = 20
 
 # Train parameters
-adam_epochs = 500
-max_lbfgs_iterations = 1000
+adam_epochs = 5#00
+max_lbfgs_iterations = 10#00
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -28,11 +28,11 @@ np.random.seed(30)
 # Load data into a container
 data_container = WorkingPeriodTestContainer()
 
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_1600_collocation_points.csv')
+test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_t_range_10.0s_10000_collocation_points.csv')
 data_container.test_t = test_df['t'].to_numpy()
 data_container.test_X = test_df[['t', 'u']].to_numpy()
 data_container.test_Y = test_df[['x1', 'x2']].to_numpy()
-data_container.test_ic = np.array([test_df[['x1', 'x2']].to_numpy()[0]])
+data_container.test_ic = np.array(test_df[['x1', 'x2']].to_numpy()[0])
 
 for working_period in working_periods_to_test:
     df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_' + str(working_period) +

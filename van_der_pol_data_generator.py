@@ -8,7 +8,7 @@ random_seed = 30
 
 scenarios = 1100
 collocation_points = 100
-t_range = 1.0
+t_range = 8.0
 
 lowest_u = -1.0
 highest_u = 1.0
@@ -38,10 +38,10 @@ x = simulator.run(t, us[0], ics[0])
 data = {'scenario': np.tile(1, (collocation_points,)),
         't': t,
         'u': np.tile(us[0], (collocation_points,)),
-        'x1_0': np.tile(ics[0][0], (collocation_points,)),
-        'x2_0': np.tile(ics[0][1], (collocation_points,)),
-        'x1': x[0],
-        'x2': x[1]}
+        'x1_0': np.tile(ics[0, :][0], (collocation_points,)),
+        'x2_0': np.tile(ics[0, :][1], (collocation_points,)),
+        'x1': x[:, 0],
+        'x2': x[:, 1]}
 
 for i in range(1, scenarios):
     scenario = np.tile(i + 1, (collocation_points,))
@@ -54,8 +54,8 @@ for i in range(1, scenarios):
     data['u'] = np.append(data['u'], u)
     data['x1_0'] = np.append(data['x1_0'], ic[:, 0])
     data['x2_0'] = np.append(data['x2_0'], ic[:, 1])
-    data['x1'] = np.append(data['x1'], x[0])
-    data['x2'] = np.append(data['x2'], x[1])
+    data['x1'] = np.append(data['x1'], x[:, 0])
+    data['x2'] = np.append(data['x2'], x[:, 1])
 
 df = pd.DataFrame(data)
 df.to_csv('data/van_der_pol/' + file_name + '.csv', index=False)

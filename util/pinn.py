@@ -89,7 +89,9 @@ class PINN:
                 np_y0 = self.predict(prediction_input)
             previous_t = row[time_column]
             new_columns.append(np_y0)
-        np_new_columns = np.array(new_columns)
+        np_new_columns = np.concatenate(new_columns)
+        if len(np_new_columns.shape) == 1:
+            np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
 
         return np.append(np_Z, np_new_columns, axis=1)
 

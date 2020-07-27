@@ -23,4 +23,4 @@ class CasadiSimulator:
     def run(self, np_t, np_u, np_ic):
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': True})
         sol = integrator(x0=np_ic, p=np_u)
-        return np.array(sol['xf'])
+        return np.transpose(np.array(sol['xf']))
