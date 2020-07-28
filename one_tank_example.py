@@ -62,10 +62,13 @@ scenarios = df['scenario'].max()
 for scenario in range(scenarios - 4, scenarios + 1):
     test_df = df[df['scenario'] == scenario]
 
-    sampled_outputs.append(test_df['h'].to_numpy())
+    np_h = test_df['h'].to_numpy()
 
     np_test_X = test_df[['t', 'v', 'ic']].to_numpy()
     prediction = model.predict(np_test_X)
+    np_h = np.reshape(np_h, prediction.shape)
+
+    sampled_outputs.append(np_h)
     predictions.append(prediction)
 
     v = test_df['v'].min()

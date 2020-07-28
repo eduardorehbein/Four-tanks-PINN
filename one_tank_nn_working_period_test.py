@@ -13,7 +13,7 @@ units_per_layer = 10
 
 # Train parameters
 adam_epochs = 500
-max_lbfgs_iterations = 1000
+max_lbfgs_iterations = 2000
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'one_tank'

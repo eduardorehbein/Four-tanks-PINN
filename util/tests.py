@@ -185,28 +185,18 @@ class WorkingPeriodTester:
 
         # Plot test results
         for nn, title in zip(plot_dict['nns'], plot_dict['titles']):
-            if len(nn.shape) == 1:
-                plot_y = np.reshape(plot_dict['y'], (plot_dict['y'].shape[0],))
-                mse = (np.square(plot_y - nn)).mean()
+            transposed_nn = np.transpose(nn)
+            transposed_y = np.transpose(plot_dict['y'])
+            index = 0
+            for current_nn, current_y in zip(transposed_nn, transposed_y):
+                index += 1
+                mse = (np.square(current_y - current_nn)).mean()
                 plotter.plot(x_axis=plot_dict['t'],
-                             y_axis_list=[plot_y, nn],
-                             labels=['y', 'nn'],
+                             y_axis_list=[current_y, current_nn],
+                             labels=['y' + str(index), 'nn' + str(index)],
                              title=title + ' Plot MSE: ' + str(round(mse, 3)) + ' u',
                              x_label='Time [s]',
                              y_label='Output [u]')
-            else:
-                transposed_nn = np.transpose(nn)
-                transposed_y = np.transpose(plot_dict['y'])
-                index = 0
-                for current_nn, current_y in zip(transposed_nn, transposed_y):
-                    index += 1
-                    mse = (np.square(current_y - current_nn)).mean()
-                    plotter.plot(x_axis=plot_dict['t'],
-                                 y_axis_list=[current_y, current_nn],
-                                 labels=['y' + str(index), 'nn' + str(index)],
-                                 title=title + ' Plot MSE: ' + str(round(mse, 3)) + ' u',
-                                 x_label='Time [s]',
-                                 y_label='Output [u]')
 
         # Save results
         now = datetime.datetime.now()

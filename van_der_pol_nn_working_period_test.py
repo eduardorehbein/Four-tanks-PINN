@@ -8,12 +8,12 @@ from util.pinn import VanDerPolPINN
 working_periods_to_test = (0.01, 0.1, 1.0, 2.0, 4.0, 8.0)
 
 # Neural network's parameters
-hidden_layers = 4
+hidden_layers = 5
 units_per_layer = 20
 
 # Train parameters
-adam_epochs = 5#00
-max_lbfgs_iterations = 10#00
+adam_epochs = 500
+max_lbfgs_iterations = 2000
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'

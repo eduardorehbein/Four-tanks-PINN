@@ -52,22 +52,14 @@ class PINN:
             tf_X = self.tensor(np_X)
             tf_NN = self.model(tf_X)
 
-            np_NN = tf_NN.numpy()
-            if np_NN.shape[1] == 1:
-                return np.transpose(np_NN)[0]
-            else:
-                return np_NN
+            return tf_NN.numpy()
         elif np_X.shape[1] + np_ic.shape[0] == self.n_inputs:
             if working_period is not None:
                 np_Z = self.process_input(np_X, np_ic, working_period, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
-                np_NN = tf_NN.numpy()
-                if np_NN.shape[1] == 1:
-                    return np.transpose(np_NN)[0]
-                else:
-                    return np_NN
+                return tf_NN.numpy()
             else:
                 raise Exception('Missing neural network\'s working period.')
         else:
@@ -79,7 +71,10 @@ class PINN:
         np_Z[:, time_column] = np_Z[:, time_column] % working_period
 
         previous_t = np_Z[0, time_column]
-        np_y0 = copy.deepcopy(np_ic)
+        if len(np_ic.shape) == 1:
+            np_y0 = np.reshape(np_ic, (1, np_ic.shape[0]))
+        else:
+            np_y0 = copy.deepcopy(np_ic)
         new_columns = []
         for index, row in enumerate(np_Z):
             if row[time_column] < previous_t:
@@ -343,8 +338,8 @@ class FourTanksPINN(PINN):
                                             tf.slice(tf_dnn3_dx, [0, 0], [tf_dnn3_dx.shape[0], 1]),
                                             tf.slice(tf_dnn4_dx, [0, 0], [tf_dnn4_dx.shape[0], 1])], axis=1))
 
-        tf_f_loss = tf.matmul(self.B[0], tf_dnn_dt) + self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
-                    tf.matmul(self.B[2], tf_v)
+        tf_f_loss = tf.matmul(self.B[0], tf_dnn_dt) + \
+                    self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf.maximum(tf_nn, 0.0))) - tf.matmul(self.B[2], tf_v)
 
         return tf.transpose(tf_f_loss)
 
