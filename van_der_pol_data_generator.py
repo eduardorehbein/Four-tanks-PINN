@@ -8,7 +8,7 @@ random_seed = 30
 
 scenarios = 1100
 collocation_points = 100
-t_range = 8.0
+t_range = 1.0
 
 lowest_u = -1.0
 highest_u = 1.0

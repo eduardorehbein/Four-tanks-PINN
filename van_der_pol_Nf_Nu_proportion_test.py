@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.pinn import OneTankPINN
+from util.pinn import VanDerPolPINN
 from util.tests import NfNuTester, NfNuTestContainer
 
 # Nf/Nu proportion test's parameters
@@ -13,8 +13,8 @@ hidden_layers = 5
 units_per_layer = 20
 
 # Train parameters
-adam_epochs = 5#00
-max_lbfgs_iterations = 1#000
+adam_epochs = 500
+max_lbfgs_iterations = 1000
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -30,7 +30,7 @@ np.random.seed(30)
 data_container = NfNuTestContainer()
 for nf in nfs_to_test:
     for nu in nus_to_test:
-        df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_10.0s_' + str(int(1.1*nu)) +
+        df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_1.0s_' + str(int(1.1*nu)) +
                          '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
 
         # Train data
@@ -54,4 +54,4 @@ for nf in nfs_to_test:
 
 # Test
 tester = NfNuTester(nfs_to_test, nus_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(OneTankPINN, hidden_layers, units_per_layer, data_container, results_subdirectory)
+tester.test(VanDerPolPINN, hidden_layers, units_per_layer, data_container, results_subdirectory)
