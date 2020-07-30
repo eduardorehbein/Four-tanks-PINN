@@ -305,6 +305,144 @@ class NfNuTester:
                          now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
 
 
+class BestAndWorstModelTester:
+    def __init__(self, adam_epochs=500, max_lbfgs_iterations=10000):
+        self.best_model_key = 'best'
+        self.worst_model_key = 'worst'
+
+        self.adam_epochs = adam_epochs
+        self.max_lbfgs_iterations = max_lbfgs_iterations
+
+    def test(self, PINNModelClass, data_container, best_model_hidden_layers, best_model_units_per_layer,
+             worst_model_hidden_layers, worst_model_units_per_layer, results_and_models_subdirectory, sys_params=None):
+        # Train data
+        best_model_np_train_u_X = data_container.get_train_u_X(self.best_model_key)
+        best_model_np_train_u_Y = data_container.get_train_u_Y(self.best_model_key)
+        best_model_np_train_f_X = data_container.get_train_f_X(self.best_model_key)
+
+        worst_model_np_train_u_X = data_container.get_train_u_X(self.worst_model_key)
+        worst_model_np_train_u_Y = data_container.get_train_u_Y(self.worst_model_key)
+        worst_model_np_train_f_X = data_container.get_train_f_X(self.worst_model_key)
+
+        # Validation data
+        best_model_np_val_X = data_container.get_val_X(self.best_model_key)
+        best_model_np_val_Y = data_container.get_val_Y(self.best_model_key)
+
+        worst_model_np_val_X = data_container.get_val_X(self.worst_model_key)
+        worst_model_np_val_Y = data_container.get_val_Y(self.worst_model_key)
+
+        # Normalizers
+        best_model_X_normalizer = Normalizer()
+        best_model_Y_normalizer = Normalizer()
+
+        best_model_X_normalizer.parametrize(np.concatenate([best_model_np_train_u_X, best_model_np_train_f_X]))
+        best_model_Y_normalizer.parametrize(best_model_np_train_u_Y)
+
+        worst_model_X_normalizer = Normalizer()
+        worst_model_Y_normalizer = Normalizer()
+
+        worst_model_X_normalizer.parametrize(np.concatenate([worst_model_np_train_u_X, worst_model_np_train_f_X]))
+        worst_model_Y_normalizer.parametrize(worst_model_np_train_u_Y)
+
+        # Instance PINN
+        if sys_params is None:
+            best_model = PINNModelClass(best_model_hidden_layers, best_model_units_per_layer,
+                                        best_model_X_normalizer, best_model_Y_normalizer)
+            worst_model = PINNModelClass(worst_model_hidden_layers, worst_model_units_per_layer,
+                                         worst_model_X_normalizer, worst_model_Y_normalizer)
+        else:
+            best_model = PINNModelClass(sys_params, best_model_hidden_layers, best_model_units_per_layer,
+                                        best_model_X_normalizer, best_model_Y_normalizer)
+            worst_model = PINNModelClass(sys_params, worst_model_hidden_layers, worst_model_units_per_layer,
+                                         worst_model_X_normalizer, worst_model_Y_normalizer)
+
+        # Train
+        best_model.train(best_model_np_train_u_X, best_model_np_train_u_Y, best_model_np_train_f_X,
+                         best_model_np_val_X, best_model_np_val_Y, self.adam_epochs, self.max_lbfgs_iterations)
+
+        worst_model.train(worst_model_np_train_u_X, worst_model_np_train_u_Y, worst_model_np_train_f_X,
+                          worst_model_np_val_X, worst_model_np_val_Y, self.adam_epochs, self.max_lbfgs_iterations)
+
+        # Load test data
+        np_test_X = data_container.test_X
+        np_test_Y = data_container.test_Y
+        test_ic = data_container.test_ic
+
+        # Test
+        np_best_model_prediction = best_model.predict(np_test_X, np_ic=test_ic, working_period=1.0)
+        np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic, working_period=8.0)
+
+        # Plotter
+        plotter = PdfPlotter()
+        plotter.text_page('Van der Pol best and worst model:' +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nTest points -> ' + str(np_test_X.shape[0]))
+
+        # Plot train and validation losses
+        loss_len = min(len(best_model.train_total_loss), len(worst_model.train_total_loss))
+        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
+                     y_axis_list=[np.array(best_model.validation_loss[:loss_len]),
+                                  np.array(worst_model.validation_loss[:loss_len])],
+                     labels=['Best model', 'Worst model'],
+                     title='Validation loss',
+                     x_label='Epoch',
+                     y_label='Loss [u²]',
+                     y_scale='log')
+        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
+                     y_axis_list=[np.array(best_model.train_total_loss[:loss_len]),
+                                  np.array(worst_model.train_total_loss[:loss_len])],
+                     labels=['Best model', 'Worst model'],
+                     title='Train total loss',
+                     x_label='Epoch',
+                     y_label='Loss [u²]',
+                     y_scale='log')
+        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
+                     y_axis_list=[np.array(best_model.train_u_loss[:loss_len]),
+                                  np.array(worst_model.train_u_loss[:loss_len])],
+                     labels=['Best model', 'Worst model'],
+                     title='Train u loss',
+                     x_label='Epoch',
+                     y_label='Loss [u²]',
+                     y_scale='log')
+        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
+                     y_axis_list=[np.array(best_model.train_f_loss[:loss_len]),
+                                  np.array(worst_model.train_f_loss[:loss_len])],
+                     labels=['Best model', 'Worst model'],
+                     title='Train f loss',
+                     x_label='Epoch',
+                     y_label='Loss [u²]',
+                     y_scale='log')
+
+        # Plot test results
+        np_t = data_container.test_t
+        np_test_U = data_container.get_test_U()
+        plotter.plot(x_axis=np_t,
+                     y_axis_list=[np_u for np_u in np.transpose(np_test_U)],
+                     labels=['u' + str(i + 1) for i in range(np_test_U.shape[1])],
+                     title='Input signal',
+                     x_label='Time [s]',
+                     y_label=['Input [u]'])
+        for i in range(np_test_Y.shape[1]):
+            plotter.plot(x_axis=np_t,
+                         y_axis_list=[np_best_model_prediction[:, i], np_worst_model_prediction[:, i], np_test_Y[:, i]],
+                         labels=['Best model', 'Worst model', 'Casadi simulator'],
+                         title='Output ' + str(i + 1) + ' prediction',
+                         x_label='Time [s]',
+                         y_label='Output [u]')
+
+        # Save results
+        now = datetime.datetime.now()
+        plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
+                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-worst-model-test.pdf')
+
+        # Save models
+        best_model.save_weights('models/' + results_and_models_subdirectory + '/' +
+                                now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-model.h5')
+        worst_model.save_weights('models/' + results_and_models_subdirectory + '/' +
+                                 now.strftime('%Y-%m-%d-%H-%M-%S') + '-worst-model.h5')
+
+
 class WorkingPeriodTestContainer:
     def __init__(self):
         self.train_val_data = dict()
@@ -398,3 +536,68 @@ class NfNuTestContainer:
     def set_val_Y(self, nf, nu, np_val_Y):
         self.check_key(nf, nu)
         self.data[nf][nu]['np_val_Y'] = np_val_Y
+
+
+class BestAndWorstModelTestContainer:
+    def __init__(self):
+        self.keys = ['best', 'worst']
+        self.train_val_data = dict([(key, {'np_train_u_Y': None,
+                                           'np_train_u_X': None,
+                                           'np_train_f_X': None,
+                                           'np_val_X': None,
+                                           'np_val_Y': None}) for key in self.keys])
+
+        self.test_t = None
+        self.test_X = None
+        self.test_Y = None
+        self.test_ic = None
+
+    def check_key(self, key):
+        if key not in self.keys:
+            raise Exception('Model parameter has to be in ' + str(self.keys))
+
+    def get_train_u_X(self, model):
+        return self.train_val_data[model]['np_train_u_X']
+
+    def get_train_u_Y(self, model):
+        return self.train_val_data[model]['np_train_u_Y']
+
+    def get_train_f_X(self, model):
+        return self.train_val_data[model]['np_train_f_X']
+
+    def get_val_X(self, model):
+        return self.train_val_data[model]['np_val_X']
+
+    def get_val_Y(self, model):
+        return self.train_val_data[model]['np_val_Y']
+
+    def set_train_u_X(self, model, np_train_u_X):
+        self.check_key(model)
+        self.train_val_data[model]['np_train_u_X'] = np_train_u_X
+
+    def set_train_u_Y(self, model, np_train_u_Y):
+        self.check_key(model)
+        self.train_val_data[model]['np_train_u_Y'] = np_train_u_Y
+
+    def set_train_f_X(self, model, np_train_f_X):
+        self.check_key(model)
+        self.train_val_data[model]['np_train_f_X'] = np_train_f_X
+
+    def set_val_X(self, model, np_val_X):
+        self.check_key(model)
+        self.train_val_data[model]['np_val_X'] = np_val_X
+
+    def set_val_Y(self, model, np_val_Y):
+        self.check_key(model)
+        self.train_val_data[model]['np_val_Y'] = np_val_Y
+
+    def get_test_U(self):
+        if self.test_X is None:
+            raise Exception('Container\'s test_X data not defined.')
+        elif np.array_equal(self.test_X.flatten(), self.test_t.flatten()):
+            raise Exception('Container\'s test_X equals test_t, so there is no u defined.')
+        else:
+            i = 0
+            while not np.array_equal(self.test_X[:, i].flatten(), self.test_t.flatten()):
+                i = i + 1
+            return np.delete(self.test_X, i, axis=1)
