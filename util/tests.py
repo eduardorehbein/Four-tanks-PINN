@@ -22,7 +22,7 @@ class StructTester:
 
         # Plotter
         plotter = PdfPlotter()
-        plotter.text_page('One tank neural network\'s structural test:' +
+        plotter.text_page('Neural network\'s structural test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
@@ -111,7 +111,7 @@ class WorkingPeriodTester:
 
         # Plotter
         plotter = PdfPlotter()
-        plotter.text_page('One tank neural network\'s working period test:' +
+        plotter.text_page('Neural network\'s working period test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain Nu -> ' + str(nu) +
@@ -216,10 +216,9 @@ class NfNuTester:
              results_subdirectory, sys_params=None):
         # Plotter
         plotter = PdfPlotter()
-        plotter.text_page('One tank neural network\'s Nf/Nu test:' +
+        plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s T -> 10 s' +
                           '\nNeural network\'s structure -> ' + str(hidden_layers) +
                           ' hidden layers of ' + str(units_per_layer) + ' neurons' +
                           '\nValidation points -> 10% of Nf')
@@ -246,7 +245,7 @@ class NfNuTester:
                 X_normalizer = Normalizer()
                 Y_normalizer = Normalizer()
 
-                X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X], axis=0))
+                X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
                 Y_normalizer.parametrize(np_train_u_Y)
 
                 # Instance PINN
@@ -272,7 +271,7 @@ class NfNuTester:
                      labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
                      title='Final validation loss',
                      x_label='Nu',
-                     y_label='Loss [cm²]',
+                     y_label='Loss [u²]',
                      x_scale='log',
                      y_scale='log')
         plotter.plot(x_axis=np.array(self.nus_to_test),
@@ -280,7 +279,7 @@ class NfNuTester:
                      labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
                      title='Final train total loss',
                      x_label='Nu',
-                     y_label='Loss [cm²]',
+                     y_label='Loss [u²]',
                      x_scale='log',
                      y_scale='log')
         plotter.plot(x_axis=np.array(self.nus_to_test),
@@ -288,7 +287,7 @@ class NfNuTester:
                      labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
                      title='Final train u loss',
                      x_label='Nu',
-                     y_label='Loss [cm²]',
+                     y_label='Loss [u²]',
                      x_scale='log',
                      y_scale='log')
         plotter.plot(x_axis=np.array(self.nus_to_test),
@@ -296,7 +295,7 @@ class NfNuTester:
                      labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
                      title='Final train f loss',
                      x_label='Nu',
-                     y_label='Loss [cm²]',
+                     y_label='Loss [u²]',
                      x_scale='log',
                      y_scale='log')
 
