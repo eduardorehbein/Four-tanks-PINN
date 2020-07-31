@@ -15,10 +15,10 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Data loading
-df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_1105_scenarios_100_collocation_points.csv')
+df = pd.read_csv('data/one_tank/rand_seed_30_t_range_10.0s_550_scenarios_200_collocation_points.csv')
 
 # Train data
-train_df = df[df['scenario'] <= 1000]
+train_df = df[df['scenario'] <= 500]
 train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
 np_train_u_X = train_u_df[['t', 'v', 'ic']].to_numpy()
 np_train_u_Y = train_u_df[['h']].to_numpy()
@@ -33,11 +33,11 @@ with open('p_files/one_tank/train_data.p', 'wb') as train_p_file:
 X_normalizer = Normalizer()
 Y_normalizer = Normalizer()
 
-X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X], axis=0))
+X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
 Y_normalizer.parametrize(np_train_u_Y)
 
 # Validation data
-val_df = df[(df['scenario'] > 1000) & (df['scenario'] <= 1100)].sample(frac=1)
+val_df = df[df['scenario'] > 500].sample(frac=1)
 np_val_X = val_df[['t', 'v', 'ic']].to_numpy()
 np_val_Y = val_df[['h']].to_numpy()
 
@@ -54,7 +54,7 @@ model = OneTankPINN(sys_params=sys_params,
                     Y_normalizer=Y_normalizer)
 
 # Load model
-model.load_weights('models/one_tank/2020-06-18-15-09-38-15s-2l-10n-best-model.h5')
+model.load_weights('models/one_tank/2020-07-02-10-25-19-10s-2l-10n-best-model.h5')
 
 # Weights p file
 weights = model.get_weights()
@@ -62,8 +62,8 @@ with open('p_files/one_tank/weights.p', 'wb') as weights_p_file:
     pickle.dump(weights, weights_p_file)
 
 # Test data
-test_df = df[df['scenario'] > 1100]
-np_test_X = test_df[['t', 'v', 'ic']].to_numpy()
+test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_1600_collocation_points.csv')
+np_test_X = test_df[['t', 'v']].to_numpy()
 np_test_Y = test_df[['h']].to_numpy()
 
 # Test p file
