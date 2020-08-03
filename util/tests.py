@@ -374,7 +374,7 @@ class BestAndWorstModelTester:
 
         # Plotter
         plotter = PdfPlotter()
-        plotter.text_page('Van der Pol best and worst model:' +
+        plotter.text_page('Best and worst model:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTest points -> ' + str(np_test_X.shape[0]))
@@ -422,7 +422,7 @@ class BestAndWorstModelTester:
                      labels=['u' + str(i + 1) for i in range(np_test_U.shape[1])],
                      title='Input signal',
                      x_label='Time [s]',
-                     y_label=['Input [u]'])
+                     y_label='Input [u]')
         for i in range(np_test_Y.shape[1]):
             plotter.plot(x_axis=np_t,
                          y_axis_list=[np_best_model_prediction[:, i], np_worst_model_prediction[:, i], np_test_Y[:, i]],

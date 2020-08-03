@@ -1,10 +1,23 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-import datetime
-from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
-from util.plot import PdfPlotter
+from util.tests import BestAndWorstModelTestContainer, BestAndWorstModelTester
+
+
+# Neural networks' parameters
+best_model_hidden_layers = 2
+best_model_units_per_layer = 10
+
+worst_model_hidden_layers = 2
+worst_model_units_per_layer = 10
+
+# Train parameters
+adam_epochs = 500
+max_lbfgs_iterations = 10000
+
+# Directory under 'results' and 'models' where the plots and models are going to be saved
+results_and_models_subdirectory = 'one_tank'
 
 # Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
@@ -46,116 +59,40 @@ worst_model_val_df = worst_model_df[worst_model_df['scenario'] > 1000].sample(fr
 worst_model_np_val_X = worst_model_val_df[['t', 'v', 'ic']].to_numpy()
 worst_model_np_val_Y = worst_model_val_df[['h']].to_numpy()
 
-# Normalizers
-best_model_X_normalizer = Normalizer()
-best_model_Y_normalizer = Normalizer()
-
-best_model_X_normalizer.parametrize(np.concatenate([best_model_np_train_u_X, best_model_np_train_f_X]))
-best_model_Y_normalizer.parametrize(best_model_np_train_u_Y)
-
-worst_model_X_normalizer = Normalizer()
-worst_model_Y_normalizer = Normalizer()
-
-worst_model_X_normalizer.parametrize(np.concatenate([worst_model_np_train_u_X, worst_model_np_train_f_X]))
-worst_model_Y_normalizer.parametrize(worst_model_np_train_u_Y)
-
-# Instance PINN
-best_model = OneTankPINN(sys_params=sys_params,
-                         hidden_layers=2,
-                         units_per_layer=10,
-                         X_normalizer=best_model_X_normalizer,
-                         Y_normalizer=best_model_Y_normalizer)
-
-worst_model = OneTankPINN(sys_params=sys_params,
-                          hidden_layers=2,
-                          units_per_layer=10,
-                          X_normalizer=worst_model_X_normalizer,
-                          Y_normalizer=worst_model_Y_normalizer)
-
-# Train
-adam_epochs = 500
-max_lbfgs_iterations = 10000
-
-best_model.train(best_model_np_train_u_X, best_model_np_train_u_Y, best_model_np_train_f_X,
-                 best_model_np_val_X, best_model_np_val_Y,
-                 adam_epochs=adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
-
-worst_model.train(worst_model_np_train_u_X, worst_model_np_train_u_Y, worst_model_np_train_f_X,
-                  worst_model_np_val_X, worst_model_np_val_Y,
-                  adam_epochs=adam_epochs, max_lbfgs_iterations=max_lbfgs_iterations)
-
-# Load test data
+# Test data
 test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_160000_collocation_points.csv')
+np_test_t = test_df['t'].to_numpy()
 np_test_X = test_df[['t', 'v']].to_numpy()
 np_test_h = test_df[['h']].to_numpy()
-test_ic = np.array([test_df['h'].to_numpy()[0]])
+np_test_ic = np.array([test_df['h'].to_numpy()[0]])
+
+# Tester
+tester = BestAndWorstModelTester(adam_epochs, max_lbfgs_iterations)
+
+# Load data into a container
+data_container = BestAndWorstModelTestContainer()
+best_model_key = tester.best_model_key
+worst_model_key = tester.worst_model_key
+
+data_container.set_train_u_X(best_model_key, best_model_np_train_u_X)
+data_container.set_train_u_Y(best_model_key, best_model_np_train_u_Y)
+data_container.set_train_f_X(best_model_key, best_model_np_train_f_X)
+
+data_container.set_val_X(best_model_key, best_model_np_val_X)
+data_container.set_val_Y(best_model_key, best_model_np_val_Y)
+
+data_container.set_train_u_X(worst_model_key, worst_model_np_train_u_X)
+data_container.set_train_u_Y(worst_model_key, worst_model_np_train_u_Y)
+data_container.set_train_f_X(worst_model_key, worst_model_np_train_f_X)
+
+data_container.set_val_X(worst_model_key, worst_model_np_val_X)
+data_container.set_val_Y(worst_model_key, worst_model_np_val_Y)
+
+data_container.test_t = np_test_t
+data_container.test_X = np_test_X
+data_container.test_Y = np_test_h
+data_container.test_ic = np_test_ic
 
 # Test
-np_best_model_prediction = best_model.predict(np_test_X, np_ic=test_ic, working_period=10.0)
-np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic, working_period=0.001)
-
-# Plotter
-plotter = PdfPlotter()
-plotter.text_page('One tank best and worst model:' +
-                  '\nAdam epochs -> ' + str(adam_epochs) +
-                  '\nL-BFGS iterations -> ' + str(max_lbfgs_iterations) +
-                  '\nNeural networks\' structure -> 2 hidden layers of 10 neurons' +
-                  '\nTest points -> ' + str(len(test_df)))
-
-# Plot train and validation losses
-loss_len = min(len(best_model.train_total_loss), len(worst_model.train_total_loss))
-plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-             y_axis_list=[np.array(best_model.validation_loss[:loss_len]),
-                          np.array(worst_model.validation_loss[:loss_len])],
-             labels=['Best model', 'Worst model'],
-             title='Validation loss',
-             x_label='Epoch',
-             y_label='Loss [cm²]',
-             y_scale='log')
-plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-             y_axis_list=[np.array(best_model.train_total_loss[:loss_len]),
-                          np.array(worst_model.train_total_loss[:loss_len])],
-             labels=['Best model', 'Worst model'],
-             title='Train total loss',
-             x_label='Epoch',
-             y_label='Loss [cm²]',
-             y_scale='log')
-plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-             y_axis_list=[np.array(best_model.train_u_loss[:loss_len]),
-                          np.array(worst_model.train_u_loss[:loss_len])],
-             labels=['Best model', 'Worst model'],
-             title='Train u loss',
-             x_label='Epoch',
-             y_label='Loss [cm²]',
-             y_scale='log')
-plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-             y_axis_list=[np.array(best_model.train_f_loss[:loss_len]),
-                          np.array(worst_model.train_f_loss[:loss_len])],
-             labels=['Best model', 'Worst model'],
-             title='Train f loss',
-             x_label='Epoch',
-             y_label='Loss [cm²]',
-             y_scale='log')
-
-# Plot test results
-np_t = test_df['t'].to_numpy()
-plotter.plot(x_axis=np_t,
-             y_axis_list=[test_df['v'].to_numpy()],
-             labels=['Input'],
-             title='Input signal',
-             x_label='Time [s]',
-             y_label='Valve opening [V]')
-plotter.plot(x_axis=np_t,
-             y_axis_list=[np_best_model_prediction, np_worst_model_prediction, np_test_h],
-             labels=['Best model', 'Worst model', 'Casadi simulator'],
-             title='Output prediction',
-             x_label='Time [s]',
-             y_label='Level [cm]')
-
-# Save results
-now = datetime.datetime.now()
-plotter.save_pdf('results/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-worst-model-test.pdf')
-
-# Save models
-best_model.save_weights('models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-model.h5')
-worst_model.save_weights('models/one_tank/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-worst-model.h5')
+tester.test(OneTankPINN, data_container, best_model_hidden_layers, best_model_units_per_layer,
+            worst_model_hidden_layers, worst_model_units_per_layer, results_and_models_subdirectory, sys_params)

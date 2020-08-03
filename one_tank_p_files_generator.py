@@ -4,6 +4,7 @@ import numpy as np
 from util.normalizer import Normalizer
 from util.pinn import OneTankPINN
 
+
 # Random seed
 np.random.seed(30)
 
