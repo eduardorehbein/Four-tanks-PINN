@@ -1,32 +1,32 @@
+import os
 import copy
+import json
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 from util.factory_lbfgs import function_factory
+from util.normalizer import Normalizer
 
 # TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
 
 class PINN:
-    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer, X_normalizer, Y_normalizer,
-                 learning_rate=0.001):
-        # Input and output vectors' dimension
+    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
+        # Neural network's structure
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
+        self.hidden_layers = hidden_layers
+        self.units_per_layer = units_per_layer
 
         # Normalizers
         self.X_normalizer = X_normalizer
         self.Y_normalizer = Y_normalizer
 
         # Model
-        tf.keras.backend.set_floatx('float64')
-        self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
-        self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))  # Normalize data
-        for i in range(hidden_layers):
-            self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
-        self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
-        self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))  # Denormalize data
+        self.model = None
+        if X_normalizer is not None and Y_normalizer is not None:
+            self.model_init()
 
         # Optimizer
         self.learning_rate = learning_rate
@@ -40,6 +40,21 @@ class PINN:
 
         # Validation loss
         self.validation_loss = []
+
+    def model_init(self):
+        if self.X_normalizer is None or self.Y_normalizer is None:
+            raise Exception('Before initializing the neural network, the class\' normalizers must be defined.')
+        else:
+            tf.keras.backend.set_floatx('float64')
+            self.model = tf.keras.Sequential()
+            self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
+            # Normalize data
+            self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))
+            for i in range(self.hidden_layers):
+                self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
+            self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
+            # Denormalize data
+            self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))
 
     def predict(self, np_X, np_ic=None, working_period=None, time_column=0):
         '''
@@ -222,11 +237,69 @@ class PINN:
         # So we have to manually put them back to the model
         func.assign_new_model_parameters(res.position)
 
-    def save_weights(self, path):
-        self.model.save_weights(path)
+    def save(self, directory_path):
+        if not os.path.isdir(directory_path):
+            os.mkdir(directory_path)
 
-    def load_weights(self, path):
-        self.model.load_weights(path)
+        self.save_losses(directory_path + '/losses.json')
+        self.save_normalizers(directory_path + '/normalizers.json')
+        self.save_weights(directory_path + '/weights.h5')
+
+    def save_losses(self, file_path):
+        losses = {'train_u_loss': self.train_u_loss,
+                  'train_f_loss': self.train_f_loss,
+                  'train_total_loss': self.train_total_loss,
+                  'validation_loss': self.validation_loss}
+
+        with open(file_path, 'w') as file:
+            json.dump(losses, file)
+
+    def save_normalizers(self, file_path):
+        X_normalizer = copy.deepcopy(self.X_normalizer)
+        X_normalizer.mean = X_normalizer.mean.tolist()
+        X_normalizer.std = X_normalizer.std.tolist()
+
+        Y_normalizer = copy.deepcopy(self.Y_normalizer)
+        Y_normalizer.mean = Y_normalizer.mean.tolist()
+        Y_normalizer.std = Y_normalizer.std.tolist()
+
+        normalizers = {'X_normalizer': X_normalizer.__dict__,
+                       'Y_normalizer': Y_normalizer.__dict__}
+
+        with open(file_path, 'w') as file:
+            json.dump(normalizers, file)
+
+    def save_weights(self, file_path):
+        self.model.save_weights(file_path)
+
+    def load(self, directory_path):
+        self.load_losses(directory_path + '/losses.json')
+        self.load_normalizers(directory_path + '/normalizers.json')
+        self.load_weights(directory_path + '/weights.h5')
+
+    def load_losses(self, file_path):
+        with open(file_path, 'r') as file:
+            losses = json.load(file)
+
+        self.train_u_loss = losses['train_u_loss']
+        self.train_f_loss = losses['train_f_loss']
+        self.train_total_loss = losses['train_total_loss']
+        self.validation_loss = losses['validation_loss']
+
+    def load_normalizers(self, file_path):
+        with open(file_path, 'r') as file:
+            normalizers = json.load(file)
+
+        X_normalizer = Normalizer(normalizers['X_normalizer'])
+        Y_normalizer = Normalizer(normalizers['Y_normalizer'])
+
+        self.X_normalizer = X_normalizer
+        self.Y_normalizer = Y_normalizer
+
+        self.model_init()
+
+    def load_weights(self, file_path):
+        self.model.load_weights(file_path)
 
     def get_weights(self):
         weights = []
@@ -240,7 +313,8 @@ class PINN:
 
 
 class OneTankPINN(PINN):
-    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+    def __init__(self, sys_params, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
         super().__init__(3, 1, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         self.k = sys_params['k']
@@ -260,7 +334,8 @@ class OneTankPINN(PINN):
 
 
 class VanDerPolPINN(PINN):
-    def __init__(self, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+    def __init__(self, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
         super().__init__(4, 2, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         # System parameters for matrix form
@@ -291,7 +366,8 @@ class VanDerPolPINN(PINN):
 
 
 class FourTanksPINN(PINN):
-    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+    def __init__(self, sys_params, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
         super().__init__(7, 4, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         # System parameters to matrix form

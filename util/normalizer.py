@@ -2,10 +2,15 @@ import numpy as np
 
 
 class Normalizer:
-    def __init__(self, analysis_axis=0):
-        self.analysis_axis = analysis_axis
-        self.mean = None
-        self.std = None
+    def __init__(self, dictionary=None, analysis_axis=0):
+        if dictionary is not None:
+            self.__dict__.update(dictionary)
+            self.mean = np.array(self.mean)
+            self.std = np.array(self.std)
+        else:
+            self.analysis_axis = analysis_axis
+            self.mean = None
+            self.std = None
 
     def parametrize(self, data):
         self.mean = np.array([data.mean(axis=self.analysis_axis)])

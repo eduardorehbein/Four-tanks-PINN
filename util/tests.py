@@ -437,10 +437,10 @@ class BestAndWorstModelTester:
                          now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-worst-model-test.pdf')
 
         # Save models
-        best_model.save_weights('models/' + results_and_models_subdirectory + '/' +
-                                now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-model.h5')
-        worst_model.save_weights('models/' + results_and_models_subdirectory + '/' +
-                                 now.strftime('%Y-%m-%d-%H-%M-%S') + '-worst-model.h5')
+        best_model.save('models/' + results_and_models_subdirectory + '/' +
+                        now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-model')
+        worst_model.save('models/' + results_and_models_subdirectory + '/' +
+                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-worst-model')
 
 
 class WorkingPeriodTestContainer:
