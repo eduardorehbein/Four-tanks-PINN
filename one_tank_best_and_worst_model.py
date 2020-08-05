@@ -13,8 +13,12 @@ worst_model_hidden_layers = 2
 worst_model_units_per_layer = 10
 
 # Train parameters
-adam_epochs = 500
-max_lbfgs_iterations = 10000
+adam_epochs = 5#00
+max_lbfgs_iterations = 1#0000
+
+# Other parameters
+best_model_working_period = 15.0
+worst_model_working_period = 0.001
 
 # Directory under 'results' and 'models' where the plots and models are going to be saved
 results_and_models_subdirectory = 'one_tank'
@@ -67,7 +71,10 @@ np_test_h = test_df[['h']].to_numpy()
 np_test_ic = np.array([test_df['h'].to_numpy()[0]])
 
 # Tester
-tester = BestAndWorstModelTester(adam_epochs, max_lbfgs_iterations)
+tester = BestAndWorstModelTester(OneTankPINN,
+                                 best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
+                                 worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
+                                 adam_epochs, max_lbfgs_iterations, sys_params)
 
 # Load data into a container
 data_container = BestAndWorstModelTestContainer()
@@ -94,5 +101,4 @@ data_container.test_Y = np_test_h
 data_container.test_ic = np_test_ic
 
 # Test
-tester.test(OneTankPINN, data_container, best_model_hidden_layers, best_model_units_per_layer,
-            worst_model_hidden_layers, worst_model_units_per_layer, results_and_models_subdirectory, sys_params)
+tester.test(data_container, results_and_models_subdirectory)

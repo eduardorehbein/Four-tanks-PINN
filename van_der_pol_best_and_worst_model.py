@@ -16,6 +16,10 @@ worst_model_units_per_layer = 2
 adam_epochs = 500
 max_lbfgs_iterations = 10000
 
+# Other parameters
+best_model_working_period = 1.0
+worst_model_working_period = 8.0
+
 # Directory under 'results' and 'models' where the plots and models are going to be saved
 results_and_models_subdirectory = 'van_der_pol'
 
@@ -60,7 +64,10 @@ np_test_Y = test_df[['x1', 'x2']].to_numpy()
 np_test_ic = np.array(test_df[['x1', 'x2']].to_numpy()[0])
 
 # Tester
-tester = BestAndWorstModelTester(adam_epochs, max_lbfgs_iterations)
+tester = BestAndWorstModelTester(VanDerPolPINN,
+                                 best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
+                                 worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
+                                 adam_epochs, max_lbfgs_iterations)
 
 # Load data into a container
 data_container = BestAndWorstModelTestContainer()
@@ -87,5 +94,4 @@ data_container.test_Y = np_test_Y
 data_container.test_ic = np_test_ic
 
 # Test
-tester.test(VanDerPolPINN, data_container, best_model_hidden_layers, best_model_units_per_layer,
-            worst_model_hidden_layers, worst_model_units_per_layer, results_and_models_subdirectory)
+tester.test(data_container, results_and_models_subdirectory)

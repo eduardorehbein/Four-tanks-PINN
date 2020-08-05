@@ -4,13 +4,16 @@ import pandas as pd
 from util.pinn import OneTankPINN
 from util.tests import StructTester
 
-# Structural test's parameters
+# Structural test parameters
 layers_to_test = (1, 2, 3)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 1000
+
+# Other parameters
+working_period = 15.0
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'one_tank'
@@ -30,7 +33,8 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Load data
-df = pd.read_csv('data/one_tank/rand_seed_30_t_range_15.0s_2000_scenarios_100_collocation_points.csv')
+df = pd.read_csv('data/one_tank/rand_seed_30_t_range_' + str(working_period) +
+                 's_2000_scenarios_100_collocation_points.csv')
 
 # Train data
 train_df = df[df['scenario'] <= 1000]
@@ -46,4 +50,5 @@ np_val_Y = val_df[['h']].to_numpy()
 
 # Test
 tester = StructTester(layers_to_test, neurons_per_layer_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(OneTankPINN, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory, sys_params)
+tester.test(OneTankPINN, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory,
+            working_period, sys_params)

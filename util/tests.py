@@ -12,7 +12,7 @@ class StructTester:
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
     def test(self, PINNModelClass, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-             results_subdirectory, sys_params=None):
+             results_subdirectory, working_period='unspecified', sys_params=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -25,6 +25,7 @@ class StructTester:
         plotter.text_page('Neural network\'s structural test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nWorking period -> ' + str(working_period) + ' s' +
                           '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
                           '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
                           '\nValidation points -> ' + str(np_val_X.shape[0]))
@@ -47,7 +48,7 @@ class StructTester:
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
                 model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-                            adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
+                            self.adam_epochs, self.max_lbfgs_iterations)
 
                 # Save plot data
                 plot_dict[layers]['final train u losses'].append(model.train_u_loss[-1])
@@ -213,7 +214,7 @@ class NfNuTester:
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
     def test(self, PINNModelClass, hidden_layers, units_per_layer, data_container,
-             results_subdirectory, sys_params=None):
+             results_subdirectory, working_period='unspecified', sys_params=None):
         # Plotter
         plotter = PdfPlotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
@@ -221,6 +222,7 @@ class NfNuTester:
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nNeural network\'s structure -> ' + str(hidden_layers) +
                           ' hidden layers of ' + str(units_per_layer) + ' neurons' +
+                          '\nWorking period -> ' + str(working_period) + ' s' +
                           '\nValidation points -> 10% of Nf')
 
         # Test
@@ -306,15 +308,27 @@ class NfNuTester:
 
 
 class BestAndWorstModelTester:
-    def __init__(self, adam_epochs=500, max_lbfgs_iterations=10000):
-        self.best_model_key = 'best'
-        self.worst_model_key = 'worst'
+    def __init__(self, PINNModelClass, best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
+                 worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
+                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None,
+                 best_model_key='best', worst_model_key='worst'):
+        self.PINNModelClass = PINNModelClass
+        self.sys_params = sys_params
+
+        self.best_model_hidden_layers = best_model_hidden_layers
+        self.best_model_units_per_layer = best_model_units_per_layer
+        self.best_model_working_period = best_model_working_period
+        self.worst_model_hidden_layers = worst_model_hidden_layers
+        self.worst_model_units_per_layer = worst_model_units_per_layer
+        self.worst_model_working_period = worst_model_working_period
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, data_container, best_model_hidden_layers, best_model_units_per_layer,
-             worst_model_hidden_layers, worst_model_units_per_layer, results_and_models_subdirectory, sys_params=None):
+        self.best_model_key = best_model_key
+        self.worst_model_key = worst_model_key
+
+    def test(self, data_container, results_and_models_subdirectory):
         # Train data
         best_model_np_train_u_X = data_container.get_train_u_X(self.best_model_key)
         best_model_np_train_u_Y = data_container.get_train_u_Y(self.best_model_key)
@@ -345,16 +359,18 @@ class BestAndWorstModelTester:
         worst_model_Y_normalizer.parametrize(worst_model_np_train_u_Y)
 
         # Instance PINN
-        if sys_params is None:
-            best_model = PINNModelClass(best_model_hidden_layers, best_model_units_per_layer,
-                                        best_model_X_normalizer, best_model_Y_normalizer)
-            worst_model = PINNModelClass(worst_model_hidden_layers, worst_model_units_per_layer,
-                                         worst_model_X_normalizer, worst_model_Y_normalizer)
+        if self.sys_params is None:
+            best_model = self.PINNModelClass(self.best_model_hidden_layers, self.best_model_units_per_layer,
+                                             best_model_X_normalizer, best_model_Y_normalizer)
+            worst_model = self.PINNModelClass(self.worst_model_hidden_layers, self.worst_model_units_per_layer,
+                                              worst_model_X_normalizer, worst_model_Y_normalizer)
         else:
-            best_model = PINNModelClass(sys_params, best_model_hidden_layers, best_model_units_per_layer,
-                                        best_model_X_normalizer, best_model_Y_normalizer)
-            worst_model = PINNModelClass(sys_params, worst_model_hidden_layers, worst_model_units_per_layer,
-                                         worst_model_X_normalizer, worst_model_Y_normalizer)
+            best_model = self.PINNModelClass(self.sys_params, self.best_model_hidden_layers,
+                                             self.best_model_units_per_layer,
+                                             best_model_X_normalizer, best_model_Y_normalizer)
+            worst_model = self.PINNModelClass(self.sys_params, self.worst_model_hidden_layers,
+                                              self.worst_model_units_per_layer,
+                                              worst_model_X_normalizer, worst_model_Y_normalizer)
 
         # Train
         best_model.train(best_model_np_train_u_X, best_model_np_train_u_Y, best_model_np_train_f_X,
@@ -369,14 +385,28 @@ class BestAndWorstModelTester:
         test_ic = data_container.test_ic
 
         # Test
-        np_best_model_prediction = best_model.predict(np_test_X, np_ic=test_ic, working_period=1.0)
-        np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic, working_period=8.0)
+        np_best_model_prediction = best_model.predict(np_test_X, np_ic=test_ic,
+                                                      working_period=self.best_model_working_period)
+        np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic,
+                                                        working_period=self.worst_model_working_period)
 
         # Plotter
         plotter = PdfPlotter()
         plotter.text_page('Best and worst model:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nBest model neural network\'s structure -> ' + str(self.best_model_hidden_layers) +
+                          ' hidden layers of ' + str(self.best_model_units_per_layer) + ' neurons' +
+                          '\nBest model working period -> ' + str(self.best_model_working_period) + ' s' +
+                          '\nBest model train Nu -> ' + str(best_model_np_train_u_X.shape[0]) +
+                          '\nBest model train Nf -> ' + str(best_model_np_train_f_X.shape[0]) +
+                          '\nBest model validation points -> ' + str(best_model_np_val_X.shape[0]) +
+                          '\nWorst model neural network\'s structure -> ' + str(self.worst_model_hidden_layers) +
+                          ' hidden layers of ' + str(self.worst_model_units_per_layer) + ' neurons' +
+                          '\nWorst model working period -> ' + str(self.worst_model_working_period) + ' s' +
+                          '\nWorst model train Nu -> ' + str(worst_model_np_train_u_X.shape[0]) +
+                          '\nWorst model train Nf -> ' + str(worst_model_np_train_f_X.shape[0]) +
+                          '\nWorst model validation points -> ' + str(worst_model_np_val_X.shape[0]) +
                           '\nTest points -> ' + str(np_test_X.shape[0]))
 
         # Plot train and validation losses
