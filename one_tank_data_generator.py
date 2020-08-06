@@ -3,7 +3,7 @@ import pandas as pd
 from util.systems.one_tank_system import CasadiSimulator
 
 
-# Hyperparameters
+# Parameters
 random_seed = 30
 
 scenarios = 1100
@@ -35,7 +35,7 @@ simulator = CasadiSimulator(sys_params)
 vs = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios,))
 ics = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios,))
 
-# Neural network's working period
+# Neural network's max working period
 t = np.linspace(0, t_range, collocation_points)
 
 # Data

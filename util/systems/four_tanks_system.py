@@ -52,45 +52,42 @@ class ResponseAnalyser:
 
 class CasadiSimulator:
     def __init__(self, sys_params):
-        # Parameters dictionary
-        self.sys_params = sys_params
-
         # Time
-        self.t = cs.SX.sym('t')
+        self.t = cs.SX.sym('t')  # [s]
 
         # States
-        self.h1 = cs.SX.sym('h1')
-        self.h2 = cs.SX.sym('h2')
-        self.h3 = cs.SX.sym('h3')
-        self.h4 = cs.SX.sym('h4')
+        self.h1 = cs.SX.sym('h1')  # [cm]
+        self.h2 = cs.SX.sym('h2')  # [cm]
+        self.h3 = cs.SX.sym('h3')  # [cm]
+        self.h4 = cs.SX.sym('h4')  # [cm]
 
         self.states = cs.vertcat(self.h1, self.h2, self.h3, self.h4)
 
         # Controls
-        self.v1 = cs.SX.sym('v1')
-        self.v2 = cs.SX.sym('v2')
+        self.v1 = cs.SX.sym('v1')  # [V]
+        self.v2 = cs.SX.sym('v2')  # [V]
+
+        self.controls = cs.vertcat(self.v1, self.v2)
 
         # Params
-        self.g = cs.SX.sym('g')
+        self.g = sys_params['g']  # [cm/s^2]
 
-        self.a1 = cs.SX.sym('a1')
-        self.a2 = cs.SX.sym('a2')
-        self.a3 = cs.SX.sym('a3')
-        self.a4 = cs.SX.sym('a4')
+        self.a1 = sys_params['a1']  # [cm^2]
+        self.a2 = sys_params['a2']  # [cm^2]
+        self.a3 = sys_params['a3']  # [cm^2]
+        self.a4 = sys_params['a4']  # [cm^2]
 
-        self.A1 = cs.SX.sym('A1')
-        self.A2 = cs.SX.sym('A2')
-        self.A3 = cs.SX.sym('A3')
-        self.A4 = cs.SX.sym('A4')
+        self.A1 = sys_params['A1']  # [cm^2]
+        self.A2 = sys_params['A2']  # [cm^2]
+        self.A3 = sys_params['A3']  # [cm^2]
+        self.A4 = sys_params['A4']  # [cm^2]
 
-        self.alpha1 = cs.SX.sym('alpha1')
-        self.alpha2 = cs.SX.sym('alpha2')
+        self.alpha1 = sys_params['alpha1']  # [adm]
+        self.alpha2 = sys_params['alpha2']  # [adm]
 
-        self.k1 = cs.SX.sym('k1')
-        self.k2 = cs.SX.sym('k2')
+        self.k1 = sys_params['k1']  # [cm^3/Vs]
+        self.k2 = sys_params['k2']  # [cm^3/Vs]
 
-        self.params = cs.vertcat(self.g, self.a1, self.a2, self.a3, self.a4, self.A1, self.A2, self.A3, self.A4,
-                                 self.alpha1, self.alpha2, self.k1, self.k2, self.v1, self.v2)
         self.rhs = cs.vertcat(-(self.a1 / self.A1) * cs.sqrt(2 * self.g * self.h1) +
                               (self.a3 / self.A1) * cs.sqrt(2 * self.g * self.h3) +
                               ((self.alpha1 * self.k1) / self.A1) * self.v1,
@@ -101,24 +98,9 @@ class CasadiSimulator:
                               (((1 - self.alpha2) * self.k2) / self.A3) * self.v2,
                               -(self.a4 / self.A4) * cs.sqrt(2 * self.g * self.h4) +
                               (((1 - self.alpha1) * self.k1) / self.A4) * self.v1)
-        self.dae = {'x': self.states, 'p': self.params, 't': self.t, 'ode': self.rhs}
+        self.dae = {'x': self.states, 'p': self.controls, 't': self.t, 'ode': self.rhs}
 
     def run(self, np_t, np_v, np_ic):
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': True})
-        sol = integrator(x0=np_ic, p=[self.sys_params['g'],  # g [cm/s^2]
-                                      self.sys_params['a1'],  # a1 [cm^2]
-                                      self.sys_params['a2'],  # a2 [cm^2]
-                                      self.sys_params['a3'],  # a3 [cm^2]
-                                      self.sys_params['a4'],  # a4 [cm^2]
-                                      self.sys_params['A1'],  # A1 [cm^2]
-                                      self.sys_params['A2'],  # A2 [cm^2]
-                                      self.sys_params['A3'],  # A3 [cm^2]
-                                      self.sys_params['A4'],  # A4 [cm^2]
-                                      self.sys_params['alpha1'],  # alpha1 [adm]
-                                      self.sys_params['alpha2'],  # alpha2 [adm]
-                                      self.sys_params['k1'],  # k1 [cm^3/Vs]
-                                      self.sys_params['k2'],  # k2 [cm^3/Vs]
-                                      np_v[0],  # v1 [V]
-                                      np_v[1]  # v2 [V]
-                                      ])
+        sol = integrator(x0=np_ic, p=np_v)
         return np.array(sol['xf'])

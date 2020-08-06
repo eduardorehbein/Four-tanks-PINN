@@ -1,32 +1,32 @@
+import os
 import copy
+import json
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 from util.factory_lbfgs import function_factory
+from util.normalizer import Normalizer
 
 # TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
 
 class PINN:
-    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer, X_normalizer, Y_normalizer,
-                 learning_rate=0.001):
-        # Input and output vectors' dimension
+    def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
+        # Neural network's structure
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
+        self.hidden_layers = hidden_layers
+        self.units_per_layer = units_per_layer
 
         # Normalizers
         self.X_normalizer = X_normalizer
         self.Y_normalizer = Y_normalizer
 
         # Model
-        tf.keras.backend.set_floatx('float64')
-        self.model = tf.keras.Sequential()
-        self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
-        self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))  # Normalize data
-        for i in range(hidden_layers):
-            self.model.add(tf.keras.layers.Dense(units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
-        self.model.add(tf.keras.layers.Dense(n_outputs, None, kernel_initializer="glorot_normal"))
-        self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))  # Denormalize data
+        self.model = None
+        if X_normalizer is not None and Y_normalizer is not None:
+            self.model_init()
 
         # Optimizer
         self.learning_rate = learning_rate
@@ -41,6 +41,21 @@ class PINN:
         # Validation loss
         self.validation_loss = []
 
+    def model_init(self):
+        if self.X_normalizer is None or self.Y_normalizer is None:
+            raise Exception('Before initializing the neural network, the class\' normalizers must be defined.')
+        else:
+            tf.keras.backend.set_floatx('float64')
+            self.model = tf.keras.Sequential()
+            self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
+            # Normalize data
+            self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))
+            for i in range(self.hidden_layers):
+                self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
+            self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
+            # Denormalize data
+            self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))
+
     def predict(self, np_X, np_ic=None, working_period=None, time_column=0):
         '''
         Predict the output NN(X)
@@ -52,22 +67,14 @@ class PINN:
             tf_X = self.tensor(np_X)
             tf_NN = self.model(tf_X)
 
-            np_NN = tf_NN.numpy()
-            if np_NN.shape[1] == 1:
-                return np.transpose(np_NN)[0]
-            else:
-                return np_NN
+            return tf_NN.numpy()
         elif np_X.shape[1] + np_ic.shape[0] == self.n_inputs:
             if working_period is not None:
                 np_Z = self.process_input(np_X, np_ic, working_period, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
-                np_NN = tf_NN.numpy()
-                if np_NN.shape[1] == 1:
-                    return np.transpose(np_NN)[0]
-                else:
-                    return np_NN
+                return tf_NN.numpy()
             else:
                 raise Exception('Missing neural network\'s working period.')
         else:
@@ -79,7 +86,10 @@ class PINN:
         np_Z[:, time_column] = np_Z[:, time_column] % working_period
 
         previous_t = np_Z[0, time_column]
-        np_y0 = copy.deepcopy(np_ic)
+        if len(np_ic.shape) == 1:
+            np_y0 = np.reshape(np_ic, (1, np_ic.shape[0]))
+        else:
+            np_y0 = copy.deepcopy(np_ic)
         new_columns = []
         for index, row in enumerate(np_Z):
             if row[time_column] < previous_t:
@@ -89,7 +99,9 @@ class PINN:
                 np_y0 = self.predict(prediction_input)
             previous_t = row[time_column]
             new_columns.append(np_y0)
-        np_new_columns = np.array(new_columns)
+        np_new_columns = np.concatenate(new_columns)
+        if len(np_new_columns.shape) == 1:
+            np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
 
         return np.append(np_Z, np_new_columns, axis=1)
 
@@ -101,7 +113,7 @@ class PINN:
                                                   beta_2=beta_2, epsilon=epsilon)
 
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-              max_adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
+              adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
@@ -114,14 +126,14 @@ class PINN:
 
         # Train with Adam
         self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                        max_adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
+                        adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
-                   max_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
+                   epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         # Train states and variables
         epoch = 0
         grads = None
@@ -132,7 +144,7 @@ class PINN:
         best_weights = copy.deepcopy(self.model.get_weights())
 
         # Train process
-        while epoch <= max_epochs:
+        while epoch <= epochs:
             # Update weights and biases
             if grads is not None:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
@@ -225,11 +237,69 @@ class PINN:
         # So we have to manually put them back to the model
         func.assign_new_model_parameters(res.position)
 
-    def save_weights(self, path):
-        self.model.save_weights(path)
+    def save(self, directory_path):
+        if not os.path.isdir(directory_path):
+            os.mkdir(directory_path)
 
-    def load_weights(self, path):
-        self.model.load_weights(path)
+        self.save_losses(directory_path + '/losses.json')
+        self.save_normalizers(directory_path + '/normalizers.json')
+        self.save_weights(directory_path + '/weights.h5')
+
+    def save_losses(self, file_path):
+        losses = {'train_u_loss': self.train_u_loss,
+                  'train_f_loss': self.train_f_loss,
+                  'train_total_loss': self.train_total_loss,
+                  'validation_loss': self.validation_loss}
+
+        with open(file_path, 'w') as file:
+            json.dump(losses, file)
+
+    def save_normalizers(self, file_path):
+        X_normalizer = copy.deepcopy(self.X_normalizer)
+        X_normalizer.mean = X_normalizer.mean.tolist()
+        X_normalizer.std = X_normalizer.std.tolist()
+
+        Y_normalizer = copy.deepcopy(self.Y_normalizer)
+        Y_normalizer.mean = Y_normalizer.mean.tolist()
+        Y_normalizer.std = Y_normalizer.std.tolist()
+
+        normalizers = {'X_normalizer': X_normalizer.__dict__,
+                       'Y_normalizer': Y_normalizer.__dict__}
+
+        with open(file_path, 'w') as file:
+            json.dump(normalizers, file)
+
+    def save_weights(self, file_path):
+        self.model.save_weights(file_path)
+
+    def load(self, directory_path):
+        self.load_losses(directory_path + '/losses.json')
+        self.load_normalizers(directory_path + '/normalizers.json')
+        self.load_weights(directory_path + '/weights.h5')
+
+    def load_losses(self, file_path):
+        with open(file_path, 'r') as file:
+            losses = json.load(file)
+
+        self.train_u_loss = losses['train_u_loss']
+        self.train_f_loss = losses['train_f_loss']
+        self.train_total_loss = losses['train_total_loss']
+        self.validation_loss = losses['validation_loss']
+
+    def load_normalizers(self, file_path):
+        with open(file_path, 'r') as file:
+            normalizers = json.load(file)
+
+        X_normalizer = Normalizer(normalizers['X_normalizer'])
+        Y_normalizer = Normalizer(normalizers['Y_normalizer'])
+
+        self.X_normalizer = X_normalizer
+        self.Y_normalizer = Y_normalizer
+
+        self.model_init()
+
+    def load_weights(self, file_path):
+        self.model.load_weights(file_path)
 
     def get_weights(self):
         weights = []
@@ -243,7 +313,8 @@ class PINN:
 
 
 class OneTankPINN(PINN):
-    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+    def __init__(self, sys_params, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
         super().__init__(3, 1, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         self.k = sys_params['k']
@@ -262,8 +333,41 @@ class OneTankPINN(PINN):
         return self.A * tf_dnn_dt + (self.a * self.two_g_sqrt) * tf.sqrt(tf.maximum(tf_NN, 0.0)) - self.k * tf_v
 
 
+class VanDerPolPINN(PINN):
+    def __init__(self, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
+        super().__init__(4, 2, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
+
+        # System parameters for matrix form
+        self.A = self.tensor([[1, 1],
+                              [-1, 0]])
+        self.b = self.tensor([[1, 0]])
+
+    def expression(self, tf_X, tf_NN, decomposed_NN, tape):
+        # ODE sys: d2x_dt2 = (1 - x^2) * dx_dt - x + u
+        #
+        # As 2 states system: dx1_dt = (1 - x2^2) * x1 - x2 + u
+        #                     dx2_dt = x1
+        #
+        # (x2 is the position variable)
+        #
+        # In matrix form: dX_dt = X*A + (u - x2^2 * x1)*b
+
+        tf_u = tf.slice(tf_X, [0, 1], [tf_X.shape[0], 1])
+
+        tf_dnn1_dx = tape.gradient(decomposed_NN[0], tf_X)
+        tf_dnn2_dx = tape.gradient(decomposed_NN[1], tf_X)
+
+        tf_dnn_dt = tf.concat([tf.slice(tf_dnn1_dx, [0, 0], [tf_dnn1_dx.shape[0], 1]),
+                               tf.slice(tf_dnn2_dx, [0, 0], [tf_dnn2_dx.shape[0], 1])], axis=1)
+
+        return tf_dnn_dt - tf.matmul(tf_NN, self.A) + \
+               tf.matmul((tf.square(decomposed_NN[1]) * decomposed_NN[0] - tf_u), self.b)
+
+
 class FourTanksPINN(PINN):
-    def __init__(self, sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate=0.001):
+    def __init__(self, sys_params, hidden_layers, units_per_layer,
+                 X_normalizer=None, Y_normalizer=None, learning_rate=0.001):
         super().__init__(7, 4, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate)
 
         # System parameters to matrix form
@@ -310,8 +414,8 @@ class FourTanksPINN(PINN):
                                             tf.slice(tf_dnn3_dx, [0, 0], [tf_dnn3_dx.shape[0], 1]),
                                             tf.slice(tf_dnn4_dx, [0, 0], [tf_dnn4_dx.shape[0], 1])], axis=1))
 
-        tf_f_loss = tf.matmul(self.B[0], tf_dnn_dt) + self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf_nn)) - \
-                    tf.matmul(self.B[2], tf_v)
+        tf_f_loss = tf.matmul(self.B[0], tf_dnn_dt) + \
+                    self.two_g_sqrt * tf.matmul(self.B[1], tf.sqrt(tf.maximum(tf_nn, 0.0))) - tf.matmul(self.B[2], tf_v)
 
         return tf.transpose(tf_f_loss)
 

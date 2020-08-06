@@ -6,10 +6,10 @@ class PdfPlotter:
     def __init__(self):
         self.y_range = float('-inf')
 
-    def text_page(self, text):
+    def text_page(self, text, vertical_position=0.5, size=24):
         firstPage = plt.figure(figsize=(11.69, 8.27))
         firstPage.clf()
-        firstPage.text(0.5, 0.5, text, transform=firstPage.transFigure, size=24, ha="center")
+        firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
              limit_range=False, x_scale='linear', y_scale='linear'):
