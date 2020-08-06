@@ -13,8 +13,8 @@ worst_model_hidden_layers = 2
 worst_model_units_per_layer = 10
 
 # Train parameters
-adam_epochs = 5#00
-max_lbfgs_iterations = 1#0000
+adam_epochs = 500
+max_lbfgs_iterations = 10000
 
 # Other parameters
 best_model_working_period = 15.0

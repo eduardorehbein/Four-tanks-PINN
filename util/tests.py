@@ -407,7 +407,9 @@ class BestAndWorstModelTester:
                           '\nWorst model train Nu -> ' + str(worst_model_np_train_u_X.shape[0]) +
                           '\nWorst model train Nf -> ' + str(worst_model_np_train_f_X.shape[0]) +
                           '\nWorst model validation points -> ' + str(worst_model_np_val_X.shape[0]) +
-                          '\nTest points -> ' + str(np_test_X.shape[0]))
+                          '\nTest points -> ' + str(np_test_X.shape[0]),
+                          vertical_position=0.25,
+                          size=20)
 
         # Plot train and validation losses
         loss_len = min(len(best_model.train_total_loss), len(worst_model.train_total_loss))
