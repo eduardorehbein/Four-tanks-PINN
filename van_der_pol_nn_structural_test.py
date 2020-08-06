@@ -42,6 +42,6 @@ np_val_X = val_df[['t', 'u', 'x1_0', 'x2_0']].to_numpy()
 np_val_Y = val_df[['x1', 'x2']].to_numpy()
 
 # Test
-tester = StructTester(layers_to_test, neurons_per_layer_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(VanDerPolPINN, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-            results_subdirectory, working_period)
+tester = StructTester(VanDerPolPINN, layers_to_test, neurons_per_layer_to_test, working_period,
+                      adam_epochs, max_lbfgs_iterations)
+tester.test(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory)

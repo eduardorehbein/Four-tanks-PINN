@@ -56,5 +56,6 @@ for nf in nfs_to_test:
         data_container.set_val_Y(nf, nu, np_val_Y)
 
 # Test
-tester = NfNuTester(nfs_to_test, nus_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(VanDerPolPINN, hidden_layers, units_per_layer, data_container, results_subdirectory, working_period)
+tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test, working_period,
+                    adam_epochs, max_lbfgs_iterations)
+tester.test(data_container, results_subdirectory)

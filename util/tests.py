@@ -5,14 +5,20 @@ from util.plot import PdfPlotter
 
 
 class StructTester:
-    def __init__(self, layers_to_test, neurons_per_layer_to_test, adam_epochs=500, max_lbfgs_iterations=1000):
+    def __init__(self, PINNModelClass, layers_to_test, neurons_per_layer_to_test, working_period='unspecified',
+                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+        self.PINNModelClass = PINNModelClass
+        self.sys_params = sys_params
+
         self.layers_to_test = layers_to_test
         self.neurons_per_layer_to_test = neurons_per_layer_to_test
+
+        self.working_period = working_period
+
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
-             results_subdirectory, working_period='unspecified', sys_params=None):
+    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -25,7 +31,7 @@ class StructTester:
         plotter.text_page('Neural network\'s structural test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nWorking period -> ' + str(working_period) + ' s' +
+                          '\nWorking period -> ' + str(self.working_period) + ' s' +
                           '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
                           '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
                           '\nValidation points -> ' + str(np_val_X.shape[0]))
@@ -40,10 +46,10 @@ class StructTester:
 
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
-                if sys_params is None:
-                    model = PINNModelClass(layers, neurons, X_normalizer, Y_normalizer)
+                if self.sys_params is None:
+                    model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer)
                 else:
-                    model = PINNModelClass(sys_params, layers, neurons, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer)
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
@@ -97,14 +103,20 @@ class StructTester:
 
 
 class WorkingPeriodTester:
-    def __init__(self, working_periods, adam_epochs=500, max_lbfgs_iterations=1000):
+    def __init__(self, PINNModelClass, hidden_layers, units_per_layer, working_periods,
+                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+        self.PINNModelClass = PINNModelClass
+        self.sys_params = sys_params
+
+        self.hidden_layers = hidden_layers
+        self.units_per_layer = units_per_layer
+
         self.working_periods = working_periods
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, hidden_layers, units_per_layer, data_container,
-             results_subdirectory, sys_params=None):
+    def test(self, data_container, results_subdirectory):
         nu = data_container.get_train_u_X(self.working_periods[0]).shape[0]
         nf = data_container.get_train_f_X(self.working_periods[0]).shape[0]
         val_scenarios = data_container.get_val_X(self.working_periods[0]).shape[0]
@@ -143,10 +155,11 @@ class WorkingPeriodTester:
             Y_normalizer.parametrize(np_train_u_Y)
 
             # Instance PINN
-            if sys_params is None:
-                model = PINNModelClass(hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+            if self.sys_params is None:
+                model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
             else:
-                model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+                model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
+                                            X_normalizer, Y_normalizer)
 
             # Train
             print('Model training with working period of ' + str(working_period) + ' seconds:')
@@ -206,23 +219,31 @@ class WorkingPeriodTester:
 
 
 class NfNuTester:
-    def __init__(self, nfs_to_test, nus_to_test, adam_epochs=500, max_lbfgs_iterations=1000):
+    def __init__(self, PINNModelClass, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
+                 working_period='unspecified', adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+        self.PINNModelClass = PINNModelClass
+        self.sys_params = sys_params
+
+        self.hidden_layers = hidden_layers
+        self.units_per_layer = units_per_layer
+
+        self.working_period = working_period
+
         self.nfs_to_test = nfs_to_test
         self.nus_to_test = nus_to_test
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, PINNModelClass, hidden_layers, units_per_layer, data_container,
-             results_subdirectory, working_period='unspecified', sys_params=None):
+    def test(self, data_container, results_subdirectory):
         # Plotter
         plotter = PdfPlotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(hidden_layers) +
-                          ' hidden layers of ' + str(units_per_layer) + ' neurons' +
-                          '\nWorking period -> ' + str(working_period) + ' s' +
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
+                          '\nWorking period -> ' + str(self.working_period) + ' s' +
                           '\nValidation points -> 10% of Nf')
 
         # Test
@@ -251,10 +272,11 @@ class NfNuTester:
                 Y_normalizer.parametrize(np_train_u_Y)
 
                 # Instance PINN
-                if sys_params is None:
-                    model = PINNModelClass(hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+                if self.sys_params is None:
+                    model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
                 else:
-                    model = PINNModelClass(sys_params, hidden_layers, units_per_layer, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
+                                                X_normalizer, Y_normalizer)
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
@@ -318,6 +340,7 @@ class BestAndWorstModelTester:
         self.best_model_hidden_layers = best_model_hidden_layers
         self.best_model_units_per_layer = best_model_units_per_layer
         self.best_model_working_period = best_model_working_period
+
         self.worst_model_hidden_layers = worst_model_hidden_layers
         self.worst_model_units_per_layer = worst_model_units_per_layer
         self.worst_model_working_period = worst_model_working_period

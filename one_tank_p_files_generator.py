@@ -43,7 +43,7 @@ model = OneTankPINN(hidden_layers=2,
                     sys_params=sys_params)
 
 # Load model
-model.load('')
+model.load('models/one_tank/2020-08-06-11-24-21-best-model')
 
 # Weights p file
 generator = PFileGenerator()

@@ -58,5 +58,6 @@ for working_period in working_periods_to_test:
     data_container.set_val_Y(working_period, np_val_Y)
 
 # Test
-tester = WorkingPeriodTester(working_periods_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(VanDerPolPINN, hidden_layers, units_per_layer, data_container, results_subdirectory)
+tester = WorkingPeriodTester(VanDerPolPINN, hidden_layers, units_per_layer, working_periods_to_test,
+                             adam_epochs, max_lbfgs_iterations)
+tester.test(data_container, results_subdirectory)
