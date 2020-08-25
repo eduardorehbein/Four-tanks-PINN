@@ -17,7 +17,7 @@ adam_epochs = 500
 max_lbfgs_iterations = 10000
 
 # Other parameters
-best_model_working_period = 15.0
+best_model_working_period = 10.0
 worst_model_working_period = 0.001
 
 # Directory under 'results' and 'models' where the plots and models are going to be saved

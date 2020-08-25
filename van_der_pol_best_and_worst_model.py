@@ -31,7 +31,7 @@ tf.config.threading.set_intra_op_parallelism_threads(8)
 np.random.seed(30)
 
 # Load train and validation data
-best_model_df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_1.0s_110_scenarios_20_collocation_points.csv')
+best_model_df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_1.0s_1100_scenarios_10_collocation_points.csv')
 worst_model_df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_8.0s_1100_scenarios_4_collocation_points.csv')
 
 # Train data

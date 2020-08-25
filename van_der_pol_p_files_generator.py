@@ -35,7 +35,7 @@ model = VanDerPolPINN(hidden_layers=5,
                       units_per_layer=20)
 
 # Load model
-model.load('models/van_der_pol/2020-08-04-11-27-53-best-model')
+model.load('models/van_der_pol/2020-08-04-11-27-53-1s-5l-20n-best-model')
 
 # P file
 generator = PFileGenerator()
