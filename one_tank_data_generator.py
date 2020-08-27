@@ -43,13 +43,13 @@ data = {'scenario': np.tile(1, (collocation_points,)),
         't': t,
         'v': np.tile(vs[0], (collocation_points,)),
         'ic': np.tile(ics[0], (collocation_points,)),
-        'h': simulator.run(t, vs[0], ics[0])}
+        'h': simulator.run(t, vs[0], ics[0])[:, 0]}
 
 for i in range(1, scenarios):
     scenario = np.tile(i + 1, (collocation_points,))
     v = np.tile(vs[i], (collocation_points,))
     ic = np.tile(ics[i], (collocation_points,))
-    h = simulator.run(t, vs[i], ics[i])
+    h = simulator.run(t, vs[i], ics[i])[:, 0]
 
     data['scenario'] = np.append(data['scenario'], scenario)
     data['t'] = np.append(data['t'], t)

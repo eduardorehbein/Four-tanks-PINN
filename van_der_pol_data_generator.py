@@ -7,13 +7,13 @@ from util.systems.van_der_pol_system import CasadiSimulator
 random_seed = 30
 
 scenarios = 1100
-collocation_points = 4
-t_range = 8.0
+collocation_points = 10
+t_range = 1.0
 
 lowest_u = -1.0
 highest_u = 1.0
-lowest_x = [-1.5, -2.0]
-highest_x = [1.5, 2.0]
+lowest_x = [-3.0, -3.0]
+highest_x = [3.0, 3.0]
 
 file_name = 'rand_seed_' + str(random_seed) + \
             '_t_range_' + str(t_range) + 's_' + \
