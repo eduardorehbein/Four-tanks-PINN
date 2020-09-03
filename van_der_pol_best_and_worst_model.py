@@ -57,7 +57,7 @@ worst_model_np_val_X = worst_model_val_df[['t', 'u', 'x1_0', 'x2_0']].to_numpy()
 worst_model_np_val_Y = worst_model_val_df[['x1', 'x2']].to_numpy()
 
 # Test data
-test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_t_range_10.0s_10000_collocation_points.csv')
+test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_sim_time_10.0s_10000_collocation_points.csv')
 np_test_t = test_df['t'].to_numpy()
 np_test_X = test_df[['t', 'u']].to_numpy()
 np_test_Y = test_df[['x1', 'x2']].to_numpy()

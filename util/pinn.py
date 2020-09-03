@@ -68,7 +68,7 @@ class PINN:
             tf_NN = self.model(tf_X)
 
             return tf_NN.numpy()
-        elif np_X.shape[1] + np_ic.shape[0] == self.n_inputs:
+        elif np_X.shape[1] + np_ic.size == self.n_inputs:
             if working_period is not None:
                 np_Z = self.process_input(np_X, np_ic, working_period, time_column)
                 tf_X = self.tensor(np_Z)

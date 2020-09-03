@@ -33,7 +33,7 @@ np_val_X = val_df[['t', 'v', 'ic']].to_numpy()
 np_val_Y = val_df[['h']].to_numpy()
 
 # Test data
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_1600_collocation_points.csv')
+test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
 np_test_X = test_df[['t', 'v']].to_numpy()
 np_test_Y = test_df[['h']].to_numpy()
 

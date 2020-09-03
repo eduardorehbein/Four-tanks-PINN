@@ -22,7 +22,7 @@ class CasadiSimulator:
         self.ode = (self.k / self.A) * self.v - (self.a / self.A) * cs.sqrt(2 * self.g * self.h)
         self.dae = {'x': self.h, 'p': self.v, 't': self.t, 'ode': self.ode}
 
-    def run(self, np_t, np_v, np_ic, output_t0=False):
+    def run(self, np_t, np_v, np_ic, output_t0=True):
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': output_t0})
         sol = integrator(x0=np.reshape(np_ic, self.h.shape),
                          p=np.reshape(np_v, self.v.shape))

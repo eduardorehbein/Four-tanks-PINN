@@ -28,7 +28,7 @@ np.random.seed(30)
 # Load data into a container
 data_container = WorkingPeriodTestContainer()
 
-test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_t_range_10.0s_10000_collocation_points.csv')
+test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_sim_time_10.0s_10000_collocation_points.csv')
 data_container.test_t = test_df['t'].to_numpy()
 data_container.test_X = test_df[['t', 'u']].to_numpy()
 data_container.test_Y = test_df[['x1', 'x2']].to_numpy()
