@@ -54,7 +54,7 @@ class PINN:
                 self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
             self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
 
-    def predict(self, np_X, np_ic=None, working_period=None, time_column=0):
+    def predict(self, np_X, np_ic=None, working_period=None, return_raw=False, time_column=0):
         '''
         Predict the output NN(X)
         :param np_X: numpy data input points X
@@ -65,14 +65,20 @@ class PINN:
             tf_X = self.tensor(np_X)
             tf_NN = self.model(tf_X)
 
-            return self.Y_normalizer.denormalize(tf_NN.numpy())
+            if return_raw:
+                return tf_NN
+            else:
+                return self.Y_normalizer.denormalize(tf_NN.numpy())
         elif np_X.shape[1] + np_ic.size == self.n_inputs:
             if working_period is not None:
                 np_Z = self.process_input(np_X, np_ic, working_period, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
-                return self.Y_normalizer.denormalize(tf_NN.numpy())
+                if return_raw:
+                    return tf_NN
+                else:
+                    return self.Y_normalizer.denormalize(tf_NN.numpy())
             else:
                 raise Exception('Missing neural network\'s working period.')
         else:
@@ -107,27 +113,25 @@ class PINN:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
                                                   beta_2=beta_2, epsilon=epsilon)
 
-    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
               adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
-        # Train data
+        # Train numpy data to tensorflow data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(self.Y_normalizer.normalize(np_train_u_Y))
         tf_train_f_X = self.tensor(np_train_f_X)
 
-        # Validation data
-        tf_val_X = self.tensor(np_val_X)
-        tf_val_Y = self.tensor(self.Y_normalizer.normalize(np_val_Y))
-
         # Train with Adam
-        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                        np_val_X, np_val_ic, T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
                         adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
-        self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+        self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
+                         np_val_X, np_val_ic, T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
-    def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+    def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
                    epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         # Train states and variables
         epoch = 0
@@ -156,7 +160,7 @@ class PINN:
             grads = tape.gradient(tf_total_loss, self.model.trainable_variables)
 
             # Validation
-            tf_val_NN = self.model(tf_val_X)
+            tf_val_NN = self.predict(np_val_X, np_val_ic, T, return_raw=True)
             tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
 
@@ -218,9 +222,9 @@ class PINN:
 
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
-    def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+    def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
                     max_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
-        func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+        func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
                                 epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Convert initial model parameters to a 1D tf.Tensor

@@ -2,7 +2,7 @@ import numpy
 import tensorflow as tf
 
 
-def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
+def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
                      epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
     """A factory to create a function required by tfp.optimizer.lbfgs_minimize.
     Args:
@@ -75,7 +75,7 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, t
 
         # Validation
         epoch = f.iter.numpy()
-        tf_val_NN = pinn.model(tf_val_X)
+        tf_val_NN = pinn.predict(np_val_X, np_val_ic, T)
         tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
         np_val_loss = tf_val_loss.numpy()
         if epoch % epochs_per_print == 0:

@@ -18,7 +18,8 @@ class StructTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory):
+    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X,
+             np_val_X, np_val_ic, working_period, np_val_Y, results_subdirectory):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -53,7 +54,7 @@ class StructTester:
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, working_period, np_val_Y,
                             self.adam_epochs, self.max_lbfgs_iterations)
 
                 # Save plot data

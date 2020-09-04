@@ -6,9 +6,9 @@ from util.systems.van_der_pol_system import CasadiSimulator
 # Parameters
 random_seed = 30
 
-scenarios = 1100
-collocation_points = 10
-t_range = 1.0
+scenarios = 1000
+collocation_points = 100
+T = 1.0
 
 lowest_u = -1.0
 highest_u = 1.0
@@ -16,7 +16,7 @@ lowest_x = [-3.0, -3.0]
 highest_x = [3.0, 3.0]
 
 file_name = 'rand_seed_' + str(random_seed) + \
-            '_t_range_' + str(t_range) + 's_' + \
+            '_T_' + str(T) + 's_' + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
@@ -31,7 +31,7 @@ us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios,))
 ics = np.random.uniform(low=lowest_x, high=highest_x, size=(scenarios, 2))
 
 # Neural network's max working period
-t = np.linspace(0, t_range, collocation_points)
+t = np.linspace(0, T, collocation_points)
 
 # Data
 x = simulator.run(t, us[0], ics[0])
