@@ -9,7 +9,7 @@ layers_to_test = (4, 5, 8, 10)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
-adam_epochs = 100
+adam_epochs = 300
 max_lbfgs_iterations = 1000
 
 # Other parameters
