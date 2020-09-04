@@ -473,7 +473,7 @@ class BestAndWorstModelTester:
         np_t = data_container.test_t
         np_test_U = data_container.get_test_U()
         plotter.plot(x_axis=np_t,
-                     y_axis_list=[np_u for np_u in np.transpose(np_test_U)],
+                     y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
                      labels=['u' + str(i + 1) for i in range(np_test_U.shape[1])],
                      title='Input signal',
                      x_label='Time [s]',

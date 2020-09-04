@@ -53,8 +53,6 @@ class PINN:
             for i in range(self.hidden_layers):
                 self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
             self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
-            # Denormalize data
-            self.model.add(tf.keras.layers.Lambda(lambda tf_NN: self.Y_normalizer.denormalize(tf_NN)))
 
     def predict(self, np_X, np_ic=None, working_period=None, time_column=0):
         '''
@@ -67,14 +65,14 @@ class PINN:
             tf_X = self.tensor(np_X)
             tf_NN = self.model(tf_X)
 
-            return tf_NN.numpy()
+            return self.Y_normalizer.denormalize(tf_NN.numpy())
         elif np_X.shape[1] + np_ic.size == self.n_inputs:
             if working_period is not None:
                 np_Z = self.process_input(np_X, np_ic, working_period, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
-                return tf_NN.numpy()
+                return self.Y_normalizer.denormalize(tf_NN.numpy())
             else:
                 raise Exception('Missing neural network\'s working period.')
         else:
@@ -86,10 +84,7 @@ class PINN:
         np_Z[:, time_column] = np_Z[:, time_column] % working_period
 
         previous_t = np_Z[0, time_column]
-        if len(np_ic.shape) == 1:
-            np_y0 = np.reshape(np_ic, (1, np_ic.shape[0]))
-        else:
-            np_y0 = copy.deepcopy(np_ic)
+        np_y0 = np.reshape(np_ic, (1, np_ic.size))
         new_columns = []
         for index, row in enumerate(np_Z):
             if row[time_column] < previous_t:
@@ -117,12 +112,12 @@ class PINN:
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
         # Train data
         tf_train_u_X = self.tensor(np_train_u_X)
-        tf_train_u_Y = self.tensor(np_train_u_Y)
+        tf_train_u_Y = self.tensor(self.Y_normalizer.normalize(np_train_u_Y))
         tf_train_f_X = self.tensor(np_train_f_X)
 
         # Validation data
         tf_val_X = self.tensor(np_val_X)
-        tf_val_Y = self.tensor(np_val_Y)
+        tf_val_Y = self.tensor(self.Y_normalizer.normalize(np_val_Y))
 
         # Train with Adam
         self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, tf_val_X, tf_val_Y,
@@ -150,7 +145,7 @@ class PINN:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
             # Learning rate adjustments
-            if epoch % 10000 == 0:
+            if epoch % 100 == 0:
                 self.learning_rate = self.learning_rate / 2
                 self.set_opt_params(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
@@ -214,7 +209,7 @@ class PINN:
 
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
-            tf_NN = self.model(tf_X)
+            tf_NN = self.Y_normalizer.denormalize(self.model(tf_X))
             np_output_selector = np.eye(self.n_outputs)
             decomposed_NN = []
             for i in range(self.n_outputs):
