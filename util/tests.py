@@ -6,7 +6,7 @@ from util.plot import PdfPlotter
 
 class StructTester:
     def __init__(self, PINNModelClass, layers_to_test, neurons_per_layer_to_test, working_period='unspecified',
-                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -105,7 +105,7 @@ class StructTester:
 
 class WorkingPeriodTester:
     def __init__(self, PINNModelClass, hidden_layers, units_per_layer, working_periods,
-                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -120,7 +120,7 @@ class WorkingPeriodTester:
     def test(self, data_container, results_subdirectory):
         nu = data_container.get_train_u_X(self.working_periods[0]).shape[0]
         nf = data_container.get_train_f_X(self.working_periods[0]).shape[0]
-        val_scenarios = data_container.get_val_X(self.working_periods[0]).shape[0]
+        val_points = data_container.val_X.shape[0]
         test_points = data_container.test_X.shape[0]
 
         # Plotter
@@ -130,7 +130,7 @@ class WorkingPeriodTester:
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain Nu -> ' + str(nu) +
                           '\nTrain Nf -> ' + str(nf) +
-                          '\nValidation points -> ' + str(val_scenarios) +
+                          '\nValidation points -> ' + str(val_points) +
                           '\nTest points -> ' + str(test_points))
 
         plot_dict = {'final train u losses': [], 'final train f losses': [],
@@ -145,8 +145,9 @@ class WorkingPeriodTester:
             np_train_f_X = data_container.get_train_f_X(working_period)
 
             # Validation data
-            np_val_X = data_container.get_val_X(working_period)
-            np_val_Y = data_container.get_val_Y(working_period)
+            np_val_X = data_container.val_X
+            np_val_Y = data_container.val_Y
+            np_val_ic = np_val_Y[0]
 
             # Normalizers
             X_normalizer = Normalizer()
@@ -164,7 +165,7 @@ class WorkingPeriodTester:
 
             # Train
             print('Model training with working period of ' + str(working_period) + ' seconds:')
-            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, working_period, np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
             # Test
@@ -221,7 +222,7 @@ class WorkingPeriodTester:
 
 class NfNuTester:
     def __init__(self, PINNModelClass, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
-                 working_period='unspecified', adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+                 working_period='unspecified', adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -501,50 +502,38 @@ class BestAndWorstModelTester:
 
 class WorkingPeriodTestContainer:
     def __init__(self):
-        self.train_val_data = dict()
+        self.train_data = dict()
+        self.val_X = None
+        self.val_Y = None
         self.test_t = None
         self.test_X = None
         self.test_Y = None
         self.test_ic = None
 
     def check_key(self, working_period):
-        if working_period not in self.train_val_data.keys():
-            self.train_val_data[working_period] = dict()
+        if working_period not in self.train_data.keys():
+            self.train_data[working_period] = dict()
 
     def get_train_u_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_u_X']
+        return self.train_data[woking_period]['np_train_u_X']
 
     def get_train_u_Y(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_u_Y']
+        return self.train_data[woking_period]['np_train_u_Y']
 
     def get_train_f_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_f_X']
-
-    def get_val_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_val_X']
-
-    def get_val_Y(self, woking_period):
-        return self.train_val_data[woking_period]['np_val_Y']
+        return self.train_data[woking_period]['np_train_f_X']
 
     def set_train_u_X(self, woking_period, np_train_u_X):
         self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_u_X'] = np_train_u_X
+        self.train_data[woking_period]['np_train_u_X'] = np_train_u_X
 
     def set_train_u_Y(self, woking_period, np_train_u_Y):
         self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_u_Y'] = np_train_u_Y
+        self.train_data[woking_period]['np_train_u_Y'] = np_train_u_Y
 
     def set_train_f_X(self, woking_period, np_train_f_X):
         self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_f_X'] = np_train_f_X
-
-    def set_val_X(self, woking_period, np_val_X):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_val_X'] = np_val_X
-
-    def set_val_Y(self, woking_period, np_val_Y):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_val_Y'] = np_val_Y
+        self.train_data[woking_period]['np_train_f_X'] = np_train_f_X
 
 
 class NfNuTestContainer:

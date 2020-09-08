@@ -9,11 +9,12 @@ layers_to_test = (4, 5, 8, 10)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
-adam_epochs = 300
-max_lbfgs_iterations = 1000
+adam_epochs = 500
+max_lbfgs_iterations = 2000
 
 # Other parameters
 T = 1.0
+random_seed = 30
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -23,7 +24,8 @@ tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Random seed
-np.random.seed(30)
+np.random.seed(random_seed)
+tf.random.set_seed(random_seed)
 
 # Train data
 train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(T) +

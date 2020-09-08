@@ -4,7 +4,7 @@ from util.systems.van_der_pol_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 30
+random_seed = 10
 
 sim_time = 10.0
 u_change_t = 2.0
@@ -12,8 +12,8 @@ collocation_points_per_u = 2000
 
 lowest_u = -1.0
 highest_u = 1.0
-lowest_x = np.array([-1.5, -2.0])
-highest_x = np.array([1.5, 2.0])
+lowest_x = np.array([-3.0, -3.0])
+highest_x = np.array([3.0, 3.0])
 
 file_name = 'long_signal_rand_seed_' + str(random_seed) + \
             '_sim_time_' + str(sim_time) + 's_' + \
