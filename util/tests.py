@@ -169,7 +169,7 @@ class WorkingPeriodTester:
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
             # Test
-            nn = model.predict(data_container.test_X, data_container.test_ic, working_period)
+            nn = model.predict(data_container.test_X, data_container.test_Y[0], working_period)
             plot_dict['nns'].append(nn)
 
             plot_dict['titles'].append('Working period = ' + str(round(working_period, 3)) + ' s.')
@@ -508,7 +508,6 @@ class WorkingPeriodTestContainer:
         self.test_t = None
         self.test_X = None
         self.test_Y = None
-        self.test_ic = None
 
     def check_key(self, working_period):
         if working_period not in self.train_data.keys():
