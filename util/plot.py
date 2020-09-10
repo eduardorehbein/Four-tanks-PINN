@@ -6,7 +6,7 @@ class PdfPlotter:
     def __init__(self):
         self.y_range = float('-inf')
 
-    def text_page(self, text, vertical_position=0.5, size=24):
+    def text_page(self, text, vertical_position=0.4, size=24):
         firstPage = plt.figure(figsize=(11.69, 8.27))
         firstPage.clf()
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")

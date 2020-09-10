@@ -4,7 +4,7 @@ from util.systems.van_der_pol_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 10
+random_seed = 60
 
 sim_time = 10.0
 u_change_t = 2.0

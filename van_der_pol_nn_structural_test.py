@@ -37,13 +37,13 @@ np_train_u_Y = train_u_df[['x1', 'x2']].to_numpy()
 np_train_f_X = train_df[['t', 'u', 'x1_0', 'x2_0']].sample(frac=1).to_numpy()
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_sim_time_10.0s_10000_collocation_points.csv')
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10000_collocation_points.csv')
 np_val_X = val_df[['t', 'u']].to_numpy()
 np_val_Y = val_df[['x1', 'x2']].to_numpy()
 np_val_ic = np_val_Y[0]
 
 # Test
-tester = StructTester(VanDerPolPINN, layers_to_test, neurons_per_layer_to_test, T,
+tester = StructTester(VanDerPolPINN, layers_to_test, neurons_per_layer_to_test,
                       adam_epochs, max_lbfgs_iterations)
 tester.test(np_train_u_X, np_train_u_Y, np_train_f_X,
             np_val_X, np_val_ic, T, np_val_Y, results_subdirectory)

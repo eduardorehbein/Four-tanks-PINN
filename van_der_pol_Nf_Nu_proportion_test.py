@@ -14,10 +14,11 @@ units_per_layer = 20
 
 # Train parameters
 adam_epochs = 500
-max_lbfgs_iterations = 1000
+max_lbfgs_iterations = 2000
 
 # Other parameters
-working_period = 1.0
+T = 1.0
+random_seed = 30
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -27,17 +28,23 @@ tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Random seed
-np.random.seed(30)
+np.random.seed(random_seed)
+tf.random.set_seed(random_seed)
 
 # Load data into a container
 data_container = NfNuTestContainer()
+
+# Validation data
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10000_collocation_points.csv')
+data_container.np_val_X = val_df[['t', 'u']].to_numpy()
+data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
+
 for nf in nfs_to_test:
     for nu in nus_to_test:
-        df = pd.read_csv('data/van_der_pol/rand_seed_30_t_range_' + str(working_period) + 's_' + str(int(1.1*nu)) +
-                         '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
+        train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(T) + 's_' + str(nu) +
+                               '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
 
         # Train data
-        train_df = df[df['scenario'] <= nu]
         train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
         np_train_u_X = train_u_df[['t', 'u', 'x1_0', 'x2_0']].to_numpy()
         np_train_u_Y = train_u_df[['x1', 'x2']].to_numpy()
@@ -47,15 +54,7 @@ for nf in nfs_to_test:
         data_container.set_train_u_Y(nf, nu, np_train_u_Y)
         data_container.set_train_f_X(nf, nu, np_train_f_X)
 
-        # Validation data
-        val_df = df[df['scenario'] > nu].sample(frac=1)
-        np_val_X = val_df[['t', 'u', 'x1_0', 'x2_0']].to_numpy()
-        np_val_Y = val_df[['x1', 'x2']].to_numpy()
-
-        data_container.set_val_X(nf, nu, np_val_X)
-        data_container.set_val_Y(nf, nu, np_val_Y)
-
 # Test
-tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test, working_period,
+tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test, T,
                     adam_epochs, max_lbfgs_iterations)
 tester.test(data_container, results_subdirectory)

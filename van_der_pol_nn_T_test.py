@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.tests import WorkingPeriodTester, WorkingPeriodTestContainer
+from util.tests import TTester, TTestContainer
 from util.pinn import VanDerPolPINN
 
 # Working period test's parameters
@@ -30,18 +30,18 @@ np.random.seed(random_seed)
 tf.random.set_seed(random_seed)
 
 # Load data into a container
-data_container = WorkingPeriodTestContainer()
+data_container = TTestContainer()
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_30_sim_time_10.0s_10000_collocation_points.csv')
-data_container.val_X = val_df[['t', 'u']].to_numpy()
-data_container.val_Y = val_df[['x1', 'x2']].to_numpy()
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10000_collocation_points.csv')
+data_container.np_val_X = val_df[['t', 'u']].to_numpy()
+data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
 
 # Test data
 test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_10_sim_time_10.0s_10000_collocation_points.csv')
-data_container.test_t = test_df['t'].to_numpy()
-data_container.test_X = test_df[['t', 'u']].to_numpy()
-data_container.test_Y = test_df[['x1', 'x2']].to_numpy()
+data_container.np_test_t = test_df['t'].to_numpy()
+data_container.np_test_X = test_df[['t', 'u']].to_numpy()
+data_container.np_test_Y = test_df[['x1', 'x2']].to_numpy()
 
 for working_period in working_periods_to_test:
     train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(working_period) +
@@ -58,6 +58,6 @@ for working_period in working_periods_to_test:
     data_container.set_train_f_X(working_period, np_train_f_X)
 
 # Test
-tester = WorkingPeriodTester(VanDerPolPINN, hidden_layers, units_per_layer, working_periods_to_test,
-                             adam_epochs, max_lbfgs_iterations)
+tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, working_periods_to_test,
+                 adam_epochs, max_lbfgs_iterations)
 tester.test(data_container, results_subdirectory)
