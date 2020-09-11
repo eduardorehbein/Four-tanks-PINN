@@ -3,7 +3,7 @@ import tensorflow as tf
 import pandas as pd
 import matplotlib.pyplot as plt
 from util.pinn import OneTankPINN
-from util.plot import PdfPlotter
+from util.plot import Plotter
 
 # Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
@@ -40,7 +40,7 @@ np_test_ic = np_test_y[0]
 np_test_nn = model.predict(np_test_X, np_test_ic, working_period=10.0)
 
 # Plotter
-plotter = PdfPlotter()
+plotter = Plotter()
 
 # Plot test results
 plt.plot(np_test_t, np_test_v, label='$v$')

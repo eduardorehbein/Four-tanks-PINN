@@ -46,4 +46,4 @@ np_val_ic = np_val_Y[0]
 tester = StructTester(VanDerPolPINN, layers_to_test, neurons_per_layer_to_test,
                       adam_epochs, max_lbfgs_iterations)
 tester.test(np_train_u_X, np_train_u_Y, np_train_f_X,
-            np_val_X, np_val_ic, T, np_val_Y, results_subdirectory)
+            np_val_X, np_val_ic, T, np_val_Y, results_subdirectory, save_mode='pdf')

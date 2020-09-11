@@ -1,7 +1,7 @@
 import numpy as np
 import datetime
 from util.normalizer import Normalizer
-from util.plot import PdfPlotter
+from util.plot import Plotter
 
 
 class StructTester:
@@ -16,7 +16,8 @@ class StructTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y, results_subdirectory):
+    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
+             results_subdirectory=None, save_mode=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -25,7 +26,7 @@ class StructTester:
         Y_normalizer.parametrize(np_train_u_Y)
 
         # Plotter
-        plotter = PdfPlotter()
+        plotter = Plotter()
         plotter.text_page('Neural network\'s structural test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
@@ -61,43 +62,38 @@ class StructTester:
                 plot_dict[layers]['final val losses'].append(model.validation_loss[-1])
 
         # Plot results
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final val losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final validation loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train total losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train total loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train u losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train u loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train f losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train f loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss',
-                     y_scale='log')
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final val losses'])
+                                           for layers in self.layers_to_test])),
+                             title='Final validation losses',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train total losses'])
+                                           for layers in self.layers_to_test])),
+                             title='Final train total losses',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train u losses'])
+                                           for layers in self.layers_to_test])),
+                             title='Final train u losses',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train f losses'])
+                                           for layers in self.layers_to_test])),
+                             title='Final train f losses',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
+        # Save or show results
+        if save_mode == 'pdf':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
+        elif save_mode == 'eps':
+            now = datetime.datetime.now()
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.eps')
+        else:
+            plotter.show()
 
 
 class TTester:
@@ -121,7 +117,7 @@ class TTester:
         test_points = data_container.np_test_X.shape[0]
 
         # Plotter
-        plotter = PdfPlotter()
+        plotter = Plotter()
         plotter.text_page('Neural network\'s T test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
@@ -186,7 +182,8 @@ class TTester:
                      title='Train and validation total losses',
                      x_label='T',
                      y_label='Loss',
-                     y_scale='log')
+                     y_scale='log',
+                     line_style='o-')
         plotter.plot(x_axis=np_working_periods,
                      y_axis_list=[np.array(plot_dict['final train u losses']),
                                   np.array(plot_dict['final train f losses'])],
@@ -194,7 +191,8 @@ class TTester:
                      title='Train losses',
                      x_label='T',
                      y_label='Loss',
-                     y_scale='log')
+                     y_scale='log',
+                     line_style='o-')
 
         # Plot test results
         for nn, title in zip(plot_dict['nns'], plot_dict['titles']):
@@ -236,7 +234,7 @@ class NfNuTester:
 
     def test(self, data_container, results_subdirectory):
         # Plotter
-        plotter = PdfPlotter()
+        plotter = Plotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
@@ -365,7 +363,7 @@ class ExhaustionTester:
         model_prediction = model.predict(np_test_X, np_test_ic, T)
 
         # Plotter
-        plotter = PdfPlotter()
+        plotter = Plotter()
         plotter.text_page('Exhaustion test:' +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +

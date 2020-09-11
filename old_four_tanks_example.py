@@ -4,7 +4,7 @@ import datetime
 from util.systems.four_tanks_system import ResponseAnalyser, CasadiSimulator
 from util.normalizer import Normalizer
 from util.pinn import OldFourTanksPINN
-from util.plot import PdfPlotter
+from util.plot import Plotter
 
 # Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
@@ -181,7 +181,7 @@ for i in range(np_test_vs.shape[1]):
             ') V.'
     titles.append(title)
 
-plotter = PdfPlotter()
+plotter = Plotter()
 
 # Plot losses
 plotter.plot(x_axis=np.linspace(1, len(model.train_total_loss), len(model.train_total_loss)),
