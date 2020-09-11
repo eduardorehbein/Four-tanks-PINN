@@ -9,8 +9,8 @@ nfs_to_test = (2000, 4000, 10000, 100000)
 nus_to_test = (40, 70, 100, 500, 1000)
 
 # Neural network's parameters
-hidden_layers = 5
-units_per_layer = 20
+hidden_layers = 10
+units_per_layer = 5
 
 # Train parameters
 adam_epochs = 500
