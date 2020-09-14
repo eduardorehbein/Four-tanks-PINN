@@ -406,10 +406,11 @@ class ExhaustionTester:
                      x_label='Time [s]',
                      y_label='Input [u]')
         for i in range(np_test_Y.shape[1]):
+            mse = (np.square(model_prediction[:, i] - np_test_Y[:, i])).mean()
             plotter.plot(x_axis=np_test_t,
                          y_axis_list=[model_prediction[:, i], np_test_Y[:, i]],
                          labels=['PINN', 'Casadi simulator'],
-                         title='Output ' + str(i + 1) + ' prediction',
+                         title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
                          x_label='Time [s]',
                          y_label='Output [u]')
 

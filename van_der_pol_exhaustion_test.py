@@ -6,8 +6,8 @@ from util.tests import ExhaustionTester
 
 
 # Neural networks' parameters
-hidden_layers = 10
-units_per_layer = 5
+hidden_layers = 5
+units_per_layer = 20
 
 # Train parameters
 adam_epochs = 500
@@ -29,7 +29,7 @@ np.random.seed(random_seed)
 tf.random.set_seed(random_seed)
 
 # Load train and validation data
-train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_1.0s_70_scenarios_142_collocation_points.csv')
+train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_1.0s_1000_scenarios_10_collocation_points.csv')
 
 # Train data
 train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
