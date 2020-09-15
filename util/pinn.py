@@ -54,7 +54,7 @@ class PINN:
                 self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
             self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
 
-    def predict(self, np_X, np_ic=None, working_period=None, return_raw=False, time_column=0):
+    def predict(self, np_X, np_ic=None, T=None, return_raw=False, time_column=0):
         '''
         Predict the output NN(X)
         :param np_X: numpy data input points X
@@ -70,8 +70,8 @@ class PINN:
             else:
                 return self.Y_normalizer.denormalize(tf_NN.numpy())
         elif np_X.shape[1] + np_ic.size == self.n_inputs:
-            if working_period is not None:
-                np_Z = self.process_input(np_X, np_ic, working_period, time_column)
+            if T is not None:
+                np_Z = self.process_input(np_X, np_ic, T, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
@@ -84,10 +84,10 @@ class PINN:
         else:
             raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
 
-    def process_input(self, np_X, np_ic, working_period, time_column):
+    def process_input(self, np_X, np_ic, T, time_column):
         # TODO: Make it works with time steps bigger than working period
         np_Z = copy.deepcopy(np_X)
-        np_Z[:, time_column] = np_Z[:, time_column] % working_period
+        np_Z[:, time_column] = np_Z[:, time_column] % T
 
         previous_t = np_Z[0, time_column]
         np_y0 = np.reshape(np_ic, (1, np_ic.size))
@@ -95,7 +95,7 @@ class PINN:
         for index, row in enumerate(np_Z):
             if row[time_column] < previous_t:
                 np_w = copy.deepcopy(np_Z[index-1, :])
-                np_w[time_column] = working_period
+                np_w[time_column] = T
                 prediction_input = np.array([np.append(np_w, np_y0)])
                 np_y0 = self.predict(prediction_input)
             previous_t = row[time_column]

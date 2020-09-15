@@ -7,10 +7,11 @@ from matplotlib.ticker import StrMethodFormatter
 
 
 class Plotter:
-    def __init__(self, font_family='serif', font='Times New Roman'):
+    def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix'):
         self.y_range = float('-inf')
         rcParams['font.family'] = font_family
         rcParams['font.sans-serif'] = [font]
+        rcParams['mathtext.fontset'] = mathtext_font
 
     def text_page(self, text, vertical_position=0.4, size=24):
         firstPage = plt.figure(figsize=(11.69, 8.27))
@@ -18,7 +19,7 @@ class Plotter:
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
-             limit_range=False, x_scale='linear', y_scale='linear', line_style='-'):
+             limit_range=False, x_scale='linear', y_scale='linear', line_styles='-', markevery=None):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -36,7 +37,11 @@ class Plotter:
                 np_y_min = np_y.min()
                 if np_y_min < y_min:
                     y_min = np_y_min
-                plt.plot(x_axis, np_y, line_style, label=labels[i], c=str(c_step * i))
+                if isinstance(line_styles, str):
+                    line_style = line_styles
+                else:
+                    line_style = line_styles[i]
+                plt.plot(x_axis, np_y, line_style, label=labels[i], c=str(c_step * i), markevery=markevery)
             if limit_range:
                 axes = plt.gca()
                 axes.set_ylim([y_min, y_min + self.y_range])

@@ -57,4 +57,4 @@ for nf in nfs_to_test:
 # Test
 tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test, T,
                     adam_epochs, max_lbfgs_iterations)
-tester.test(data_container, results_subdirectory)
+tester.test(data_container, results_subdirectory, save_mode='all')

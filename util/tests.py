@@ -64,34 +64,40 @@ class StructTester:
         # Plot results
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final val losses'])
                                            for layers in self.layers_to_test])),
-                             title='Final validation losses',
+                             title='Final validation losses (neurons x layers)',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test)
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train total losses'])
                                            for layers in self.layers_to_test])),
-                             title='Final train total losses',
+                             title='Final train total losses (neurons x layers)',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test)
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train u losses'])
                                            for layers in self.layers_to_test])),
-                             title='Final train u losses',
+                             title='Final train u losses (neurons x layers)',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test)
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train f losses'])
                                            for layers in self.layers_to_test])),
-                             title='Final train f losses',
+                             title='Final train f losses (neurons x layers)',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test)
 
         # Save or show results
-        if save_mode == 'pdf':
+        if save_mode == 'all':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
+        elif save_mode == 'pdf':
             now = datetime.datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
         elif save_mode == 'eps':
             now = datetime.datetime.now()
             plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.eps')
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
         else:
             plotter.show()
 
@@ -110,7 +116,7 @@ class TTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory):
+    def test(self, data_container, results_subdirectory, save_mode=None):
         nu = data_container.get_train_u_X(self.Ts[0]).shape[0]
         nf = data_container.get_train_f_X(self.Ts[0]).shape[0]
         val_points = data_container.np_val_X.shape[0]
@@ -131,11 +137,11 @@ class TTester:
                      't': data_container.np_test_t, 'y': data_container.np_test_Y,
                      'nns': [], 'titles': []}
 
-        for working_period in self.Ts:
+        for T in self.Ts:
             # Train data
-            np_train_u_X = data_container.get_train_u_X(working_period)
-            np_train_u_Y = data_container.get_train_u_Y(working_period)
-            np_train_f_X = data_container.get_train_f_X(working_period)
+            np_train_u_X = data_container.get_train_u_X(T)
+            np_train_u_Y = data_container.get_train_u_Y(T)
+            np_train_f_X = data_container.get_train_f_X(T)
 
             # Validation data
             np_val_X = data_container.np_val_X
@@ -157,15 +163,15 @@ class TTester:
                                             X_normalizer, Y_normalizer)
 
             # Train
-            print('Model training with T of ' + str(working_period) + ' seconds:')
-            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, working_period, np_val_Y,
+            print('Model training with T of ' + str(T) + ' seconds:')
+            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
             # Test
-            nn = model.predict(data_container.np_test_X, data_container.np_test_Y[0], working_period)
+            nn = model.predict(data_container.np_test_X, data_container.np_test_Y[0], T)
             plot_dict['nns'].append(nn)
 
-            plot_dict['titles'].append('T = ' + str(round(working_period, 3)) + ' s.')
+            plot_dict['titles'].append('T = ' + str(round(T, 3)) + ' s.')
 
             # Final losses
             plot_dict['final train u losses'].append(model.train_u_loss[-1])
@@ -174,45 +180,63 @@ class TTester:
             plot_dict['final val losses'].append(model.validation_loss[-1])
 
         # Plot losses
-        np_working_periods = np.array(self.Ts)
-        plotter.plot(x_axis=np_working_periods,
+        np_Ts = np.array(self.Ts)
+        plotter.plot(x_axis=np_Ts,
                      y_axis_list=[np.array(plot_dict['final train total losses']),
                                   np.array(plot_dict['final val losses'])],
                      labels=['train loss', 'val loss'],
                      title='Train and validation total losses',
                      x_label='T',
                      y_label='Loss',
+                     x_scale='log',
                      y_scale='log',
-                     line_style='o-')
-        plotter.plot(x_axis=np_working_periods,
+                     line_styles='o-')
+        plotter.plot(x_axis=np_Ts,
                      y_axis_list=[np.array(plot_dict['final train u losses']),
                                   np.array(plot_dict['final train f losses'])],
                      labels=['u loss', 'f loss'],
                      title='Train losses',
                      x_label='T',
                      y_label='Loss',
+                     x_scale='log',
                      y_scale='log',
-                     line_style='o-')
+                     line_styles='o-')
 
         # Plot test results
-        for nn, title in zip(plot_dict['nns'], plot_dict['titles']):
+        for nn, title, current_T in zip(plot_dict['nns'], plot_dict['titles'], np_Ts):
             transposed_nn = np.transpose(nn)
             transposed_y = np.transpose(plot_dict['y'])
-            index = 0
+            markevery = int(plot_dict['t'].size / (plot_dict['t'][-1] / current_T))
+            output_index = 0
             for current_nn, current_y in zip(transposed_nn, transposed_y):
-                index += 1
+                output_index += 1
                 mse = (np.square(current_y - current_nn)).mean()
                 plotter.plot(x_axis=plot_dict['t'],
                              y_axis_list=[current_y, current_nn],
-                             labels=['y' + str(index), 'nn' + str(index)],
-                             title=title + ' MSE: ' + str(round(mse, 3)) + ' u',
+                             labels=['$\\hat{y}_{' + str(output_index) + '}$', '$y_{' + str(output_index) + '}$'],
+                             title=title + ' MSE: ' + str(round(mse, 3)),
                              x_label='Time',
-                             y_label='Output')
+                             y_label='Output',
+                             line_styles=['--', 'o-'],
+                             markevery=markevery)
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
+        # Save or show results
+        if save_mode == 'all':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
+        elif save_mode == 'pdf':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
+        elif save_mode == 'eps':
+            now = datetime.datetime.now()
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
+        else:
+            plotter.show()
 
 
 class NfNuTester:
@@ -232,7 +256,7 @@ class NfNuTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory):
+    def test(self, data_container, results_subdirectory, save_mode=None):
         # Plotter
         plotter = Plotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
@@ -288,43 +312,44 @@ class NfNuTester:
                 plot_dict[nf]['final val losses'].append(model.validation_loss[-1])
 
         # Plot results
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final val losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final validation loss',
-                     x_label='Nu',
-                     y_label='Loss',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train total losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train total loss',
-                     x_label='Nu',
-                     y_label='Loss',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train u losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train u loss',
-                     x_label='Nu',
-                     y_label='Loss',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train f losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train f loss',
-                     x_label='Nu',
-                     y_label='Loss',
-                     x_scale='log',
-                     y_scale='log')
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final val losses'])
+                                                     for nf in self.nfs_to_test])),
+                             title='Final validation losses $(N_t \\times N_f)$',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train total losses'])
+                                                     for nf in self.nfs_to_test])),
+                             title='Final train total losses $(N_t \\times N_f)$',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train u losses'])
+                                                     for nf in self.nfs_to_test])),
+                             title='Final train u losses $(N_t \\times N_f)$',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test)
+        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train f losses'])
+                                                     for nf in self.nfs_to_test])),
+                             title='Final train f losses $(N_t \\times N_f)$',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test)
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
+        # Save or show results
+        if save_mode == 'all':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
+        elif save_mode == 'pdf':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
+        elif save_mode == 'eps':
+            now = datetime.datetime.now()
+            plotter.save_eps('results/' + results_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
+        else:
+            plotter.show()
 
 
 class ExhaustionTester:
@@ -340,7 +365,7 @@ class ExhaustionTester:
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
     def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
-            np_test_t, np_test_X, np_test_ic, np_test_Y, results_and_models_subdirectory):
+            np_test_t, np_test_X, np_test_ic, np_test_Y, results_and_models_subdirectory, save_mode=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -384,14 +409,14 @@ class ExhaustionTester:
                      labels=['Train loss', 'Validation loss'],
                      title='Total losses',
                      x_label='Epoch',
-                     y_label='Loss [u²]',
+                     y_label='Loss',
                      y_scale='log')
         plotter.plot(x_axis=loss_x_axis,
                      y_axis_list=[np.array(model.train_u_loss), np.array(model.train_f_loss)],
                      labels=['u loss', 'f loss'],
                      title='Train losses',
                      x_label='Epoch',
-                     y_label='Loss [u²]',
+                     y_label='Loss',
                      y_scale='log')
 
         # Plot test results
@@ -401,23 +426,38 @@ class ExhaustionTester:
         np_test_U = np.delete(np_test_X, t_index, axis=1)
         plotter.plot(x_axis=np_test_t,
                      y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
-                     labels=['u' + str(i + 1) for i in range(np_test_U.shape[1])],
+                     labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
                      title='Input signal',
-                     x_label='Time [s]',
-                     y_label='Input [u]')
+                     x_label='Time',
+                     y_label='Input')
         for i in range(np_test_Y.shape[1]):
+            markevery = int(np_test_t.size / (np_test_t[-1] / T))
             mse = (np.square(model_prediction[:, i] - np_test_Y[:, i])).mean()
             plotter.plot(x_axis=np_test_t,
-                         y_axis_list=[model_prediction[:, i], np_test_Y[:, i]],
-                         labels=['PINN', 'Casadi simulator'],
+                         y_axis_list=[np_test_Y[:, i], model_prediction[:, i]],
+                         labels=['$\\hat{y}_{' + str(i + 1) + '}$', '$y_{' + str(i + 1) + '}$'],
                          title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
-                         x_label='Time [s]',
-                         y_label='Output [u]')
+                         x_label='Time',
+                         y_label='Output',
+                         line_styles=['--', 'o-'],
+                         markevery=markevery)
 
-        # Save results
+        # Save or show results
         now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
+        if save_mode == 'all':
+            now = datetime.datetime.now()
+            plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
+            plotter.save_eps('results/' + results_and_models_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test')
+        elif save_mode == 'pdf':
+            plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
+        elif save_mode == 'eps':
+            plotter.save_eps('results/' + results_and_models_subdirectory + '/' +
+                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test')
+        else:
+            plotter.show()
 
         # Save model
         model.save('models/' + results_and_models_subdirectory + '/' +

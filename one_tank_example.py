@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-import matplotlib.pyplot as plt
 from util.pinn import OneTankPINN
 from util.plot import Plotter
 
@@ -37,14 +36,20 @@ np_test_y = test_df[['h']].to_numpy()
 np_test_ic = np_test_y[0]
 
 # Model prediction
-np_test_nn = model.predict(np_test_X, np_test_ic, working_period=10.0)
-
-# Plotter
-plotter = Plotter()
+T = 10.0
+np_test_nn = model.predict(np_test_X, np_test_ic, T=T)
 
 # Plot test results
-plt.plot(np_test_t, np_test_v, label='$v$')
-plt.plot(np_test_t, np_test_y.flatten(), label='$\hat{y}$')
-plt.plot(np_test_t, np_test_nn.flatten(), label='$y$')
-plt.legend()
-plt.show()
+plotter = Plotter()
+
+markevery = int(np_test_t.size / (np_test_t[-1] / T))
+mse = (np.square(np_test_nn - np_test_y)).mean()
+plotter.plot(x_axis=np_test_t,
+             y_axis_list=[np_test_v, np_test_y, np_test_nn],
+             labels=['$v$', '$\\hat{y}$', '$y$'],
+             title='One tank model test. MSE: ' + str(round(mse, 3)),
+             x_label='Time',
+             y_label='Inputs and outputs',
+             line_styles=['-', '--', 'o-'],
+             markevery=markevery)
+plotter.show()

@@ -5,7 +5,7 @@ from util.pinn import VanDerPolPINN
 from util.tests import StructTester
 
 # Structural test parameters
-layers_to_test = (4, 5, 8, 10)
+layers_to_test = (1, 2, 4, 5, 8, 10)
 neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
 
 # Train parameters
@@ -46,4 +46,4 @@ np_val_ic = np_val_Y[0]
 tester = StructTester(VanDerPolPINN, layers_to_test, neurons_per_layer_to_test,
                       adam_epochs, max_lbfgs_iterations)
 tester.test(np_train_u_X, np_train_u_Y, np_train_f_X,
-            np_val_X, np_val_ic, T, np_val_Y, results_subdirectory, save_mode='pdf')
+            np_val_X, np_val_ic, T, np_val_Y, results_subdirectory, save_mode='all')
