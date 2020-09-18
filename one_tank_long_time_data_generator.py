@@ -30,7 +30,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 simulator = CasadiSimulator(sys_params)
 
-# Controls and initial conditions for training and testing
+# Controls and initial conditions
 np_vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(sim_time / v_change_t),))
 np_h0 = (highest_h - lowest_h) * np.random.rand(1, 1) + lowest_h
 

@@ -31,11 +31,11 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 simulator = CasadiSimulator(sys_params)
 
-# Controls and initial conditions for training and testing
+# Controls and initial conditions
 vs = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios,))
 ics = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios,))
 
-# Neural network's max working period
+# Time
 t = np.linspace(0, t_range, collocation_points)
 
 # Data

@@ -5,7 +5,7 @@ from util.tests import TTester, TTestContainer
 from util.pinn import VanDerPolPINN
 
 # Working period test's parameters
-working_periods_to_test = (0.01, 0.1, 1.0, 2.0, 4.0, 8.0)
+Ts_to_test = (0.01, 0.1, 1.0, 2.0, 4.0, 8.0)
 
 # Neural network's parameters
 hidden_layers = 10
@@ -33,17 +33,20 @@ tf.random.set_seed(random_seed)
 data_container = TTestContainer()
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10000_collocation_points.csv')
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10_scenarios_1000_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'u']].to_numpy()
 data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
+data_container.np_val_ic = val_df[val_df['t'] == 0.0][['x1', 'x2']].to_numpy()
 
 # Test data
 test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_10_sim_time_10.0s_10000_collocation_points.csv')
 data_container.np_test_t = test_df['t'].to_numpy()
 data_container.np_test_X = test_df[['t', 'u']].to_numpy()
-data_container.np_test_Y = test_df[['x1', 'x2']].to_numpy()
+np_test_Y = test_df[['x1', 'x2']].to_numpy()
+data_container.np_test_Y = np_test_Y
+data_container.np_test_ic = np.reshape(np_test_Y[0], (1, np_test_Y.shape[1]))
 
-for working_period in working_periods_to_test:
+for working_period in Ts_to_test:
     train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(working_period) +
                            's_1000_scenarios_100_collocation_points.csv')
 
@@ -58,6 +61,5 @@ for working_period in working_periods_to_test:
     data_container.set_train_f_X(working_period, np_train_f_X)
 
 # Test
-tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, working_periods_to_test,
-                 adam_epochs, max_lbfgs_iterations)
-tester.test(data_container, results_subdirectory)
+tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, Ts_to_test, adam_epochs, max_lbfgs_iterations)
+tester.test(data_container, results_subdirectory, save_mode='all')

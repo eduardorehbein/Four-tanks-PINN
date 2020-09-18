@@ -35,9 +35,10 @@ tf.random.set_seed(random_seed)
 data_container = NfNuTestContainer()
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10000_collocation_points.csv')
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10_scenarios_1000_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'u']].to_numpy()
 data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
+data_container.np_val_ic = val_df[val_df['t'] == 0.0][['x1', 'x2']].to_numpy()
 
 for nf in nfs_to_test:
     for nu in nus_to_test:

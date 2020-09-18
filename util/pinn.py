@@ -69,7 +69,7 @@ class PINN:
                 return tf_NN
             else:
                 return self.Y_normalizer.denormalize(tf_NN.numpy())
-        elif np_X.shape[1] + np_ic.size == self.n_inputs:
+        elif np_X.shape[1] + np_ic.shape[1] == self.n_inputs:
             if T is not None:
                 np_Z = self.process_input(np_X, np_ic, T, time_column)
                 tf_X = self.tensor(np_Z)
@@ -85,26 +85,65 @@ class PINN:
             raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
 
     def process_input(self, np_X, np_ic, T, time_column):
-        # TODO: Make it works with time steps bigger than working period
-        np_Z = copy.deepcopy(np_X)
-        np_Z[:, time_column] = np_Z[:, time_column] % T
+        # Detect different simulations
+        simulation_indexes = [0]
+        if np_ic.shape[0] > 1:
+            previous_t = np_X[0, time_column]
+            for i in range(1, np_X[:, time_column].size):
+                if np_X[i, time_column] < previous_t:
+                    simulation_indexes.append(i)
+        simulation_indexes.append(np_X.shape[0])
 
-        previous_t = np_Z[0, time_column]
-        np_y0 = np.reshape(np_ic, (1, np_ic.size))
-        new_columns = []
-        for index, row in enumerate(np_Z):
-            if row[time_column] < previous_t:
-                np_w = copy.deepcopy(np_Z[index-1, :])
-                np_w[time_column] = T
-                prediction_input = np.array([np.append(np_w, np_y0)])
-                np_y0 = self.predict(prediction_input)
-            previous_t = row[time_column]
-            new_columns.append(np_y0)
-        np_new_columns = np.concatenate(new_columns)
-        if len(np_new_columns.shape) == 1:
-            np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
+        # Process each simulation
+        res = []
+        for k in range(len(simulation_indexes) - 1):
+            np_Z = copy.deepcopy(np_X[simulation_indexes[k]:simulation_indexes[k+1], :])
 
-        return np.append(np_Z, np_new_columns, axis=1)
+            # Fill spaces bigger than T by inserting some extra samples
+            previous_t = np_Z[0, time_column]
+            inserted_lines = []
+            i = 1
+            while i < np_Z.shape[0]:
+                if np_Z[i, time_column] - previous_t > T:
+                    np_line = copy.deepcopy(np_Z[i - 1, :])
+                    np_line[time_column] = previous_t + T
+                    np_Z = np.insert(np_Z, i, np_line, axis=0)
+                    inserted_lines.append(i)
+                previous_t = np_Z[i, time_column]
+                i = i + 1
+
+            # Rewrite time values to fit them in T
+            np_Z[:, time_column] = np_Z[:, time_column] % T
+
+            # Calculate initial conditions
+            previous_t = np_Z[0, time_column]
+            np_y0 = np.reshape(np_ic[k, :], (1, np_ic[k, :].size))
+            new_columns = [np_y0]
+            for i in range(1, np_Z.shape[0]):
+                row = np_Z[i]
+                if row[time_column] <= previous_t:
+                    np_w = copy.deepcopy(np_Z[i - 1, :])
+                    np_w[time_column] = T
+                    prediction_input = np.array([np.append(np_w, np_y0)])
+                    np_y0 = self.predict(prediction_input)
+                previous_t = row[time_column]
+                new_columns.append(np_y0)
+
+            # Merge time/control inputs and initial conditions
+            np_new_columns = np.concatenate(new_columns)
+            if len(np_new_columns.shape) == 1:
+                np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
+
+            np_sim_res = np.append(np_Z, np_new_columns, axis=1)
+
+            # Delete inserted data
+            if len(inserted_lines) > 0:
+                np_sim_res = np.delete(np_sim_res, inserted_lines, axis=0)
+
+            # Save simulation processed data
+            res.append(np_sim_res)
+
+        return np.concatenate(res)
 
     def tensor(self, np_X):
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)

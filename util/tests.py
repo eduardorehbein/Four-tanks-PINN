@@ -137,6 +137,9 @@ class TTester:
                      't': data_container.np_test_t, 'y': data_container.np_test_Y,
                      'nns': [], 'titles': []}
 
+        # Test control T
+        test_control_T = data_container.get_test_control_T()
+
         for T in self.Ts:
             # Train data
             np_train_u_X = data_container.get_train_u_X(T)
@@ -146,7 +149,7 @@ class TTester:
             # Validation data
             np_val_X = data_container.np_val_X
             np_val_Y = data_container.np_val_Y
-            np_val_ic = np_val_Y[0]
+            np_val_ic = data_container.np_val_ic
 
             # Normalizers
             X_normalizer = Normalizer()
@@ -168,7 +171,7 @@ class TTester:
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
             # Test
-            nn = model.predict(data_container.np_test_X, data_container.np_test_Y[0], T)
+            nn = model.predict(data_container.np_test_X, data_container.np_test_ic, min(T, test_control_T))
             plot_dict['nns'].append(nn)
 
             plot_dict['titles'].append('T = ' + str(round(T, 3)) + ' s.')
@@ -206,7 +209,7 @@ class TTester:
         for nn, title, current_T in zip(plot_dict['nns'], plot_dict['titles'], np_Ts):
             transposed_nn = np.transpose(nn)
             transposed_y = np.transpose(plot_dict['y'])
-            markevery = int(plot_dict['t'].size / (plot_dict['t'][-1] / current_T))
+            markevery = int(plot_dict['t'].size / (plot_dict['t'][-1] / min(current_T, test_control_T)))
             output_index = 0
             for current_nn, current_y in zip(transposed_nn, transposed_y):
                 output_index += 1
@@ -270,7 +273,7 @@ class NfNuTester:
         # Validation data
         np_val_X = data_container.np_val_X
         np_val_Y = data_container.np_val_Y
-        np_val_ic = np_val_Y[0]
+        np_val_ic = data_container.np_val_ic
 
         # Test
         plot_dict = dict()
@@ -419,11 +422,22 @@ class ExhaustionTester:
                      y_label='Loss',
                      y_scale='log')
 
-        # Plot test results
+        # Calculate controls signals an their T
         t_index = 0
         while not np.array_equal(np_test_X[:, t_index].flatten(), np_test_t.flatten()):
             t_index = t_index + 1
         np_test_U = np.delete(np_test_X, t_index, axis=1)
+
+        control_T = None
+        row = 0
+        while control_T is None:
+            for col in range(np_test_U.shape[1]):
+                if np_test_U[row, col] != np_test_U[row + 1, col]:
+                    control_T = np_test_t[row]
+                    break
+            row = row + 1
+
+        # Plot test results
         plotter.plot(x_axis=np_test_t,
                      y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
                      labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
@@ -431,7 +445,7 @@ class ExhaustionTester:
                      x_label='Time',
                      y_label='Input')
         for i in range(np_test_Y.shape[1]):
-            markevery = int(np_test_t.size / (np_test_t[-1] / T))
+            markevery = int(np_test_t.size / (np_test_t[-1] / min(T, control_T)))
             mse = (np.square(model_prediction[:, i] - np_test_Y[:, i])).mean()
             plotter.plot(x_axis=np_test_t,
                          y_axis_list=[np_test_Y[:, i], model_prediction[:, i]],
@@ -469,8 +483,10 @@ class TTestContainer:
         self.train_data = dict()
         self.np_val_X = None
         self.np_val_Y = None
+        self.np_val_ic = None
         self.np_test_t = None
         self.np_test_X = None
+        self.np_test_ic = None
         self.np_test_Y = None
 
     def check_key(self, T):
@@ -498,12 +514,30 @@ class TTestContainer:
         self.check_key(T)
         self.train_data[T]['np_train_f_X'] = np_train_f_X
 
+    def get_test_control_T(self):
+        t_index = 0
+        while not np.array_equal(self.np_test_X[:, t_index].flatten(), self.np_test_t.flatten()):
+            t_index = t_index + 1
+        np_test_U = np.delete(self.np_test_X, t_index, axis=1)
+
+        control_T = None
+        row = 0
+        while control_T is None:
+            for col in range(np_test_U.shape[1]):
+                if np_test_U[row, col] != np_test_U[row + 1, col]:
+                    control_T = self.np_test_t[row]
+                    break
+            row = row + 1
+
+        return control_T
+
 
 class NfNuTestContainer:
     def __init__(self):
         self.train_data = dict()
         self.np_val_X = None
         self.np_val_Y = None
+        self.np_val_ic = None
 
     def check_key(self, nf, nu):
         if nf not in self.train_data.keys():

@@ -24,7 +24,7 @@ np_test_t = test_df['t'].to_numpy()
 np_test_u = test_df['u'].to_numpy()
 np_test_X = test_df[['t', 'u']].to_numpy()
 np_test_y = test_df[['x1', 'x2']].to_numpy()
-np_test_ic = np_test_y[0]
+np_test_ic = np.reshape(np_test_y[0], (1, np_test_y.shape[1]))
 
 # Model prediction
 T = 1.0

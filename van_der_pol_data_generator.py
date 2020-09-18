@@ -26,11 +26,11 @@ np.random.seed(random_seed)
 # System simulator
 simulator = CasadiSimulator()
 
-# Controls and initial conditions for training and testing
+# Controls and initial conditions
 us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios,))
 ics = np.random.uniform(low=lowest_x, high=highest_x, size=(scenarios, 2))
 
-# Neural network's max working period
+# Time
 t = np.linspace(0, T, collocation_points)
 
 # Data
