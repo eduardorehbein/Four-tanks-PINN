@@ -387,8 +387,11 @@ class ExhaustionTester:
         model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
                     self.adam_epochs, self.max_lbfgs_iterations)
 
+        # Calculate controls signals an their T
+        np_test_U, control_T = self.get_test_control_and_T(np_test_t, np_test_X)
+
         # Test
-        model_prediction = model.predict(np_test_X, np_test_ic, T)
+        model_prediction = model.predict(np_test_X, np_test_ic, min(control_T, T))
 
         # Plotter
         plotter = Plotter()
@@ -421,21 +424,6 @@ class ExhaustionTester:
                      x_label='Epoch',
                      y_label='Loss',
                      y_scale='log')
-
-        # Calculate controls signals an their T
-        t_index = 0
-        while not np.array_equal(np_test_X[:, t_index].flatten(), np_test_t.flatten()):
-            t_index = t_index + 1
-        np_test_U = np.delete(np_test_X, t_index, axis=1)
-
-        control_T = None
-        row = 0
-        while control_T is None:
-            for col in range(np_test_U.shape[1]):
-                if np_test_U[row, col] != np_test_U[row + 1, col]:
-                    control_T = np_test_t[row]
-                    break
-            row = row + 1
 
         # Plot test results
         plotter.plot(x_axis=np_test_t,
@@ -476,6 +464,23 @@ class ExhaustionTester:
         # Save model
         model.save('models/' + results_and_models_subdirectory + '/' +
                    now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhausted-model')
+
+    def get_test_control_and_T(self, np_test_t, np_test_X):
+        t_index = 0
+        while not np.array_equal(np_test_X[:, t_index].flatten(), np_test_t.flatten()):
+            t_index = t_index + 1
+        np_test_U = np.delete(np_test_X, t_index, axis=1)
+
+        control_T = None
+        row = 0
+        while control_T is None:
+            for col in range(np_test_U.shape[1]):
+                if np_test_U[row, col] != np_test_U[row + 1, col]:
+                    control_T = np_test_t[row]
+                    break
+            row = row + 1
+
+        return np_test_U, control_T
 
 
 class TTestContainer:

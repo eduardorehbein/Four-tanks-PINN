@@ -86,12 +86,7 @@ class PINN:
 
     def process_input(self, np_X, np_ic, T, time_column):
         # Detect different simulations
-        simulation_indexes = [0]
-        if np_ic.shape[0] > 1:
-            previous_t = np_X[0, time_column]
-            for i in range(1, np_X[:, time_column].size):
-                if np_X[i, time_column] < previous_t:
-                    simulation_indexes.append(i)
+        simulation_indexes = np.where(np_X[:, time_column] == 0.0)[0].tolist()
         simulation_indexes.append(np_X.shape[0])
 
         # Process each simulation
