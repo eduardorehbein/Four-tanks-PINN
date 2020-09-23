@@ -12,8 +12,8 @@ T = 1.0
 
 lowest_u = -1.0
 highest_u = 1.0
-lowest_x = [-3.0, -3.0]
-highest_x = [3.0, 3.0]
+lowest_x = -3.0
+highest_x = 3.0
 
 file_name = 'rand_seed_' + str(random_seed) + \
             '_T_' + str(T) + 's_' + \
@@ -38,15 +38,15 @@ x = simulator.run(t, us[0], ics[0])
 data = {'scenario': np.tile(1, (collocation_points,)),
         't': t,
         'u': np.tile(us[0], (collocation_points,)),
-        'x1_0': np.tile(ics[0, :][0], (collocation_points,)),
-        'x2_0': np.tile(ics[0, :][1], (collocation_points,)),
+        'x1_0': np.tile(ics[0, 0], (collocation_points,)),
+        'x2_0': np.tile(ics[0, 1], (collocation_points,)),
         'x1': x[:, 0],
         'x2': x[:, 1]}
 
 for i in range(1, scenarios):
     scenario = np.tile(i + 1, (collocation_points,))
     u = np.tile(us[i], (collocation_points,))
-    ic = np.tile(ics[i], (collocation_points, 2))
+    ic = np.tile(ics[i], (collocation_points, 1))
     x = simulator.run(t, us[i], ics[i])
 
     data['scenario'] = np.append(data['scenario'], scenario)

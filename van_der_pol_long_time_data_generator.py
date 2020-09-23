@@ -13,8 +13,8 @@ collocation_points_per_u = 50
 
 lowest_u = -1.0
 highest_u = 1.0
-lowest_x = np.array([-3.0, -3.0])
-highest_x = np.array([3.0, 3.0])
+lowest_x = -3.0
+highest_x = 3.0
 
 if scenarios > 1:
     file_name = 'long_signal_rand_seed_' + str(random_seed) + \
@@ -36,7 +36,7 @@ simulator = CasadiSimulator()
 
 # Controls and initial conditions
 np_us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios, int(sim_time / u_change_t)))
-np_x0s = (highest_x - lowest_x) * np.random.rand(scenarios, 2) + lowest_x
+np_x0s = np.random.uniform(low=lowest_x, high=highest_x, size=(scenarios, 2))
 
 # Generate data
 data = {'scenario': [],

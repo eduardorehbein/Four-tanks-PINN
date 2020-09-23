@@ -8,9 +8,6 @@ from util.plot import Plotter
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# Random seed
-np.random.seed(30)
-
 # Instance PINN
 model = VanDerPolPINN(hidden_layers=5, units_per_layer=20)
 
