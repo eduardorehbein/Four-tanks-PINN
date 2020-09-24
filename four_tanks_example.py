@@ -51,7 +51,7 @@ model = FourTanksPINN(sys_params=sys_params,
 model.load_weights('models/four_tanks/2020-06-08-22-25-06-15s-5l-15n-best-model.h5')
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_7500_collocation_points.csv')
+test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_750_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df[['v1', 'v2']].to_numpy()
@@ -60,13 +60,13 @@ np_test_Y = test_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 np_test_ic = np.reshape(np_test_Y[0, :], (1, np_test_Y.shape[1]))
 
 # Model prediction
-T = 2.0
-np_test_NN = model.predict(np_test_X, np_test_ic, T=T)
+test_T = 2.0
+np_test_NN = model.predict(np_test_X, np_test_ic, T=test_T)
 
 # Plot test results
 plotter = Plotter()
 
-markevery = int(np_test_t.size / (np_test_t[-1] / T))
+markevery = int(np_test_t.size / (np_test_t[-1] / test_T))
 mse = (np.square(np_test_NN - np_test_Y)).mean()
 plotter.plot(x_axis=np_test_t,
              y_axis_list=[np_test_v[:, 0], np_test_v[:, 1],
@@ -87,6 +87,11 @@ plotter.plot(x_axis=np_test_t,
                           '--', 'o-',
                           '--', 'o-',
                           '--', 'o-'],
-             markevery=markevery)
+             markevery=markevery,
+             draw_styles=['steps', 'steps',
+                          'default', 'default',
+                          'default', 'default',
+                          'default', 'default',
+                          'default', 'default'])
 
 plotter.show()

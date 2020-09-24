@@ -5,15 +5,16 @@ from util.pinn import FourTanksPINN
 from util.tests import StructTester
 
 # Structural test parameters
-layers_to_test = (1, 2, 4, 5, 8, 10)
-neurons_per_layer_to_test = (2, 3, 5, 8, 10, 15, 20)
+layers_to_test = (2, 4, 5, 8, 10)
+neurons_per_layer_to_test = (3, 5, 10, 15, 20)
 
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 2000
+train_T = 15.0
+val_T = 2.0
 
 # Other parameters
-T = 15.0
 random_seed = 30
 
 # Directory under 'results' where the plots are going to be saved
@@ -43,7 +44,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 # Train data
-train_df = pd.read_csv('data/four_tanks/rand_seed_30_T_' + str(T) + 's_1000_scenarios_100_collocation_points.csv')
+train_df = pd.read_csv('data/four_tanks/rand_seed_30_T_' + str(train_T) + 's_1000_scenarios_100_collocation_points.csv')
 
 train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
 np_train_u_X = train_u_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].to_numpy()
@@ -59,5 +60,5 @@ np_val_ic = val_df[val_df['t'] == 0.0][['h1', 'h2', 'h3', 'h4']].to_numpy()
 # Test
 tester = StructTester(FourTanksPINN, layers_to_test, neurons_per_layer_to_test,
                       adam_epochs, max_lbfgs_iterations, sys_params)
-tester.test(np_train_u_X, np_train_u_Y, np_train_f_X,
-            np_val_X, np_val_ic, T, np_val_Y, results_subdirectory)
+tester.test(np_train_u_X, np_train_u_Y, np_train_f_X, train_T,
+            np_val_X, np_val_ic, val_T, np_val_Y, results_subdirectory, save_mode='all')

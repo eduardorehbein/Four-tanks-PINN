@@ -147,7 +147,7 @@ class PINN:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
                                                   beta_2=beta_2, epsilon=epsilon)
 
-    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, T, np_val_Y,
+    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, val_T, np_val_Y,
               adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
         # Train numpy data to tensorflow data
@@ -157,15 +157,15 @@ class PINN:
 
         # Train with Adam
         self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                        np_val_X, np_val_ic, T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
+                        np_val_X, np_val_ic, val_T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
                         adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                         np_val_X, np_val_ic, T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
+                         np_val_X, np_val_ic, val_T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
-    def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
+    def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                    epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
         # Train states and variables
         epoch = 0
@@ -194,7 +194,7 @@ class PINN:
             grads = tape.gradient(tf_total_loss, self.model.trainable_variables)
 
             # Validation
-            tf_val_NN = self.predict(np_val_X, np_val_ic, T, return_raw=True)
+            tf_val_NN = self.predict(np_val_X, np_val_ic, val_T, return_raw=True)
             tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
             np_val_loss = tf_val_loss.numpy()
 
@@ -256,9 +256,9 @@ class PINN:
 
         return self.expression(tf_X, tf_NN, decomposed_NN, f_tape)
 
-    def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
+    def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                     max_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
-        func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, T, tf_val_Y,
+        func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                                 epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Convert initial model parameters to a 1D tf.Tensor

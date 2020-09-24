@@ -15,22 +15,22 @@ model = VanDerPolPINN(hidden_layers=5, units_per_layer=20)
 model.load('models/van_der_pol/2020-09-14-11-21-57-1s-5l-20n-exhausted-model')
 
 # Test data
-test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_10_sim_time_10.0s_10000_collocation_points.csv')
+test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_10_sim_time_10.0s_200_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_u = test_df['u'].to_numpy()
 np_test_X = test_df[['t', 'u']].to_numpy()
 np_test_y = test_df[['x1', 'x2']].to_numpy()
-np_test_ic = np.reshape(np_test_y[0], (1, np_test_y.shape[1]))
+np_test_ic = np.reshape(np_test_y[0, :], (1, np_test_y.shape[1]))
 
 # Model prediction
-T = 1.0
-np_test_nn = model.predict(np_test_X, np_test_ic, T=T)
+test_T = 0.5
+np_test_nn = model.predict(np_test_X, np_test_ic, T=test_T)
 
 # Plot test results
 plotter = Plotter()
 
-markevery = int(np_test_t.size / (np_test_t[-1] / T))
+markevery = int(np_test_t.size / (np_test_t[-1] / test_T))
 mse = (np.square(np_test_nn - np_test_y)).mean()
 plotter.plot(x_axis=np_test_t,
              y_axis_list=[np_test_u, np_test_y[:, 0], np_test_nn[:, 0], np_test_y[:, 1], np_test_nn[:, 1]],
@@ -39,5 +39,6 @@ plotter.plot(x_axis=np_test_t,
              x_label='Time',
              y_label='Inputs and outputs',
              line_styles=['-', '--', 'o-', '--', 'o-'],
-             markevery=markevery)
+             markevery=markevery,
+             draw_styles=['steps', 'default', 'default', 'default', 'default'])
 plotter.show()

@@ -4,12 +4,12 @@ from util.systems.van_der_pol_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 60
+random_seed = 10
 
 sim_time = 10.0
 u_change_t = 0.5
-scenarios = 10
-collocation_points_per_u = 50
+scenarios = 1
+collocation_points_per_u = 10
 
 lowest_u = -1.0
 highest_u = 1.0
@@ -51,22 +51,15 @@ for j in range(scenarios):
 
     np_u = np.tile(np_us[j, 0], (collocation_points_per_u, 1))
 
-    np_x0 = np.reshape(np_x0s[j, :], (1, np_x0s[j, :].size))
-    np_x = np_x0
-    np_x = np.append(np_x,
-                     simulator.run(np_T, np_us[j, 0], np_x[0], output_t0=False),
-                     axis=0)
+    np_x = simulator.run(np_T, np_us[j, 0], np_x0s[j, :])
 
     for i in range(1, int(sim_time / u_change_t)):
         np_t = np.append(np_t, np_T[1:] + np_t[-1])
-
-        np_ic = np.reshape(np_x[-1], np_x0.shape)
-
-        np_u = np.append(np_u,
-                         np.tile(np_us[j, i], (collocation_points_per_u - 1, np_u.shape[1])),
+        np_u = np.append(np_u[:-1],
+                         np.tile(np_us[j, i], (collocation_points_per_u, np_u.shape[1])),
                          axis=0)
         np_x = np.append(np_x,
-                         simulator.run(np_T, np_us[j, i], np_x[-1], output_t0=False),
+                         simulator.run(np_T, np_us[j, i], np_x[-1, :], output_t0=False),
                          axis=0)
 
     data['scenario'].append(np.tile(j + 1, (np_t.size,)))

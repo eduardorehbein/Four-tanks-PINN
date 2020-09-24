@@ -15,9 +15,10 @@ units_per_layer = 5
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 2000
+train_T = 1.0
+val_T = 0.5
 
 # Other parameters
-T = 1.0
 random_seed = 30
 
 # Directory under 'results' where the plots are going to be saved
@@ -33,16 +34,18 @@ tf.random.set_seed(random_seed)
 
 # Load data into a container
 data_container = NfNuTestContainer()
+data_container.train_T = train_T
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10_scenarios_1000_collocation_points.csv')
+val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10_scenarios_200_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'u']].to_numpy()
 data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
 data_container.np_val_ic = val_df[val_df['t'] == 0.0][['x1', 'x2']].to_numpy()
+data_container.val_T = val_T
 
 for nf in nfs_to_test:
     for nu in nus_to_test:
-        train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(T) + 's_' + str(nu) +
+        train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(train_T) + 's_' + str(nu) +
                                '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
 
         # Train data
@@ -56,6 +59,6 @@ for nf in nfs_to_test:
         data_container.set_train_f_X(nf, nu, np_train_f_X)
 
 # Test
-tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test, T,
+tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
                     adam_epochs, max_lbfgs_iterations)
 tester.test(data_container, results_subdirectory, save_mode='all')

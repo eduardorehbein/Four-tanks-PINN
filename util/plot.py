@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import StrMethodFormatter
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plotter:
@@ -19,7 +20,8 @@ class Plotter:
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
-             limit_range=False, x_scale='linear', y_scale='linear', line_styles='-', markevery=None):
+             limit_range=False, x_scale='linear', y_scale='linear', line_styles='-',
+             markevery=None, draw_styles='default'):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -41,7 +43,11 @@ class Plotter:
                     line_style = line_styles
                 else:
                     line_style = line_styles[i]
-                plt.plot(x_axis, np_y, line_style, label=labels[i], c=str(c_step * i), markevery=markevery)
+                if isinstance(draw_styles, str):
+                    ds = draw_styles
+                else:
+                    ds = draw_styles[i]
+                plt.plot(x_axis, np_y, line_style, label=labels[i], c=str(c_step * i), markevery=markevery, ds=ds)
             if limit_range:
                 axes = plt.gca()
                 axes.set_ylim([y_min, y_min + self.y_range])
@@ -61,12 +67,11 @@ class Plotter:
                      cbar_kw={}, cbar_label="L2 error", imshow_kw={'cmap': 'Greys'},
                      txt_val_fmt="{x:.2f}", txt_colors=("black", "white"), txt_threshold=None, text_kw={}):
         fig, ax = plt.subplots()
-        im, cbar = self.get_heatmap(data, row_labels, col_labels,
+        im, cbar = self.get_heatmap(data, title, row_labels, col_labels,
                                     ax=ax, cbar_kw=cbar_kw, cbarlabel=cbar_label, **imshow_kw)
         self.annotate_heatmap(im, data, txt_val_fmt, txt_colors, txt_threshold, **text_kw)
-        plt.title(title)
 
-    def get_heatmap(self, data, row_labels, col_labels, ax=None,
+    def get_heatmap(self, data, title, row_labels, col_labels, ax=None,
                 cbar_kw={}, cbarlabel="", **kwargs):
         """
         Create a heatmap from a numpy array and two lists of labels.
@@ -95,9 +100,13 @@ class Plotter:
 
         # Plot the heatmap
         im = ax.imshow(data, **kwargs)
+        plt.title(title)
 
         # Create colorbar
-        cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+
+        cbar = ax.figure.colorbar(im, ax=ax, cax=cax, **cbar_kw)
         cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
         # We want to show all ticks...

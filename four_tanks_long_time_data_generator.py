@@ -4,11 +4,11 @@ from util.systems.four_tanks_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 60
+random_seed = 10
 
 sim_time = 150.0
 u_change_t = 2.0
-scenarios = 10
+scenarios = 1
 collocation_points_per_v = 10
 
 lowest_v = 0.5
@@ -73,36 +73,30 @@ for j in range(scenarios):
     np_v2 = np.tile(np_v2s[j, 0], (collocation_points_per_v, 1))
     np_v = np.transpose(np.array([np_v1[-1], np_v2[-1]]))
 
-    np_x0 = np.reshape(np_h0s[j, :], (1, np_h0s[j, :].size))
-    np_x = np_x0
-    np_x = np.append(np_x,
-                     simulator.run(np_T, np_v, np_x[0, :], output_t0=False),
-                     axis=0)
+    np_h = simulator.run(np_T, np_v, np_h0s[j, :])
 
     for i in range(1, int(sim_time / u_change_t)):
         np_t = np.append(np_t, np_T[1:] + np_t[-1])
 
-        np_ic = np.reshape(np_x[-1], np_x0.shape)
-
-        np_v1 = np.append(np_v1,
-                          np.tile(np_v1s[j, i], (collocation_points_per_v - 1, np_v1.shape[1])),
+        np_v1 = np.append(np_v1[:-1],
+                          np.tile(np_v1s[j, i], (collocation_points_per_v, np_v1.shape[1])),
                           axis=0)
-        np_v2 = np.append(np_v2,
-                          np.tile(np_v2s[j, i], (collocation_points_per_v - 1, np_v2.shape[1])),
+        np_v2 = np.append(np_v2[:-1],
+                          np.tile(np_v2s[j, i], (collocation_points_per_v, np_v2.shape[1])),
                           axis=0)
         np_v = np.array([np_v1[-1], np_v2[-1]])
-        np_x = np.append(np_x,
-                         simulator.run(np_T, np_v, np_x[-1], output_t0=False),
+        np_h = np.append(np_h,
+                         simulator.run(np_T, np_v, np_h[-1, :], output_t0=False),
                          axis=0)
 
     data['scenario'].append(np.tile(j + 1, (np_t.size,)))
     data['t'].append(np_t)
     data['v1'].append(np_v1[:, 0])
     data['v2'].append(np_v2[:, 0])
-    data['h1'].append(np_x[:, 0])
-    data['h2'].append(np_x[:, 1])
-    data['h3'].append(np_x[:, 2])
-    data['h4'].append(np_x[:, 3])
+    data['h1'].append(np_h[:, 0])
+    data['h2'].append(np_h[:, 1])
+    data['h3'].append(np_h[:, 2])
+    data['h4'].append(np_h[:, 3])
 
 # Save data
 data['scenario'] = np.concatenate(data['scenario'])
