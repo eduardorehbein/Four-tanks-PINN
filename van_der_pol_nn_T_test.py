@@ -50,8 +50,8 @@ data_container.np_test_Y = np_test_Y
 data_container.np_test_ic = np.reshape(np_test_Y[0], (1, np_test_Y.shape[1]))
 data_container.test_T = test_T
 
-for working_period in train_Ts_to_test:
-    train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(working_period) +
+for train_T in train_Ts_to_test:
+    train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(train_T) +
                            's_1000_scenarios_100_collocation_points.csv')
 
     # Train data
@@ -60,9 +60,9 @@ for working_period in train_Ts_to_test:
     np_train_u_Y = train_u_df[['x1', 'x2']].to_numpy()
     np_train_f_X = train_df[['t', 'u', 'x1_0', 'x2_0']].sample(frac=1).to_numpy()
 
-    data_container.set_train_u_X(working_period, np_train_u_X)
-    data_container.set_train_u_Y(working_period, np_train_u_Y)
-    data_container.set_train_f_X(working_period, np_train_f_X)
+    data_container.set_train_u_X(train_T, np_train_u_X)
+    data_container.set_train_u_Y(train_T, np_train_u_Y)
+    data_container.set_train_f_X(train_T, np_train_f_X)
 
 # Test
 tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, train_Ts_to_test, adam_epochs, max_lbfgs_iterations)
