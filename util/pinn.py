@@ -28,6 +28,9 @@ class PINN:
         if X_normalizer is not None and Y_normalizer is not None:
             self.model_init()
 
+        # Trained T
+        self.trained_T = None
+
         # Optimizer
         self.learning_rate = learning_rate
         self.optimizer = None
@@ -54,7 +57,7 @@ class PINN:
                 self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
             self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
 
-    def predict(self, np_X, np_ic=None, T=None, return_raw=False, time_column=0):
+    def predict(self, np_X, np_ic=None, prediction_T=None, return_raw=False, time_column=0):
         '''
         Predict the output NN(X)
         :param np_X: numpy data input points X
@@ -70,8 +73,8 @@ class PINN:
             else:
                 return self.Y_normalizer.denormalize(tf_NN.numpy())
         elif np_X.shape[1] + np_ic.shape[1] == self.n_inputs:
-            if T is not None:
-                np_Z = self.process_input(np_X, np_ic, T, time_column)
+            if prediction_T is not None:
+                np_Z = self.process_input(np_X, np_ic, prediction_T, time_column)
                 tf_X = self.tensor(np_Z)
                 tf_NN = self.model(tf_X)
 
@@ -84,31 +87,37 @@ class PINN:
         else:
             raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
 
-    def process_input(self, np_X, np_ic, T, time_column):
+    def process_input(self, np_X, np_ic, prediction_T, time_column):
+        # Check trained T
+        if self.trained_T is None:
+            raise Exception('The parameter "trained_T" must be set before a long signal prediction.')
+
         # Detect different simulations
         simulation_indexes = np.where(np_X[:, time_column] == 0.0)[0].tolist()
         simulation_indexes.append(np_X.shape[0])
 
         # Process each simulation
         res = []
+        min_T = min(prediction_T, self.trained_T)
         for k in range(len(simulation_indexes) - 1):
             np_Z = copy.deepcopy(np_X[simulation_indexes[k]:simulation_indexes[k+1], :])
 
             # Fill spaces bigger than T by inserting some extra samples
-            previous_t = np_Z[0, time_column]
-            inserted_lines = []
-            i = 1
-            while i < np_Z.shape[0]:
-                if np_Z[i, time_column] - previous_t > T:
-                    np_line = copy.deepcopy(np_Z[i - 1, :])
-                    np_line[time_column] = previous_t + T
-                    np_Z = np.insert(np_Z, i, np_line, axis=0)
-                    inserted_lines.append(i)
-                previous_t = np_Z[i, time_column]
-                i = i + 1
+            if prediction_T > self.trained_T:
+                previous_t = np_Z[0, time_column]
+                inserted_lines = []
+                i = 1
+                while i < np_Z.shape[0]:
+                    if np_Z[i, time_column] - previous_t > self.trained_T:
+                        np_line = copy.deepcopy(np_Z[i - 1, :])
+                        np_line[time_column] = previous_t + self.trained_T/2
+                        np_Z = np.insert(np_Z, i, np_line, axis=0)
+                        inserted_lines.append(i)
+                    previous_t = np_Z[i, time_column]
+                    i = i + 1
 
             # Rewrite time values to fit them in T
-            np_Z[:, time_column] = np_Z[:, time_column] % T
+            np_Z[:, time_column] = np_Z[:, time_column] % min_T
 
             # Calculate initial conditions
             previous_t = np_Z[0, time_column]
@@ -118,7 +127,7 @@ class PINN:
                 row = np_Z[i]
                 if row[time_column] <= previous_t:
                     np_w = copy.deepcopy(np_Z[i - 1, :])
-                    np_w[time_column] = T
+                    np_w[time_column] = min_T
                     prediction_input = np.array([np.append(np_w, np_y0)])
                     np_y0 = self.predict(prediction_input)
                 previous_t = row[time_column]
@@ -132,7 +141,7 @@ class PINN:
             np_sim_res = np.append(np_Z, np_new_columns, axis=1)
 
             # Delete inserted data
-            if len(inserted_lines) > 0:
+            if prediction_T > self.trained_T:
                 np_sim_res = np.delete(np_sim_res, inserted_lines, axis=0)
 
             # Save simulation processed data
@@ -147,9 +156,12 @@ class PINN:
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
                                                   beta_2=beta_2, epsilon=epsilon)
 
-    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, val_T, np_val_Y,
+    def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
               adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
+        # Update trained T parameter
+        self.trained_T = train_T
+
         # Train numpy data to tensorflow data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(self.Y_normalizer.normalize(np_train_u_Y))

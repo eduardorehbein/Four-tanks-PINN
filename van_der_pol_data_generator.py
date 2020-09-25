@@ -7,8 +7,8 @@ from util.systems.van_der_pol_system import CasadiSimulator
 random_seed = 30
 
 scenarios = 1000
-collocation_points = 10
-T = 1.0
+collocation_points = 100
+T = 0.5
 
 lowest_u = -1.0
 highest_u = 1.0

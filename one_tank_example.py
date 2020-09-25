@@ -37,7 +37,7 @@ np_test_ic = np_test_y[0]
 
 # Model prediction
 T = 10.0
-np_test_nn = model.predict(np_test_X, np_test_ic, T=T)
+np_test_nn = model.predict(np_test_X, np_test_ic, prediction_T=T)
 
 # Plot test results
 plotter = Plotter()

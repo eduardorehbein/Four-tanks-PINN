@@ -10,6 +10,7 @@ tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Instance PINN
 model = VanDerPolPINN(hidden_layers=5, units_per_layer=20)
+model.trained_T = 1.0
 
 # Load model
 model.load('models/van_der_pol/2020-09-14-11-21-57-1s-5l-20n-exhausted-model')
@@ -25,7 +26,7 @@ np_test_ic = np.reshape(np_test_y[0, :], (1, np_test_y.shape[1]))
 
 # Model prediction
 test_T = 0.5
-np_test_nn = model.predict(np_test_X, np_test_ic, T=test_T)
+np_test_nn = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
 # Plot test results
 plotter = Plotter()

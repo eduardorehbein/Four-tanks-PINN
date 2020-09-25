@@ -49,6 +49,7 @@ model = FourTanksPINN(sys_params=sys_params,
 
 # Load model
 model.load_weights('models/four_tanks/2020-06-08-22-25-06-15s-5l-15n-best-model.h5')
+model.trained_T = 15.0
 
 # Test data
 test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_750_collocation_points.csv')
@@ -61,7 +62,7 @@ np_test_ic = np.reshape(np_test_Y[0, :], (1, np_test_Y.shape[1]))
 
 # Model prediction
 test_T = 2.0
-np_test_NN = model.predict(np_test_X, np_test_ic, T=test_T)
+np_test_NN = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
 # Plot test results
 plotter = Plotter()

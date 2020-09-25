@@ -53,7 +53,7 @@ class StructTester:
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, val_T, np_val_Y,
+                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
                             self.adam_epochs, self.max_lbfgs_iterations)
 
                 # Save plot data
@@ -162,7 +162,7 @@ class TTester:
 
             # Train
             print('Model training with T of ' + str(train_T) + ' seconds:')
-            model.train(np_train_u_X, np_train_u_Y, np_train_f_X,
+            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T,
                         data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
                         data_container.np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
@@ -296,7 +296,7 @@ class NfNuTester:
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X,
+                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, data_container.train_T,
                             data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
                             data_container.np_val_Y,
                             adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
@@ -377,7 +377,7 @@ class ExhaustionTester:
                                         X_normalizer, Y_normalizer)
 
         # Train
-        model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_ic, val_T, np_val_Y,
+        model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
                     self.adam_epochs, self.max_lbfgs_iterations)
 
         # Calculate controls signals an their T
