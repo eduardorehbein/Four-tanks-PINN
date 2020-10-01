@@ -1,5 +1,5 @@
 import numpy as np
-import datetime
+from datetime import datetime
 from util.normalizer import Normalizer
 from util.plot import Plotter
 
@@ -27,17 +27,10 @@ class StructTester:
 
         # Plotter
         plotter = Plotter()
-        plotter.text_page('Neural network\'s structural test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nTrain T -> ' + str(train_T) + ' s' +
-                          '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
-                          '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
-                          '\nValidation points -> ' + str(np_val_X.shape[0]) +
-                          '\nValidation T -> ' + str(val_T) + ' s')
+        plot_dict = dict()
 
         # Structural test
-        plot_dict = dict()
+        start_time = datetime.now()
         for layers in self.layers_to_test:
             plot_dict[layers] = {'final train u losses': [],
                                  'final train f losses': [],
@@ -63,6 +56,16 @@ class StructTester:
                 plot_dict[layers]['final val losses'].append(model.validation_loss[-1])
 
         # Plot results
+        plotter.text_page('Neural network\'s structural test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nTrain T -> ' + str(train_T) + ' s' +
+                          '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
+                          '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
+                          '\nValidation points -> ' + str(np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(val_T) + ' s' +
+                          '\nPlot scale -> Log 10')
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final val losses'])
                                            for layers in self.layers_to_test])),
                              title='Final validation losses (neurons x layers)',
@@ -86,17 +89,17 @@ class StructTester:
 
         # Save or show results
         if save_mode == 'all':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
         elif save_mode == 'pdf':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
         elif save_mode == 'eps':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
         else:
@@ -125,21 +128,13 @@ class TTester:
 
         # Plotter
         plotter = Plotter()
-        plotter.text_page('Neural network\'s T test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nTrain Nu -> ' + str(nu) +
-                          '\nTrain Nf -> ' + str(nf) +
-                          '\nValidation points -> ' + str(val_points) +
-                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
-                          '\nTest points -> ' + str(test_points) +
-                          '\nTest T -> ' + str(data_container.test_T) + ' s')
-
         plot_dict = {'final train u losses': [], 'final train f losses': [],
                      'final train total losses': [], 'final val losses': [],
                      't': data_container.np_test_t, 'y': data_container.np_test_Y,
                      'nns': [], 'titles': []}
 
+        # T test
+        start_time = datetime.now()
         for train_T in self.train_Ts:
             # Train data
             np_train_u_X = data_container.get_train_u_X(train_T)
@@ -171,7 +166,7 @@ class TTester:
             nn = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
             plot_dict['nns'].append(nn)
 
-            plot_dict['titles'].append('T = ' + str(round(data_container.test_T, 3)) + ' s.')
+            plot_dict['titles'].append('T = ' + str(round(train_T, 3)) + ' s.')
 
             # Final losses
             plot_dict['final train u losses'].append(model.train_u_loss[-1])
@@ -180,12 +175,31 @@ class TTester:
             plot_dict['final val losses'].append(model.validation_loss[-1])
 
         # Plot losses
+        plotter.text_page('Neural network\'s T test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nTrain Nu -> ' + str(nu) +
+                          '\nTrain Nf -> ' + str(nf) +
+                          '\nValidation points -> ' + str(val_points) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nTest points -> ' + str(test_points) +
+                          '\nTest T -> ' + str(data_container.test_T) + ' s')
+
         np_train_Ts = np.array(self.train_Ts)
         plotter.plot(x_axis=np_train_Ts,
-                     y_axis_list=[np.array(plot_dict['final train total losses']),
-                                  np.array(plot_dict['final val losses'])],
-                     labels=['train loss', 'val loss'],
-                     title='Train and validation total losses',
+                     y_axis_list=[np.array(plot_dict['final val losses'])],
+                     labels=['val loss'],
+                     title='Validation loss',
+                     x_label='Train T',
+                     y_label='Loss',
+                     x_scale='log',
+                     y_scale='log',
+                     line_styles='o-')
+        plotter.plot(x_axis=np_train_Ts,
+                     y_axis_list=[np.array(plot_dict['final train total losses'])],
+                     labels=['train loss'],
+                     title='Train total loss',
                      x_label='Train T',
                      y_label='Loss',
                      x_scale='log',
@@ -222,17 +236,17 @@ class TTester:
 
         # Save or show results
         if save_mode == 'all':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
         elif save_mode == 'pdf':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
         elif save_mode == 'eps':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
         else:
@@ -257,17 +271,10 @@ class NfNuTester:
     def test(self, data_container, results_subdirectory, save_mode=None):
         # Plotter
         plotter = Plotter()
-        plotter.text_page('Neural network\'s Nf/Nu test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
-                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
-                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
-                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
-                          '\nValidation T -> ' + str(data_container.val_T) + ' s')
-
-        # Test
         plot_dict = dict()
+
+        # Nf/Nu Test
+        start_time = datetime.now()
         for nf in self.nfs_to_test:
             plot_dict[nf] = {'final train u losses': [],
                              'final train f losses': [],
@@ -308,6 +315,16 @@ class NfNuTester:
                 plot_dict[nf]['final val losses'].append(model.validation_loss[-1])
 
         # Plot results
+        plotter.text_page('Neural network\'s Nf/Nu test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nPlot scale -> Log 10')
         plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final val losses'])
                                                      for nf in self.nfs_to_test])),
                              title='Final validation losses $(N_t \\times N_f)$',
@@ -331,17 +348,17 @@ class NfNuTester:
 
         # Save or show results
         if save_mode == 'all':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
         elif save_mode == 'pdf':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_pdf('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
         elif save_mode == 'eps':
-            now = datetime.datetime.now()
+            now = datetime.now()
             plotter.save_eps('results/' + results_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
         else:
@@ -369,6 +386,9 @@ class ExhaustionTester:
         X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
         Y_normalizer.parametrize(np_train_u_Y)
 
+        # Start time
+        start_time = datetime.now()
+
         # Instance PINN
         if self.sys_params is None:
             model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
@@ -389,6 +409,7 @@ class ExhaustionTester:
         # Plotter
         plotter = Plotter()
         plotter.text_page('Exhaustion test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
@@ -400,7 +421,7 @@ class ExhaustionTester:
                           '\nValidation T -> ' + str(val_T) + ' s' +
                           '\nTest points -> ' + str(np_test_X.shape[0]) +
                           '\nTest T -> ' + str(test_T) + ' s',
-                          vertical_position=0.3)
+                          vertical_position=0.25)
 
         # Plot train and validation losses
         loss_len = len(model.train_total_loss)
@@ -441,9 +462,8 @@ class ExhaustionTester:
                          markevery=markevery)
 
         # Save or show results
-        now = datetime.datetime.now()
+        now = datetime.now()
         if save_mode == 'all':
-            now = datetime.datetime.now()
             plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
                              now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
             plotter.save_eps('results/' + results_and_models_subdirectory + '/' +

@@ -14,7 +14,7 @@ class Plotter:
         rcParams['font.sans-serif'] = [font]
         rcParams['mathtext.fontset'] = mathtext_font
 
-    def text_page(self, text, vertical_position=0.4, size=24):
+    def text_page(self, text, vertical_position=0.3, size=24):
         firstPage = plt.figure(figsize=(11.69, 8.27))
         firstPage.clf()
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
@@ -51,7 +51,8 @@ class Plotter:
             if limit_range:
                 axes = plt.gca()
                 axes.set_ylim([y_min, y_min + self.y_range])
-            plt.legend()
+            if len(y_axis_list) > 1:
+                plt.legend()
 
     def set_y_range(self, y_axis_list):
         min_min = float('inf')

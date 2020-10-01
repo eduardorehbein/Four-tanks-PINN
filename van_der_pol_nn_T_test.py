@@ -8,7 +8,7 @@ from util.pinn import VanDerPolPINN
 train_Ts_to_test = (0.1, 0.5, 1.0, 2.0, 4.0, 8.0)
 
 # Neural network's parameters
-hidden_layers = 4
+hidden_layers = 2
 units_per_layer = 20
 
 # Train parameters
