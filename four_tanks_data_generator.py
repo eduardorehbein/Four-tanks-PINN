@@ -7,8 +7,8 @@ from util.systems.four_tanks_system import CasadiSimulator
 random_seed = 30
 
 scenarios = 1000
-collocation_points = 10
-T = 15.0
+collocation_points = 100
+T = 50.0
 
 lowest_v = 0.5
 highest_v = 3.0

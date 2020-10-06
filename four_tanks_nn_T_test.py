@@ -5,14 +5,14 @@ from util.tests import TTester, TTestContainer
 from util.pinn import FourTanksPINN
 
 # Working period test's parameters
-train_Ts_to_test = (0.1, 1.0, 5.0, 10.0, 15.0, 20.0)
+train_Ts_to_test = (1.0, 5.0, 10.0, 15.0, 20.0, 50.0)
 
 # Neural network's parameters
 hidden_layers = 5
 units_per_layer = 10
 
 # Train parameters
-adam_epochs = 500
+adam_epochs = 1000
 max_lbfgs_iterations = 2000
 val_T = 2.0
 test_T = val_T
