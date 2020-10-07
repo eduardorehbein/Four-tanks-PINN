@@ -57,3 +57,21 @@ class CasadiSimulator:
         sol = integrator(x0=np.reshape(np_ic, self.states.shape),
                          p=np.reshape(np_v, self.controls.shape))
         return np.transpose(np.array(sol['xf']))
+
+    def get_runge_kutta(self, T, runge_kutta_steps=4):
+        DT = T / runge_kutta_steps
+        f = cs.Function('f', [self.controls, self.states], [self.ode])
+
+        y0 = cs.MX.sym('y0', 1, 4)
+
+        u = cs.MX.sym('u', 1, 2)
+        y = y0
+
+        for j in range(runge_kutta_steps):
+            k1 = f(u, y)
+            k2 = f(u, y + DT / 2 * k1)
+            k3 = f(u, y + DT / 2 * k2)
+            k4 = f(u, y + DT * k3)
+            y = y + DT / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+
+        return cs.Function('F', [u, y0], [y], ['u', 'y0'], ['yf'])
