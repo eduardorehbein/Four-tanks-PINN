@@ -12,7 +12,7 @@ units_per_layer = 20
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 10000
-train_T = 1.0
+train_T = 0.5
 val_T = 0.5
 
 # Test parameters

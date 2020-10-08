@@ -64,7 +64,9 @@ class CasadiSimulator:
 
         y0 = cs.MX.sym('y0', 1, 4)
 
-        u = cs.MX.sym('u', 1, 2)
+        v1 = cs.MX.sym('v1')
+        v2 = cs.MX.sym('v2')
+        u = cs.horzcat(v1, v2)
         y = y0
 
         for j in range(runge_kutta_steps):

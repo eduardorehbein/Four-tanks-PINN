@@ -96,7 +96,7 @@ plotter.plot(var_v,
              '$v_2$',
              '$h_4$')
 
-# plotter.show()
+plotter.show()
 
 v1 = 2.0
 v2 = 2.75
