@@ -167,14 +167,15 @@ class PINN:
         tf_train_u_Y = self.tensor(self.Y_normalizer.normalize(np_train_u_Y))
         tf_train_f_X = self.tensor(np_train_f_X)
 
+        # Val normalized labels
+        tf_val_Y = self.tensor(self.Y_normalizer.normalize(np_val_Y))
+
         # Train with Adam
-        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                        np_val_X, np_val_ic, val_T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
+        self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                         adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
         # Train with L-BFGS
-        self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
-                         np_val_X, np_val_ic, val_T, self.tensor(self.Y_normalizer.normalize(np_val_Y)),
+        self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,

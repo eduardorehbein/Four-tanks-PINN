@@ -75,7 +75,7 @@ def function_factory(pinn, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, n
 
         # Validation
         epoch = f.iter.numpy()
-        tf_val_NN = pinn.predict(np_val_X, np_val_ic, val_T)
+        tf_val_NN = pinn.predict(np_val_X, np_val_ic, val_T, return_raw=True)
         tf_val_loss = tf.reduce_mean(tf.square(tf_val_NN - tf_val_Y))
         np_val_loss = tf_val_loss.numpy()
         if epoch % epochs_per_print == 0:

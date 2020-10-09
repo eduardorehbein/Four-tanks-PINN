@@ -13,7 +13,7 @@ hidden_layers = 5
 units_per_layer = 10
 
 # Train parameters
-adam_epochs = 1000
+adam_epochs = 500
 max_lbfgs_iterations = 2000
 train_T = 15.0
 val_T = 2.0

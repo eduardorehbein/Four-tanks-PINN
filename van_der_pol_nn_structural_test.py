@@ -11,7 +11,7 @@ neurons_per_layer_to_test = (3, 5, 10, 15, 20)
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 2000
-train_T = 1.0
+train_T = 0.5
 val_T = 0.5
 
 # Other parameters

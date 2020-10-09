@@ -9,7 +9,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 class Plotter:
     def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix'):
-        self.y_range = float('-inf')
         rcParams['font.family'] = font_family
         rcParams['font.sans-serif'] = [font]
         rcParams['mathtext.fontset'] = mathtext_font
@@ -20,8 +19,8 @@ class Plotter:
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
-             limit_range=False, x_scale='linear', y_scale='linear', line_styles='-',
-             markevery=None, draw_styles='default'):
+             x_scale='linear', y_scale='linear', line_styles='-',
+             markevery=None, draw_styles='default', np_c_base=np.array([1.0, 0.0, 0.0])):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -33,12 +32,8 @@ class Plotter:
             plt.yscale(y_scale)
 
             c_step = 1/len(y_axis_list)
-            y_min = float('inf')
             for i in range(len(y_axis_list)):
                 np_y = y_axis_list[i]
-                np_y_min = np_y.min()
-                if np_y_min < y_min:
-                    y_min = np_y_min
                 if isinstance(line_styles, str):
                     line_style = line_styles
                 else:
@@ -47,33 +42,20 @@ class Plotter:
                     ds = draw_styles
                 else:
                     ds = draw_styles[i]
-                plt.plot(x_axis, np_y, line_style, label=labels[i], c=str(c_step * i), markevery=markevery, ds=ds)
-            if limit_range:
-                axes = plt.gca()
-                axes.set_ylim([y_min, y_min + self.y_range])
+                plt.plot(x_axis, np_y, line_style,
+                         label=labels[i], c=c_step * (i + 1) * np_c_base, markevery=markevery, ds=ds)
             if len(y_axis_list) > 1:
                 plt.legend()
 
-    def set_y_range(self, y_axis_list):
-        min_min = float('inf')
-        max_max = float('-inf')
-        for np_y in y_axis_list:
-            min_min = min(min_min, np_y.min())
-            max_max = max(max_max, np_y.max())
-        data_range = abs(max_max - min_min)
-        if data_range > self.y_range:
-            self.y_range = data_range
-
-    def plot_heatmap(self, data, title, row_labels, col_labels,
-                     cbar_kw={}, cbar_label="L2 error", imshow_kw={'cmap': 'Greys'},
-                     txt_val_fmt="{x:.2f}", txt_colors=("black", "white"), txt_threshold=None, text_kw={}):
+    def plot_heatmap(self, data, title, x_label, y_label, row_labels, col_labels,
+                     cbar_kw={}, imshow_kw={'cmap': 'Greys'}, txt_val_fmt="{x:.2f}", txt_colors=("black", "white"),
+                     txt_threshold=None, text_kw={}):
         fig, ax = plt.subplots()
-        im, cbar = self.get_heatmap(data, title, row_labels, col_labels,
-                                    ax=ax, cbar_kw=cbar_kw, cbarlabel=cbar_label, **imshow_kw)
+        im, cbar = self.get_heatmap(data, title, x_label, y_label, row_labels, col_labels,
+                                    ax=ax, cbar_kw=cbar_kw, **imshow_kw)
         self.annotate_heatmap(im, data, txt_val_fmt, txt_colors, txt_threshold, **text_kw)
 
-    def get_heatmap(self, data, title, row_labels, col_labels, ax=None,
-                cbar_kw={}, cbarlabel="", **kwargs):
+    def get_heatmap(self, data, title, x_label, y_label, row_labels, col_labels, ax=None, cbar_kw={}, **kwargs):
         """
         Create a heatmap from a numpy array and two lists of labels.
 
@@ -101,14 +83,16 @@ class Plotter:
 
         # Plot the heatmap
         im = ax.imshow(data, **kwargs)
+
         plt.title(title)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
 
         # Create colorbar
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
 
         cbar = ax.figure.colorbar(im, ax=ax, cax=cax, **cbar_kw)
-        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
 
         # We want to show all ticks...
         ax.set_xticks(np.arange(data.shape[1]))
