@@ -20,7 +20,7 @@ class Plotter:
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
              x_scale='linear', y_scale='linear', line_styles='-',
-             markevery=None, draw_styles='default', np_c_base=np.array([1.0, 0.0, 0.0])):
+             markevery=None, draw_styles='default', np_c_base=np.array([200, 200, 200])/255):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:

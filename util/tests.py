@@ -201,7 +201,7 @@ class TTester:
                           '\nTest T -> ' + str(data_container.test_T) + ' s')
 
         np_train_Ts = np.array(self.train_Ts)
-        np_c_base = np.array([153, 255, 51])/255.0
+        np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[np.array(plot_dict['final val losses'])],
                      labels=['val loss'],
