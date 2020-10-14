@@ -1,7 +1,9 @@
+import os
 import numpy as np
 from datetime import datetime
 from util.normalizer import Normalizer
 from util.plot import Plotter
+from util.data_interface import JsonDAO
 
 
 class StructTester:
@@ -134,20 +136,9 @@ class TTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory, save_mode=None):
-        nu = data_container.get_train_u_X(self.train_Ts[0]).shape[0]
-        nf = data_container.get_train_f_X(self.train_Ts[0]).shape[0]
-        val_points = data_container.np_val_X.shape[0]
-        test_points = data_container.np_test_X.shape[0]
+        self.dao = JsonDAO()
 
-        # Plotter
-        plotter = Plotter()
-        plot_dict = {'final train u losses': [], 'final train f losses': [],
-                     'final train total losses': [], 'final val losses': [],
-                     't': data_container.np_test_t, 'y': data_container.np_test_Y,
-                     'nns': [], 'titles': []}
-
-        # T test
+    def test(self, data_container, results_subdirectory=None):
         start_time = datetime.now()
         for train_T in self.train_Ts:
             # Train data
@@ -178,17 +169,23 @@ class TTester:
 
             # Test
             nn = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
-            plot_dict['nns'].append(nn)
 
-            plot_dict['titles'].append('T = ' + str(round(train_T, 3)) + ' s.')
+            data_container.set_nn(train_T, nn)
+            data_container.set_title(train_T, 'T = ' + str(round(train_T, 3)) + ' s.')
 
-            # Final losses
-            plot_dict['final train u losses'].append(model.train_u_loss[-1])
-            plot_dict['final train f losses'].append(model.train_f_loss[-1])
-            plot_dict['final train total losses'].append(model.train_total_loss[-1])
-            plot_dict['final val losses'].append(model.validation_loss[-1])
+            # Losses
+            data_container.set_train_u_loss(train_T, model.train_u_loss)
+            data_container.set_train_f_loss(train_T, model.train_f_loss)
+            data_container.set_train_total_loss(train_T, model.train_total_loss)
+            data_container.set_val_loss(train_T, model.validation_loss)
 
-        # Plot losses
+        # Plot front page and losses
+        nu = data_container.get_train_u_X(self.train_Ts[0]).shape[0]
+        nf = data_container.get_train_f_X(self.train_Ts[0]).shape[0]
+        val_points = data_container.np_val_X.shape[0]
+        test_points = data_container.np_test_X.shape[0]
+
+        plotter = Plotter()
         plotter.text_page('Neural network\'s T test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
@@ -203,7 +200,7 @@ class TTester:
         np_train_Ts = np.array(self.train_Ts)
         np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
-                     y_axis_list=[np.array(plot_dict['final val losses'])],
+                     y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
                      labels=['val loss'],
                      title='Validation loss',
                      x_label='Train T',
@@ -213,7 +210,7 @@ class TTester:
                      line_styles='o-',
                      np_c_base=np_c_base)
         plotter.plot(x_axis=np_train_Ts,
-                     y_axis_list=[np.array(plot_dict['final train total losses'])],
+                     y_axis_list=[data_container.get_final_train_total_losses(self.train_Ts)],
                      labels=['train loss'],
                      title='Train total loss',
                      x_label='Train T',
@@ -223,8 +220,8 @@ class TTester:
                      line_styles='o-',
                      np_c_base=np_c_base)
         plotter.plot(x_axis=np_train_Ts,
-                     y_axis_list=[np.array(plot_dict['final train u losses']),
-                                  np.array(plot_dict['final train f losses'])],
+                     y_axis_list=[data_container.get_final_train_u_losses(self.train_Ts),
+                                  data_container.get_final_train_f_losses(self.train_Ts)],
                      labels=['u loss', 'f loss'],
                      title='Train losses',
                      x_label='Train T',
@@ -235,15 +232,17 @@ class TTester:
                      np_c_base=np_c_base)
 
         # Plot test results
-        for nn, title, current_T in zip(plot_dict['nns'], plot_dict['titles'], np_train_Ts):
+        for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
+                                        data_container.get_titles(self.train_Ts),
+                                        np_train_Ts):
             transposed_nn = np.transpose(nn)
-            transposed_y = np.transpose(plot_dict['y'])
-            markevery = int(plot_dict['t'].size / (plot_dict['t'][-1] / data_container.test_T))
+            transposed_y = np.transpose(data_container.np_test_Y)
+            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
             output_index = 0
             for current_nn, current_y in zip(transposed_nn, transposed_y):
                 output_index += 1
                 mse = (np.square(current_y - current_nn)).mean()
-                plotter.plot(x_axis=plot_dict['t'],
+                plotter.plot(x_axis=data_container.np_test_t,
                              y_axis_list=[current_y, current_nn],
                              labels=['$\\hat{y}_{' + str(output_index) + '}$', '$y_{' + str(output_index) + '}$'],
                              title=title + ' MSE: ' + str(round(mse, 3)),
@@ -254,20 +253,15 @@ class TTester:
                              np_c_base=np_c_base)
 
         # Save or show results
-        if save_mode == 'all':
+        if results_subdirectory is not None:
             now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
-        elif save_mode == 'pdf':
-            now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test.pdf')
-        elif save_mode == 'eps':
-            now = datetime.now()
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test')
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
         else:
             plotter.show()
 
@@ -524,80 +518,3 @@ class ExhaustionTester:
         while not np.array_equal(np_test_X[:, t_index].flatten(), np_test_t.flatten()):
             t_index = t_index + 1
         return np.delete(np_test_X, t_index, axis=1)
-
-
-class TTestContainer:
-    def __init__(self):
-        self.train_data = dict()
-        self.np_val_X = None
-        self.np_val_ic = None
-        self.val_T = None
-        self.np_val_Y = None
-        self.np_test_t = None
-        self.np_test_X = None
-        self.np_test_ic = None
-        self.test_T = None
-        self.np_test_Y = None
-
-    def check_key(self, train_T):
-        if train_T not in self.train_data.keys():
-            self.train_data[train_T] = dict()
-
-    def get_train_u_X(self, train_T):
-        return self.train_data[train_T]['np_train_u_X']
-
-    def get_train_u_Y(self, train_T):
-        return self.train_data[train_T]['np_train_u_Y']
-
-    def get_train_f_X(self, train_T):
-        return self.train_data[train_T]['np_train_f_X']
-
-    def set_train_u_X(self, train_T, np_train_u_X):
-        self.check_key(train_T)
-        self.train_data[train_T]['np_train_u_X'] = np_train_u_X
-
-    def set_train_u_Y(self, train_T, np_train_u_Y):
-        self.check_key(train_T)
-        self.train_data[train_T]['np_train_u_Y'] = np_train_u_Y
-
-    def set_train_f_X(self, train_T, np_train_f_X):
-        self.check_key(train_T)
-        self.train_data[train_T]['np_train_f_X'] = np_train_f_X
-
-
-class NfNuTestContainer:
-    def __init__(self):
-        self.train_data = dict()
-        self.train_T = None
-        self.np_val_X = None
-        self.np_val_ic = None
-        self.val_T = None
-        self.np_val_Y = None
-
-    def check_key(self, nf, nu):
-        if nf not in self.train_data.keys():
-            self.train_data[nf] = dict()
-            self.train_data[nf][nu] = dict()
-        elif nu not in self.train_data[nf].keys():
-            self.train_data[nf][nu] = dict()
-
-    def get_train_u_X(self, nf, nu):
-        return self.train_data[nf][nu]['np_train_u_X']
-
-    def get_train_u_Y(self, nf, nu):
-        return self.train_data[nf][nu]['np_train_u_Y']
-
-    def get_train_f_X(self, nf, nu):
-        return self.train_data[nf][nu]['np_train_f_X']
-
-    def set_train_u_X(self, nf, nu, np_train_u_X):
-        self.check_key(nf, nu)
-        self.train_data[nf][nu]['np_train_u_X'] = np_train_u_X
-
-    def set_train_u_Y(self, nf, nu, np_train_u_Y):
-        self.check_key(nf, nu)
-        self.train_data[nf][nu]['np_train_u_Y'] = np_train_u_Y
-
-    def set_train_f_X(self, nf, nu, np_train_f_X):
-        self.check_key(nf, nu)
-        self.train_data[nf][nu]['np_train_f_X'] = np_train_f_X

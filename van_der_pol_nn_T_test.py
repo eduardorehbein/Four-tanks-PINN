@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.tests import TTester, TTestContainer
+from util.tests import TTester
+from util.data_container import TTestContainer
 from util.pinn import VanDerPolPINN
 
 # Working period test's parameters
@@ -66,4 +67,4 @@ for train_T in train_Ts_to_test:
 
 # Test
 tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, train_Ts_to_test, adam_epochs, max_lbfgs_iterations)
-tester.test(data_container, results_subdirectory, save_mode='all')
+tester.test(data_container, results_subdirectory)
