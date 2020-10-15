@@ -18,27 +18,19 @@ class StructTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
-             results_subdirectory=None, save_mode=None):
+        self.dao = JsonDAO()
+
+    def test(self, data_container, results_subdirectory=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
 
-        X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
-        Y_normalizer.parametrize(np_train_u_Y)
-
-        # Plotter
-        plotter = Plotter()
-        plot_dict = dict()
+        X_normalizer.parametrize(np.concatenate([data_container.np_train_u_X, data_container.np_train_f_X]))
+        Y_normalizer.parametrize(data_container.np_train_u_Y)
 
         # Structural test
         start_time = datetime.now()
         for layers in self.layers_to_test:
-            plot_dict[layers] = {'final train u losses': [],
-                                 'final train f losses': [],
-                                 'final train total losses': [],
-                                 'final val losses': []}
-
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
                 if self.sys_params is None:
@@ -48,54 +40,58 @@ class StructTester:
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
+                model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
+                            data_container.train_T,
+                            data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
+                            data_container.np_val_Y,
                             self.adam_epochs, self.max_lbfgs_iterations)
 
                 # Save plot data
-                plot_dict[layers]['final train u losses'].append(model.train_u_loss[-1])
-                plot_dict[layers]['final train f losses'].append(model.train_f_loss[-1])
-                plot_dict[layers]['final train total losses'].append(model.train_total_loss[-1])
-                plot_dict[layers]['final val losses'].append(model.validation_loss[-1])
+                data_container.set_train_u_loss(layers, neurons, model.train_u_loss)
+                data_container.set_train_f_loss(layers, neurons, model.train_f_loss)
+                data_container.set_train_total_loss(layers, neurons, model.train_total_loss)
+                data_container.set_val_loss(layers, neurons, model.validation_loss)
 
         # Plot results
+        plotter = Plotter()
         plotter.text_page('Neural network\'s structural test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nTrain T -> ' + str(train_T) + ' s' +
-                          '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
-                          '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
-                          '\nValidation points -> ' + str(np_val_X.shape[0]) +
-                          '\nValidation T -> ' + str(val_T) + ' s' +
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nTrain Nu -> ' + str(data_container.np_train_u_X.shape[0]) +
+                          '\nTrain Nf -> ' + str(data_container.np_train_f_X.shape[0]) +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
                           '\nPlot scale -> Log 10')
 
         heatmap_colors = 'Reds'
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final val losses'])
-                                           for layers in self.layers_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
+                                                                               self.neurons_per_layer_to_test)),
                              title='Validation L2 error',
                              x_label='Neurons',
                              y_label='Layers',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train total losses'])
-                                           for layers in self.layers_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.layers_to_test,
+                                                                                       self.neurons_per_layer_to_test)),
                              title='Train total L2 error',
                              x_label='Neurons',
                              y_label='Layers',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train u losses'])
-                                           for layers in self.layers_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
+                                                                                   self.neurons_per_layer_to_test)),
                              title='Train u L2 error',
                              x_label='Neurons',
                              y_label='Layers',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[layers]['final train f losses'])
-                                           for layers in self.layers_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
+                                                                                   self.neurons_per_layer_to_test)),
                              title='Train f L2 error',
                              x_label='Neurons',
                              y_label='Layers',
@@ -104,20 +100,16 @@ class StructTester:
                              imshow_kw={'cmap': heatmap_colors})
 
         # Save or show results
-        if save_mode == 'all':
+        if results_subdirectory is not None:
             now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
-        elif save_mode == 'pdf':
-            now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
-        elif save_mode == 'eps':
-            now = datetime.now()
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test')
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-nn-structural-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.results)
         else:
             plotter.show()
 
@@ -190,6 +182,8 @@ class TTester:
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
                           '\nTrain Nu -> ' + str(nu) +
                           '\nTrain Nf -> ' + str(nf) +
                           '\nValidation points -> ' + str(val_points) +

@@ -6,8 +6,8 @@ from util.tests import ExhaustionTester
 
 
 # Neural networks' parameters
-hidden_layers = 2
-units_per_layer = 20
+hidden_layers = 4
+units_per_layer = 15
 
 # Train parameters
 adam_epochs = 500
