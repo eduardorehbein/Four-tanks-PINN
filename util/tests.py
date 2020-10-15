@@ -281,19 +281,11 @@ class NfNuTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory, save_mode=None):
-        # Plotter
-        plotter = Plotter()
-        plot_dict = dict()
+        self.dao = JsonDAO()
 
-        # Nf/Nu Test
+    def test(self, data_container, results_subdirectory=None):
         start_time = datetime.now()
         for nf in self.nfs_to_test:
-            plot_dict[nf] = {'final train u losses': [],
-                             'final train f losses': [],
-                             'final train total losses': [],
-                             'final val losses': []}
-
             for nu in self.nus_to_test:
                 # Train data
                 np_train_u_X = data_container.get_train_u_X(nf, nu)
@@ -322,13 +314,14 @@ class NfNuTester:
                             adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
                 # Save plot data
-                plot_dict[nf]['final train u losses'].append(model.train_u_loss[-1])
-                plot_dict[nf]['final train f losses'].append(model.train_f_loss[-1])
-                plot_dict[nf]['final train total losses'].append(model.train_total_loss[-1])
-                plot_dict[nf]['final val losses'].append(model.validation_loss[-1])
+                data_container.set_train_u_loss(nf, nu, model.train_u_loss)
+                data_container.set_train_f_loss(nf, nu, model.train_f_loss)
+                data_container.set_train_total_loss(nf, nu, model.train_total_loss)
+                data_container.set_val_loss(nf, nu, model.validation_loss)
 
         # Plot results
-        plotter.text_page('Neural network\'s Nf/Nt test:' +
+        plotter = Plotter()
+        plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
@@ -340,54 +333,50 @@ class NfNuTester:
                           '\nPlot scale -> Log 10')
 
         heatmap_colors = 'Oranges'
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final val losses'])
-                                                     for nf in self.nfs_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
+                                                                               self.nus_to_test)),
                              title='Validation L2 error',
-                             x_label='Nt',
+                             x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
                              col_labels=self.nus_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train total losses'])
-                                                     for nf in self.nfs_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.nfs_to_test,
+                                                                                       self.nus_to_test)),
                              title='Train total L2 error',
-                             x_label='Nt',
+                             x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
                              col_labels=self.nus_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train u losses'])
-                                                     for nf in self.nfs_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.nfs_to_test,
+                                                                                   self.nus_to_test)),
                              title='Train u L2 error',
-                             x_label='Nt',
+                             x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
                              col_labels=self.nus_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(np.array([np.array(plot_dict[nf]['final train f losses'])
-                                                     for nf in self.nfs_to_test])),
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.nfs_to_test,
+                                                                                   self.nus_to_test)),
                              title='Train f L2 error',
-                             x_label='Nt',
+                             x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
                              col_labels=self.nus_to_test,
                              imshow_kw={'cmap': heatmap_colors})
 
         # Save or show results
-        if save_mode == 'all':
+        if results_subdirectory is not None:
             now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
-        elif save_mode == 'pdf':
-            now = datetime.now()
-            plotter.save_pdf('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
-        elif save_mode == 'eps':
-            now = datetime.now()
-            plotter.save_eps('results/' + results_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test')
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.results)
         else:
             plotter.show()
 

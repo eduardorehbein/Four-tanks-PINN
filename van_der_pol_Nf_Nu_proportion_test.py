@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from util.pinn import VanDerPolPINN
-from util.tests import NfNuTester, NfNuTestContainer
+from util.tests import NfNuTester
+from util.data_container import NfNuTestContainer
 
 # Nf/Nu proportion test's parameters
 nfs_to_test = (2000, 4000, 10000, 100000)
@@ -61,4 +62,4 @@ for nf in nfs_to_test:
 # Test
 tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
                     adam_epochs, max_lbfgs_iterations)
-tester.test(data_container, results_subdirectory, save_mode='all')
+tester.test(data_container, results_subdirectory)

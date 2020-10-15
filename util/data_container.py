@@ -16,9 +16,9 @@ class TTestContainer:
         self.test_T = None
         self.np_test_Y = None
 
-    def check_key(self, key, directory):
-        if key not in directory.keys():
-            directory[key] = dict()
+    def check_key(self, key, dictionary):
+        if key not in dictionary.keys():
+            dictionary[key] = dict()
 
     def get_train_u_X(self, train_T):
         return self.train_data[train_T]['np_train_u_X']
@@ -54,6 +54,9 @@ class TTestContainer:
         results = copy.deepcopy(self.results)
         for T in self.results.keys():
             results[T]['nn'] = results[T]['nn'].tolist()
+        results['test_y'] = self.np_test_Y.tolist()
+        results['test_t'] = self.np_test_t.tolist()
+
         return results
 
     def set_train_u_X(self, train_T, np_train_u_X):
@@ -96,18 +99,19 @@ class TTestContainer:
 class NfNuTestContainer:
     def __init__(self):
         self.train_data = dict()
+        self.results = dict()
         self.train_T = None
         self.np_val_X = None
         self.np_val_ic = None
         self.val_T = None
         self.np_val_Y = None
 
-    def check_key(self, nf, nu):
-        if nf not in self.train_data.keys():
-            self.train_data[nf] = dict()
-            self.train_data[nf][nu] = dict()
-        elif nu not in self.train_data[nf].keys():
-            self.train_data[nf][nu] = dict()
+    def check_key(self, nf, nu, dictionary):
+        if nf not in dictionary.keys():
+            dictionary[nf] = dict()
+            dictionary[nf][nu] = dict()
+        elif nu not in dictionary[nf].keys():
+            dictionary[nf][nu] = dict()
 
     def get_train_u_X(self, nf, nu):
         return self.train_data[nf][nu]['np_train_u_X']
@@ -118,14 +122,54 @@ class NfNuTestContainer:
     def get_train_f_X(self, nf, nu):
         return self.train_data[nf][nu]['np_train_f_X']
 
+    def get_final_val_losses(self, nfs, nus):
+        return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['val_loss'][-1] for nu in nus]
+                         for nf in nfs])
+
+    def get_final_train_total_losses(self, nfs, nus):
+        return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_total_loss'][-1] for nu in nus]
+                         for nf in nfs])
+
+    def get_final_train_u_losses(self, nfs, nus):
+        return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_u_loss'][-1] for nu in nus]
+                         for nf in nfs])
+
+    def get_final_train_f_losses(self, nfs, nus):
+        return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_f_loss'][-1] for nu in nus]
+                         for nf in nfs])
+
     def set_train_u_X(self, nf, nu, np_train_u_X):
-        self.check_key(nf, nu)
+        self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_u_X'] = np_train_u_X
 
     def set_train_u_Y(self, nf, nu, np_train_u_Y):
-        self.check_key(nf, nu)
+        self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_u_Y'] = np_train_u_Y
 
     def set_train_f_X(self, nf, nu, np_train_f_X):
-        self.check_key(nf, nu)
+        self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_f_X'] = np_train_f_X
+
+    def set_val_loss(self, nf, nu, val_loss):
+        nf_key = 'Nf = ' + str(nf)
+        nu_key = 'Nu = ' + str(nu)
+        self.check_key(nf_key, nu_key, self.results)
+        self.results[nf_key][nu_key]['val_loss'] = val_loss
+
+    def set_train_total_loss(self, nf, nu, train_total_loss):
+        nf_key = 'Nf = ' + str(nf)
+        nu_key = 'Nu = ' + str(nu)
+        self.check_key(nf_key, nu_key, self.results)
+        self.results[nf_key][nu_key]['train_total_loss'] = train_total_loss
+
+    def set_train_u_loss(self, nf, nu, train_u_loss):
+        nf_key = 'Nf = ' + str(nf)
+        nu_key = 'Nu = ' + str(nu)
+        self.check_key(nf_key, nu_key, self.results)
+        self.results[nf_key][nu_key]['train_u_loss'] = train_u_loss
+
+    def set_train_f_loss(self, nf, nu, train_f_loss):
+        nf_key = 'Nf = ' + str(nf)
+        nu_key = 'Nu = ' + str(nu)
+        self.check_key(nf_key, nu_key, self.results)
+        self.results[nf_key][nu_key]['train_f_loss'] = train_f_loss
