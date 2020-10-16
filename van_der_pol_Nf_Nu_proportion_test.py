@@ -16,7 +16,7 @@ units_per_layer = 15
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 2000
-train_T = 0.5
+train_T = 1.0
 val_T = 0.5
 
 # Other parameters
