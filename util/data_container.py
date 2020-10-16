@@ -119,6 +119,19 @@ class TTestContainer:
 
         return results
 
+    def load_results(self, dictionary):
+        self.np_test_t = np.array(dictionary['test_t'])
+        self.np_test_Y = np.array(dictionary['test_y'])
+
+        self.results = dictionary
+        del self.results['test_t']
+        del self.results['test_y']
+
+        keys = list(self.results.keys())
+        for key in keys:
+            self.results[key]['nn'] = np.array(self.results[key]['nn'])
+            self.results[float(key)] = self.results.pop(key)
+
     def set_train_u_X(self, train_T, np_train_u_X):
         self.check_key(train_T, self.train_data)
         self.train_data[train_T]['np_train_u_X'] = np_train_u_X
@@ -233,3 +246,41 @@ class NfNuTestContainer:
         nu_key = 'Nu = ' + str(nu)
         self.check_key(nf_key, nu_key, self.results)
         self.results[nf_key][nu_key]['train_f_loss'] = train_f_loss
+
+
+class ExhaustionTestContainer:
+    def __init__(self):
+        self.np_train_u_X = None
+        self.np_train_u_Y = None
+        self.np_train_f_X = None
+        self.train_T = None
+        self.np_val_X = None
+        self.np_val_ic = None
+        self.val_T = None
+        self.np_val_Y = None
+        self.np_test_t = None
+        self.np_test_X = None
+        self.np_test_ic = None
+        self.test_T = None
+        self.np_test_Y = None
+        self.np_test_NN = None
+        self.train_total_loss = None
+        self.train_u_loss = None
+        self.train_f_loss = None
+        self.val_loss = None
+
+    def get_results_dict(self):
+        return {'val_loss': self.val_loss,
+                'train_total_loss': self.train_total_loss,
+                'train_u_loss': self.train_u_loss,
+                'train_f_loss': self.train_f_loss,
+                'np_test_t': self.np_test_t.tolist(),
+                'np_test_U': self.get_np_test_U().tolist(),
+                'np_test_Y': self.np_test_Y.tolist(),
+                'np_test_NN': self.np_test_NN.tolist()}
+
+    def get_np_test_U(self):
+        t_index = 0
+        while not np.array_equal(self.np_test_X[:, t_index].flatten(), self.np_test_t.flatten()):
+            t_index = t_index + 1
+        return np.delete(self.np_test_X, t_index, axis=1)

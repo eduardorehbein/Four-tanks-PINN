@@ -179,13 +179,5 @@ class Plotter:
             pdf.savefig(fig)
         pdf.close()
 
-    def save_eps(self, directory_path):
-        if not os.path.isdir(directory_path):
-            os.mkdir(directory_path)
-
-        for fig in range(1, plt.gcf().number + 1):
-            plt.figure(fig)
-            plt.savefig(directory_path + '/figure_' + str(fig) + '.eps', format='eps')
-
     def show(self):
         plt.show()

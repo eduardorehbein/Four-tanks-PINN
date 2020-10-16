@@ -7,7 +7,7 @@ from util.data_interface import JsonDAO
 
 
 class StructTester:
-    def __init__(self, PINNModelClass, layers_to_test, neurons_per_layer_to_test,
+    def __init__(self, PINNModelClass=None, layers_to_test=None, neurons_per_layer_to_test=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
@@ -21,6 +21,9 @@ class StructTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        # Start time
+        start_time = datetime.now()
+
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -29,7 +32,6 @@ class StructTester:
         Y_normalizer.parametrize(data_container.np_train_u_Y)
 
         # Structural test
-        start_time = datetime.now()
         for layers in self.layers_to_test:
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
@@ -52,10 +54,13 @@ class StructTester:
                 data_container.set_train_total_loss(layers, neurons, model.train_total_loss)
                 data_container.set_val_loss(layers, neurons, model.validation_loss)
 
+        # Ending time
+        data_container.test_duration = str(datetime.now() - start_time)
+
         # Plot results
         plotter = Plotter()
         plotter.text_page('Neural network\'s structural test:' +
-                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nTest duration -> ' + data_container.test_duration +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain T -> ' + str(data_container.train_T) + ' s' +
@@ -64,40 +69,7 @@ class StructTester:
                           '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
                           '\nValidation T -> ' + str(data_container.val_T) + ' s' +
                           '\nPlot scale -> Log 10')
-
-        heatmap_colors = 'Reds'
-        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
-                                                                               self.neurons_per_layer_to_test)),
-                             title='Validation L2 error',
-                             x_label='Neurons',
-                             y_label='Layers',
-                             row_labels=self.layers_to_test,
-                             col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.layers_to_test,
-                                                                                       self.neurons_per_layer_to_test)),
-                             title='Train total L2 error',
-                             x_label='Neurons',
-                             y_label='Layers',
-                             row_labels=self.layers_to_test,
-                             col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
-                                                                                   self.neurons_per_layer_to_test)),
-                             title='Train u L2 error',
-                             x_label='Neurons',
-                             y_label='Layers',
-                             row_labels=self.layers_to_test,
-                             col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
-        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
-                                                                                   self.neurons_per_layer_to_test)),
-                             title='Train f L2 error',
-                             x_label='Neurons',
-                             y_label='Layers',
-                             row_labels=self.layers_to_test,
-                             col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+        self.plot_graphs(data_container, plotter)
 
         # Save or show results
         if results_subdirectory is not None:
@@ -113,9 +85,46 @@ class StructTester:
         else:
             plotter.show()
 
+    def plot_graphs(self, data_container, plotter, just_val_loss=False):
+        heatmap_colors = 'Reds'
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
+                                                                               self.neurons_per_layer_to_test)),
+                             title='Validation L2 error',
+                             x_label='Neurons',
+                             y_label='Layers',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+        if not just_val_loss:
+            plotter.plot_heatmap(data=np.log10(data_container.
+                                               get_final_train_total_losses(self.layers_to_test,
+                                                                            self.neurons_per_layer_to_test)),
+                                 title='Train total L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
+            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
+                                                                                       self.neurons_per_layer_to_test)),
+                                 title='Train u L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
+            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
+                                                                                       self.neurons_per_layer_to_test)),
+                                 title='Train f L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
+
 
 class TTester:
-    def __init__(self, PINNModelClass, hidden_layers, units_per_layer, Ts,
+    def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, Ts=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
@@ -131,6 +140,7 @@ class TTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        # Start time
         start_time = datetime.now()
         for train_T in self.train_Ts:
             # Train data
@@ -190,15 +200,30 @@ class TTester:
                           '\nValidation T -> ' + str(data_container.val_T) + ' s' +
                           '\nTest points -> ' + str(test_points) +
                           '\nTest T -> ' + str(data_container.test_T) + ' s')
+        self.plot_graphs(data_container, plotter)
 
+        # Save or show results
+        if results_subdirectory is not None:
+            now = datetime.now()
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
+        else:
+            plotter.show()
+
+    def plot_graphs(self, data_container, plotter):
         np_train_Ts = np.array(self.train_Ts)
         np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
                      labels=['val loss'],
-                     title='Validation loss',
+                     title='Validation L2 error',
                      x_label='Train T',
-                     y_label='Loss',
+                     y_label=None,
                      x_scale='log',
                      y_scale='log',
                      line_styles='o-',
@@ -206,9 +231,9 @@ class TTester:
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_total_losses(self.train_Ts)],
                      labels=['train loss'],
-                     title='Train total loss',
+                     title='Train total L2 error',
                      x_label='Train T',
-                     y_label='Loss',
+                     y_label=None,
                      x_scale='log',
                      y_scale='log',
                      line_styles='o-',
@@ -216,10 +241,10 @@ class TTester:
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_u_losses(self.train_Ts),
                                   data_container.get_final_train_f_losses(self.train_Ts)],
-                     labels=['u loss', 'f loss'],
-                     title='Train losses',
+                     labels=['u', 'f'],
+                     title='Train u and f L2 error',
                      x_label='Train T',
-                     y_label='Loss',
+                     y_label=None,
                      x_scale='log',
                      y_scale='log',
                      line_styles='o-',
@@ -241,23 +266,10 @@ class TTester:
                              labels=['$\\hat{y}_{' + str(output_index) + '}$', '$y_{' + str(output_index) + '}$'],
                              title=title + ' MSE: ' + str(round(mse, 3)),
                              x_label='Time',
-                             y_label='Output',
+                             y_label=None,
                              line_styles=['--', 'o-'],
                              markevery=markevery,
                              np_c_base=np_c_base)
-
-        # Save or show results
-        if results_subdirectory is not None:
-            now = datetime.now()
-            directory_path = 'results/' + results_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test'
-
-            if not os.path.isdir(directory_path):
-                os.mkdir(directory_path)
-
-            plotter.save_pdf(directory_path + '/results.pdf')
-            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
-        else:
-            plotter.show()
 
 
 class NfNuTester:
@@ -278,6 +290,7 @@ class NfNuTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        # Start time
         start_time = datetime.now()
         for nf in self.nfs_to_test:
             for nu in self.nus_to_test:
@@ -387,14 +400,15 @@ class ExhaustionTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
-             np_test_t, np_test_X, np_test_ic, test_T, np_test_Y, results_and_models_subdirectory, save_mode=None):
+        self.dao = JsonDAO()
+
+    def test(self, data_container, results_and_models_subdirectory=None):
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
 
-        X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
-        Y_normalizer.parametrize(np_train_u_Y)
+        X_normalizer.parametrize(np.concatenate([data_container.np_train_u_X, data_container.np_train_f_X]))
+        Y_normalizer.parametrize(data_container.np_train_u_Y)
 
         # Start time
         start_time = datetime.now()
@@ -407,14 +421,23 @@ class ExhaustionTester:
                                         X_normalizer, Y_normalizer)
 
         # Train
-        model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
+        model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
+                    data_container.train_T,
+                    data_container.np_val_X, data_container.np_val_ic, data_container.val_T, data_container.np_val_Y,
                     self.adam_epochs, self.max_lbfgs_iterations)
 
+        # Load train results into the container
+        data_container.val_loss = model.validation_loss
+        data_container.train_total_loss = model.train_total_loss
+        data_container.train_u_loss = model.train_u_loss
+        data_container.train_f_loss = model.train_f_loss
+
         # Calculate controls signals an their T
-        np_test_U = self.get_test_control(np_test_t, np_test_X)
+        np_test_U = data_container.get_np_test_U()
 
         # Test
-        model_prediction = model.predict(np_test_X, np_test_ic, test_T)
+        model_prediction = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
+        data_container.np_test_NN = model_prediction
 
         # Plotter
         plotter = Plotter()
@@ -424,13 +447,13 @@ class ExhaustionTester:
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
                           ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
-                          '\nTrain T -> ' + str(train_T) + ' s' +
-                          '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
-                          '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
-                          '\nValidation points -> ' + str(np_val_X.shape[0]) +
-                          '\nValidation T -> ' + str(val_T) + ' s' +
-                          '\nTest points -> ' + str(np_test_X.shape[0]) +
-                          '\nTest T -> ' + str(test_T) + ' s',
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nTrain Nu -> ' + str(data_container.np_train_u_X.shape[0]) +
+                          '\nTrain Nf -> ' + str(data_container.np_train_f_X.shape[0]) +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nTest points -> ' + str(data_container.np_test_X.shape[0]) +
+                          '\nTest T -> ' + str(data_container.test_T) + ' s',
                           vertical_position=0.25)
 
         # Plot train and validation losses
@@ -438,66 +461,63 @@ class ExhaustionTester:
         loss_x_axis = np.linspace(1, loss_len, loss_len)
         np_c_base = np.array([0, 255, 204])/255.0
         plotter.plot(x_axis=loss_x_axis,
-                     y_axis_list=[np.array(model.train_total_loss), np.array(model.validation_loss)],
-                     labels=['Train loss', 'Validation loss'],
-                     title='Total losses',
+                     y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
+                     labels=['Train', 'Validation'],
+                     title='L2 error',
                      x_label='Epoch',
-                     y_label='Loss',
+                     y_label=None,
                      y_scale='log',
                      np_c_base=np_c_base)
         plotter.plot(x_axis=loss_x_axis,
-                     y_axis_list=[np.array(model.train_u_loss), np.array(model.train_f_loss)],
-                     labels=['u loss', 'f loss'],
-                     title='Train losses',
+                     y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
+                     labels=['u', 'f'],
+                     title='Train L2 error',
                      x_label='Epoch',
-                     y_label='Loss',
+                     y_label=None,
                      y_scale='log',
                      np_c_base=np_c_base)
 
         # Plot test results
-        plotter.plot(x_axis=np_test_t,
+        plotter.plot(x_axis=data_container.np_test_t,
                      y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
                      labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
                      title='Input signal',
                      x_label='Time',
-                     y_label='Input',
+                     y_label=None,
                      draw_styles='steps',
                      np_c_base=np_c_base)
-        for i in range(np_test_Y.shape[1]):
-            markevery = int(np_test_t.size / (np_test_t[-1] / test_T))
-            mse = (np.square(model_prediction[:, i] - np_test_Y[:, i])).mean()
-            plotter.plot(x_axis=np_test_t,
-                         y_axis_list=[np_test_Y[:, i], model_prediction[:, i]],
+        for i in range(data_container.np_test_Y.shape[1]):
+            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
+            mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
+            plotter.plot(x_axis=data_container.np_test_t,
+                         y_axis_list=[data_container.np_test_Y[:, i], data_container.np_test_NN[:, i]],
                          labels=['$\\hat{y}_{' + str(i + 1) + '}$', '$y_{' + str(i + 1) + '}$'],
                          title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
                          x_label='Time',
-                         y_label='Output',
+                         y_label=None,
                          line_styles=['--', 'o-'],
                          markevery=markevery,
                          np_c_base=np_c_base)
 
-        # Save or show results
-        now = datetime.now()
-        if save_mode == 'all':
-            plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
-            plotter.save_eps('results/' + results_and_models_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test')
-        elif save_mode == 'pdf':
-            plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test.pdf')
-        elif save_mode == 'eps':
-            plotter.save_eps('results/' + results_and_models_subdirectory + '/' +
-                             now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhaustion-test')
+        # Save model and results or show results
+        if results_and_models_subdirectory is not None:
+            # Save results
+            now = datetime.now()
+            directory_path = 'results/' + results_and_models_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-exhaustion-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
+
+            # Save model
+            model_dir = 'models/' + results_and_models_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-' + \
+                        str(data_container.train_T) + 's-' + str(self.hidden_layers) + 'l-' + \
+                        str(self.units_per_layer) + 'n-exhausted-model'
+            if data_container.train_T % 1 > 0:
+                model_dir = model_dir.replace('.', 'dot')
+            model.save(model_dir)
         else:
             plotter.show()
-
-        # Save model
-        model.save('models/' + results_and_models_subdirectory + '/' +
-                   now.strftime('%Y-%m-%d-%H-%M-%S') + '-exhausted-model')
-
-    def get_test_control(self, np_test_t, np_test_X):
-        t_index = 0
-        while not np.array_equal(np_test_X[:, t_index].flatten(), np_test_t.flatten()):
-            t_index = t_index + 1
-        return np.delete(np_test_X, t_index, axis=1)
