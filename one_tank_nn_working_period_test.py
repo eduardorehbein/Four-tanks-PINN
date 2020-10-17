@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.tests import WorkingPeriodTester, WorkingPeriodTestContainer
+from util.tests import TTester, TTestContainer
 from util.pinn import OneTankPINN
 
 # Working period test's parameters
@@ -33,12 +33,12 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Load data into a container
-data_container = WorkingPeriodTestContainer()
+data_container = TTestContainer()
 
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_1600_collocation_points.csv')
-data_container.test_t = test_df['t'].to_numpy()
-data_container.test_X = test_df[['t', 'v']].to_numpy()
-data_container.test_Y = test_df[['h']].to_numpy()
+test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
+data_container.np_test_t = test_df['t'].to_numpy()
+data_container.np_test_X = test_df[['t', 'v']].to_numpy()
+data_container.np_test_Y = test_df[['h']].to_numpy()
 data_container.test_ic = np.array([test_df['h'].to_numpy()[0]])
 
 for working_period in working_periods_to_test:
@@ -65,6 +65,6 @@ for working_period in working_periods_to_test:
     data_container.set_val_Y(working_period, np_val_Y)
 
 # Test
-tester = WorkingPeriodTester(OneTankPINN, hidden_layers, units_per_layer, working_periods_to_test,
-                             adam_epochs, max_lbfgs_iterations, sys_params)
+tester = TTester(OneTankPINN, hidden_layers, units_per_layer, working_periods_to_test,
+                 adam_epochs, max_lbfgs_iterations, sys_params)
 tester.test(data_container, results_subdirectory)

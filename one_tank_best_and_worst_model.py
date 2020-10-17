@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from util.pinn import OneTankPINN
-from util.tests import BestAndWorstModelTestContainer, BestAndWorstModelTester
+from util.tests import BestAndWorstModelTestContainer, ExhaustionTester
 
 
 # Neural networks' parameters
@@ -13,11 +13,11 @@ worst_model_hidden_layers = 2
 worst_model_units_per_layer = 10
 
 # Train parameters
-adam_epochs = 500
-max_lbfgs_iterations = 10000
+adam_epochs = 100
+max_lbfgs_iterations = 1000
 
 # Other parameters
-best_model_working_period = 15.0
+best_model_working_period = 10.0
 worst_model_working_period = 0.001
 
 # Directory under 'results' and 'models' where the plots and models are going to be saved
@@ -64,17 +64,17 @@ worst_model_np_val_X = worst_model_val_df[['t', 'v', 'ic']].to_numpy()
 worst_model_np_val_Y = worst_model_val_df[['h']].to_numpy()
 
 # Test data
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_t_range_160.0s_160000_collocation_points.csv')
+test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
 np_test_t = test_df['t'].to_numpy()
 np_test_X = test_df[['t', 'v']].to_numpy()
 np_test_h = test_df[['h']].to_numpy()
 np_test_ic = np.array([test_df['h'].to_numpy()[0]])
 
 # Tester
-tester = BestAndWorstModelTester(OneTankPINN,
-                                 best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
-                                 worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
-                                 adam_epochs, max_lbfgs_iterations, sys_params)
+tester = ExhaustionTester(OneTankPINN,
+                          best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
+                          worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
+                          adam_epochs, max_lbfgs_iterations, sys_params)
 
 # Load data into a container
 data_container = BestAndWorstModelTestContainer()
@@ -95,9 +95,9 @@ data_container.set_train_f_X(worst_model_key, worst_model_np_train_f_X)
 data_container.set_val_X(worst_model_key, worst_model_np_val_X)
 data_container.set_val_Y(worst_model_key, worst_model_np_val_Y)
 
-data_container.test_t = np_test_t
-data_container.test_X = np_test_X
-data_container.test_Y = np_test_h
+data_container.np_test_t = np_test_t
+data_container.np_test_X = np_test_X
+data_container.np_test_Y = np_test_h
 data_container.test_ic = np_test_ic
 
 # Test

@@ -4,20 +4,29 @@ from util.systems.van_der_pol_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 30
+random_seed = 10
 
-collocation_points = 10000
-t_range = 10.0
-v_change_t = 2.0
+sim_time = 10.0
+u_change_t = 0.5
+scenarios = 1
+collocation_points_per_u = 10
 
 lowest_u = -1.0
 highest_u = 1.0
-lowest_x = np.array([-1.5, -2.0])
-highest_x = np.array([1.5, 2.0])
+lowest_x = -3.0
+highest_x = 3.0
 
-file_name = 'long_signal_rand_seed_' + str(random_seed) + \
-            '_t_range_' + str(t_range) + 's_' + \
-            str(collocation_points) + '_collocation_points'
+if scenarios > 1:
+    file_name = 'long_signal_rand_seed_' + str(random_seed) + \
+                '_sim_time_' + str(sim_time) + 's_' + \
+                str(scenarios) + '_scenarios_' + \
+                str(int((sim_time / u_change_t) * (collocation_points_per_u if collocation_points_per_u > 2 else 1))) + \
+                '_collocation_points'
+else:
+    file_name = 'long_signal_rand_seed_' + str(random_seed) + \
+                '_sim_time_' + str(sim_time) + 's_' + \
+                str(int((sim_time / u_change_t) * (collocation_points_per_u if collocation_points_per_u > 2 else 1))) + \
+                '_collocation_points'
 
 # Set random seed
 np.random.seed(random_seed)
@@ -25,30 +34,46 @@ np.random.seed(random_seed)
 # System simulator
 simulator = CasadiSimulator()
 
-# Controls and initial conditions for training and testing
-us = np.random.uniform(low=lowest_u, high=highest_u, size=(int(t_range / v_change_t),))
-ic = (highest_x - lowest_x)*np.random.rand(1, 2) + lowest_x
+# Controls and initial conditions
+np_us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios, int(sim_time / u_change_t)))
+np_x0s = np.random.uniform(low=lowest_x, high=highest_x, size=(scenarios, 2))
 
-# Time
-t = np.linspace(0, t_range, collocation_points)
-t_change_index_step = int(v_change_t/(t_range/collocation_points))
+# Generate data
+data = {'scenario': [],
+        't': [],
+        'u': [],
+        'x1': [],
+        'x2': []}
 
-# Data
-x = simulator.run(t[:t_change_index_step], us[0], ic)
-data = {'t': t,
-        'u': np.tile(us[0], (t_change_index_step,)),
-        'x1': x[:, 0],
-        'x2': x[:, 1]}
+for j in range(scenarios):
+    np_T = np.linspace(0, u_change_t, collocation_points_per_u)
+    np_t = np_T
 
-for i in range(1, len(us)):
-    u = np.tile(us[i], (t_change_index_step,))
-    x1_0 = data['x1'].reshape((data['x1'].shape[0], 1))
-    x2_0 = data['x2'].reshape((data['x2'].shape[0], 1))
-    x = simulator.run(t[:t_change_index_step], us[i], np.concatenate([x1_0, x2_0], axis=1)[-1])
+    np_u = np.tile(np_us[j, 0], (collocation_points_per_u, 1))
 
-    data['u'] = np.append(data['u'], u)
-    data['x1'] = np.append(data['x1'], x[:, 0])
-    data['x2'] = np.append(data['x2'], x[:, 1])
+    np_x = simulator.run(np_T, np_us[j, 0], np_x0s[j, :])
+
+    for i in range(1, int(sim_time / u_change_t)):
+        np_t = np.append(np_t, np_T[1:] + np_t[-1])
+        np_u = np.append(np_u[:-1],
+                         np.tile(np_us[j, i], (collocation_points_per_u, np_u.shape[1])),
+                         axis=0)
+        np_x = np.append(np_x,
+                         simulator.run(np_T, np_us[j, i], np_x[-1, :], output_t0=False),
+                         axis=0)
+
+    data['scenario'].append(np.tile(j + 1, (np_t.size,)))
+    data['t'].append(np_t)
+    data['u'].append(np_u[:, 0])
+    data['x1'].append(np_x[:, 0])
+    data['x2'].append(np_x[:, 1])
+
+# Save data
+data['scenario'] = np.concatenate(data['scenario'])
+data['t'] = np.concatenate(data['t'])
+data['u'] = np.concatenate(data['u'])
+data['x1'] = np.concatenate(data['x1'])
+data['x2'] = np.concatenate(data['x2'])
 
 df = pd.DataFrame(data)
 df.to_csv('data/van_der_pol/' + file_name + '.csv', index=False)

@@ -6,9 +6,9 @@ from util.systems.one_tank_system import CasadiSimulator
 # Parameters
 random_seed = 30
 
-collocation_points = 1600
-t_range = 160.0
+sim_time = 160.0
 v_change_t = 20.0
+collocation_points_per_v = 200
 
 lowest_v = 0.5
 highest_v = 4.45
@@ -16,8 +16,8 @@ lowest_h = 2.0
 highest_h = 20.0
 
 file_name = 'long_signal_rand_seed_' + str(random_seed) + \
-            '_t_range_' + str(t_range) + 's_' + \
-            str(collocation_points) + '_collocation_points'
+            '_sim_time_' + str(sim_time) + 's_' + \
+            str(int((sim_time / v_change_t) * collocation_points_per_v)) + '_collocation_points'
 
 # Set random seed
 np.random.seed(random_seed)
@@ -30,25 +30,32 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 simulator = CasadiSimulator(sys_params)
 
-# Controls and initial conditions for training and testing
-vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(t_range / v_change_t),))
-ic = (highest_h - lowest_h)*np.random.rand() + lowest_h
+# Controls and initial conditions
+np_vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(sim_time / v_change_t),))
+np_h0 = (highest_h - lowest_h) * np.random.rand(1, 1) + lowest_h
 
-# Time
-t = np.linspace(0, t_range, collocation_points)
-t_change_index_step = int(v_change_t/(t_range/collocation_points))
+# Generate data
+np_T = np.linspace(0, v_change_t, collocation_points_per_v)
+np_t = np_T
 
-# Data
-data = {'t': t,
-        'v': np.tile(vs[0], (t_change_index_step,)),
-        'h': simulator.run(t[:t_change_index_step], vs[0], ic)[0]}
+np_v = np.tile(np_vs[0], (collocation_points_per_v, 1))
 
-for i in range(1, len(vs)):
-    v = np.tile(vs[i], (t_change_index_step,))
-    h = simulator.run(t[:t_change_index_step], vs[i], data['h'][-1])[0]
+np_h = np_h0
+np_h = np.append(np_h,
+                 simulator.run(np_T, np_vs[0], np_h[0], output_t0=False),
+                 axis=0)
 
-    data['v'] = np.append(data['v'], v)
-    data['h'] = np.append(data['h'], h)
+for i in range(1, int(sim_time / v_change_t)):
+    np_t = np.append(np_t, np_T[1:] + np_t[-1])
+    np_v = np.append(np_v,
+                     np.tile(np_vs[i], (collocation_points_per_v - 1, np_v.shape[1])),
+                     axis=0)
+    np_h = np.append(np_h,
+                     simulator.run(np_T, np_vs[i], np_h[-1], output_t0=False),
+                     axis=0)
 
-df = pd.DataFrame(data)
+# Save data
+df = pd.DataFrame({'t': np_t,
+                   'v': np_v[:, 0],
+                   'h': np_h[:, 0]})
 df.to_csv('data/one_tank/' + file_name + '.csv', index=False)

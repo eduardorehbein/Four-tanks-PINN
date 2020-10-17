@@ -1,49 +1,38 @@
+import os
 import numpy as np
-import datetime
+from datetime import datetime
 from util.normalizer import Normalizer
-from util.plot import PdfPlotter
+from util.plot import Plotter
+from util.data_interface import JsonDAO
 
 
 class StructTester:
-    def __init__(self, PINNModelClass, layers_to_test, neurons_per_layer_to_test, working_period='unspecified',
-                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+    def __init__(self, PINNModelClass=None, layers_to_test=None, neurons_per_layer_to_test=None,
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
         self.layers_to_test = layers_to_test
         self.neurons_per_layer_to_test = neurons_per_layer_to_test
 
-        self.working_period = working_period
-
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y, results_subdirectory):
+        self.dao = JsonDAO()
+
+    def test(self, data_container, results_subdirectory=None):
+        # Start time
+        start_time = datetime.now()
+
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
 
-        X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
-        Y_normalizer.parametrize(np_train_u_Y)
-
-        # Plotter
-        plotter = PdfPlotter()
-        plotter.text_page('Neural network\'s structural test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nWorking period -> ' + str(self.working_period) + ' s' +
-                          '\nTrain Nu -> ' + str(np_train_u_X.shape[0]) +
-                          '\nTrain Nf -> ' + str(np_train_f_X.shape[0]) +
-                          '\nValidation points -> ' + str(np_val_X.shape[0]))
+        X_normalizer.parametrize(np.concatenate([data_container.np_train_u_X, data_container.np_train_f_X]))
+        Y_normalizer.parametrize(data_container.np_train_u_Y)
 
         # Structural test
-        plot_dict = dict()
         for layers in self.layers_to_test:
-            plot_dict[layers] = {'final train u losses': [],
-                                 'final train f losses': [],
-                                 'final train total losses': [],
-                                 'final val losses': []}
-
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
                 if self.sys_params is None:
@@ -53,99 +42,111 @@ class StructTester:
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+                model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
+                            data_container.train_T,
+                            data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
+                            data_container.np_val_Y,
                             self.adam_epochs, self.max_lbfgs_iterations)
 
                 # Save plot data
-                plot_dict[layers]['final train u losses'].append(model.train_u_loss[-1])
-                plot_dict[layers]['final train f losses'].append(model.train_f_loss[-1])
-                plot_dict[layers]['final train total losses'].append(model.train_total_loss[-1])
-                plot_dict[layers]['final val losses'].append(model.validation_loss[-1])
+                data_container.set_train_u_loss(layers, neurons, model.train_u_loss)
+                data_container.set_train_f_loss(layers, neurons, model.train_f_loss)
+                data_container.set_train_total_loss(layers, neurons, model.train_total_loss)
+                data_container.set_val_loss(layers, neurons, model.validation_loss)
+
+        # Ending time
+        data_container.test_duration = str(datetime.now() - start_time)
 
         # Plot results
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final val losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final validation loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train total losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train total loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train u losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train u loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.neurons_per_layer_to_test),
-                     y_axis_list=[np.array(plot_dict[layers]['final train f losses'])
-                                  for layers in self.layers_to_test],
-                     labels=[str(layers) + ' layers' for layers in self.layers_to_test],
-                     title='Final train f loss',
-                     x_label='Neurons per layer',
-                     y_label='Loss [u²]',
-                     y_scale='log')
+        plotter = Plotter()
+        plotter.text_page('Neural network\'s structural test:' +
+                          '\nTest duration -> ' + data_container.test_duration +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nTrain Nu -> ' + str(data_container.np_train_u_X.shape[0]) +
+                          '\nTrain Nf -> ' + str(data_container.np_train_f_X.shape[0]) +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nPlot scale -> Log 10')
+        self.plot_graphs(data_container, plotter)
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-structural-test.pdf')
+        # Save or show results
+        if results_subdirectory is not None:
+            now = datetime.now()
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-nn-structural-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.results)
+        else:
+            plotter.show()
+
+    def plot_graphs(self, data_container, plotter, just_val_loss=False):
+        heatmap_colors = 'Reds'
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
+                                                                               self.neurons_per_layer_to_test)),
+                             title='Validation L2 error',
+                             x_label='Neurons',
+                             y_label='Layers',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+        if not just_val_loss:
+            plotter.plot_heatmap(data=np.log10(data_container.
+                                               get_final_train_total_losses(self.layers_to_test,
+                                                                            self.neurons_per_layer_to_test)),
+                                 title='Train total L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
+            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
+                                                                                       self.neurons_per_layer_to_test)),
+                                 title='Train u L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
+            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
+                                                                                       self.neurons_per_layer_to_test)),
+                                 title='Train f L2 error',
+                                 x_label='Neurons',
+                                 y_label='Layers',
+                                 row_labels=self.layers_to_test,
+                                 col_labels=self.neurons_per_layer_to_test,
+                                 imshow_kw={'cmap': heatmap_colors})
 
 
-class WorkingPeriodTester:
-    def __init__(self, PINNModelClass, hidden_layers, units_per_layer, working_periods,
-                 adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+class TTester:
+    def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, Ts=None,
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
         self.hidden_layers = hidden_layers
         self.units_per_layer = units_per_layer
 
-        self.working_periods = working_periods
+        self.train_Ts = Ts
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory):
-        nu = data_container.get_train_u_X(self.working_periods[0]).shape[0]
-        nf = data_container.get_train_f_X(self.working_periods[0]).shape[0]
-        val_scenarios = data_container.get_val_X(self.working_periods[0]).shape[0]
-        test_points = data_container.test_X.shape[0]
+        self.dao = JsonDAO()
 
-        # Plotter
-        plotter = PdfPlotter()
-        plotter.text_page('Neural network\'s working period test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nTrain Nu -> ' + str(nu) +
-                          '\nTrain Nf -> ' + str(nf) +
-                          '\nValidation points -> ' + str(val_scenarios) +
-                          '\nTest points -> ' + str(test_points))
-
-        plot_dict = {'final train u losses': [], 'final train f losses': [],
-                     'final train total losses': [], 'final val losses': [],
-                     't': data_container.test_t, 'y': data_container.test_Y,
-                     'nns': [], 'titles': []}
-
-        for working_period in self.working_periods:
+    def test(self, data_container, results_subdirectory=None):
+        # Start time
+        start_time = datetime.now()
+        for train_T in self.train_Ts:
             # Train data
-            np_train_u_X = data_container.get_train_u_X(working_period)
-            np_train_u_Y = data_container.get_train_u_Y(working_period)
-            np_train_f_X = data_container.get_train_f_X(working_period)
-
-            # Validation data
-            np_val_X = data_container.get_val_X(working_period)
-            np_val_Y = data_container.get_val_Y(working_period)
+            np_train_u_X = data_container.get_train_u_X(train_T)
+            np_train_u_Y = data_container.get_train_u_Y(train_T)
+            np_train_f_X = data_container.get_train_f_X(train_T)
 
             # Normalizers
             X_normalizer = Normalizer()
@@ -162,72 +163,123 @@ class WorkingPeriodTester:
                                             X_normalizer, Y_normalizer)
 
             # Train
-            print('Model training with working period of ' + str(working_period) + ' seconds:')
-            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+            print('Model training with T of ' + str(train_T) + ' seconds:')
+            model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T,
+                        data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
+                        data_container.np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
             # Test
-            nn = model.predict(data_container.test_X, data_container.test_ic, working_period)
-            plot_dict['nns'].append(nn)
+            nn = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
 
-            plot_dict['titles'].append('Working period = ' + str(round(working_period, 3)) + ' s.')
+            data_container.set_nn(train_T, nn)
+            data_container.set_title(train_T, 'T = ' + str(round(train_T, 3)) + ' s.')
 
-            # Final losses
-            plot_dict['final train u losses'].append(model.train_u_loss[-1])
-            plot_dict['final train f losses'].append(model.train_f_loss[-1])
-            plot_dict['final train total losses'].append(model.train_total_loss[-1])
-            plot_dict['final val losses'].append(model.validation_loss[-1])
+            # Losses
+            data_container.set_train_u_loss(train_T, model.train_u_loss)
+            data_container.set_train_f_loss(train_T, model.train_f_loss)
+            data_container.set_train_total_loss(train_T, model.train_total_loss)
+            data_container.set_val_loss(train_T, model.validation_loss)
 
-        # Plot losses
-        np_working_periods = np.array(self.working_periods)
-        plotter.plot(x_axis=np_working_periods,
-                     y_axis_list=[np.array(plot_dict['final train total losses']),
-                                  np.array(plot_dict['final val losses'])],
-                     labels=['train loss', 'val loss'],
-                     title='Train and validation total losses',
-                     x_label='Working period [s]',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np_working_periods,
-                     y_axis_list=[np.array(plot_dict['final train u losses']),
-                                  np.array(plot_dict['final train f losses'])],
-                     labels=['u loss', 'f loss'],
-                     title='Train losses',
-                     x_label='Working period [s]',
-                     y_label='Loss [u²]',
-                     y_scale='log')
+        # Plot front page and losses
+        nu = data_container.get_train_u_X(self.train_Ts[0]).shape[0]
+        nf = data_container.get_train_f_X(self.train_Ts[0]).shape[0]
+        val_points = data_container.np_val_X.shape[0]
+        test_points = data_container.np_test_X.shape[0]
+
+        plotter = Plotter()
+        plotter.text_page('Neural network\'s T test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
+                          '\nTrain Nu -> ' + str(nu) +
+                          '\nTrain Nf -> ' + str(nf) +
+                          '\nValidation points -> ' + str(val_points) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nTest points -> ' + str(test_points) +
+                          '\nTest T -> ' + str(data_container.test_T) + ' s')
+        self.plot_graphs(data_container, plotter)
+
+        # Save or show results
+        if results_subdirectory is not None:
+            now = datetime.now()
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
+        else:
+            plotter.show()
+
+    def plot_graphs(self, data_container, plotter):
+        np_train_Ts = np.array(self.train_Ts)
+        np_c_base = np.array([0, 153, 51]) / 255.0
+        plotter.plot(x_axis=np_train_Ts,
+                     y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
+                     labels=['val loss'],
+                     title='Validation L2 error',
+                     x_label='Train T',
+                     y_label=None,
+                     x_scale='log',
+                     y_scale='log',
+                     line_styles='o-',
+                     np_c_base=np_c_base)
+        plotter.plot(x_axis=np_train_Ts,
+                     y_axis_list=[data_container.get_final_train_total_losses(self.train_Ts)],
+                     labels=['train loss'],
+                     title='Train total L2 error',
+                     x_label='Train T',
+                     y_label=None,
+                     x_scale='log',
+                     y_scale='log',
+                     line_styles='o-',
+                     np_c_base=np_c_base)
+        plotter.plot(x_axis=np_train_Ts,
+                     y_axis_list=[data_container.get_final_train_u_losses(self.train_Ts),
+                                  data_container.get_final_train_f_losses(self.train_Ts)],
+                     labels=['u', 'f'],
+                     title='Train u and f L2 error',
+                     x_label='Train T',
+                     y_label=None,
+                     x_scale='log',
+                     y_scale='log',
+                     line_styles='o-',
+                     np_c_base=np_c_base)
 
         # Plot test results
-        for nn, title in zip(plot_dict['nns'], plot_dict['titles']):
+        for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
+                                        data_container.get_titles(self.train_Ts),
+                                        np_train_Ts):
             transposed_nn = np.transpose(nn)
-            transposed_y = np.transpose(plot_dict['y'])
-            index = 0
+            transposed_y = np.transpose(data_container.np_test_Y)
+            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
+            output_index = 0
             for current_nn, current_y in zip(transposed_nn, transposed_y):
-                index += 1
+                output_index += 1
                 mse = (np.square(current_y - current_nn)).mean()
-                plotter.plot(x_axis=plot_dict['t'],
+                plotter.plot(x_axis=data_container.np_test_t,
                              y_axis_list=[current_y, current_nn],
-                             labels=['y' + str(index), 'nn' + str(index)],
-                             title=title + ' Plot MSE: ' + str(round(mse, 3)) + ' u',
-                             x_label='Time [s]',
-                             y_label='Output [u]')
-
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-working-period-test.pdf')
+                             labels=['$\\hat{y}_{' + str(output_index) + '}$', '$y_{' + str(output_index) + '}$'],
+                             title=title + ' MSE: ' + str(round(mse, 3)),
+                             x_label='Time',
+                             y_label=None,
+                             line_styles=['--', 'o-'],
+                             markevery=markevery,
+                             np_c_base=np_c_base)
 
 
 class NfNuTester:
     def __init__(self, PINNModelClass, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
-                 working_period='unspecified', adam_epochs=500, max_lbfgs_iterations=1000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
         self.hidden_layers = hidden_layers
         self.units_per_layer = units_per_layer
-
-        self.working_period = working_period
 
         self.nfs_to_test = nfs_to_test
         self.nus_to_test = nus_to_test
@@ -235,34 +287,17 @@ class NfNuTester:
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-    def test(self, data_container, results_subdirectory):
-        # Plotter
-        plotter = PdfPlotter()
-        plotter.text_page('Neural network\'s Nf/Nu test:' +
-                          '\nAdam epochs -> ' + str(self.adam_epochs) +
-                          '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
-                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
-                          '\nWorking period -> ' + str(self.working_period) + ' s' +
-                          '\nValidation points -> 10% of Nf')
+        self.dao = JsonDAO()
 
-        # Test
-        plot_dict = dict()
+    def test(self, data_container, results_subdirectory=None):
+        # Start time
+        start_time = datetime.now()
         for nf in self.nfs_to_test:
-            plot_dict[nf] = {'final train u losses': [],
-                             'final train f losses': [],
-                             'final train total losses': [],
-                             'final val losses': []}
-
             for nu in self.nus_to_test:
                 # Train data
                 np_train_u_X = data_container.get_train_u_X(nf, nu)
                 np_train_u_Y = data_container.get_train_u_Y(nf, nu)
                 np_train_f_X = data_container.get_train_f_X(nf, nu)
-
-                # Validation data
-                np_val_X = data_container.get_val_X(nf, nu)
-                np_val_Y = data_container.get_val_Y(nf, nu)
 
                 # Normalizers
                 X_normalizer = Normalizer()
@@ -280,379 +315,209 @@ class NfNuTester:
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
-                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, np_val_X, np_val_Y,
+                model.train(np_train_u_X, np_train_u_Y, np_train_f_X, data_container.train_T,
+                            data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
+                            data_container.np_val_Y,
                             adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
                 # Save plot data
-                plot_dict[nf]['final train u losses'].append(model.train_u_loss[-1])
-                plot_dict[nf]['final train f losses'].append(model.train_f_loss[-1])
-                plot_dict[nf]['final train total losses'].append(model.train_total_loss[-1])
-                plot_dict[nf]['final val losses'].append(model.validation_loss[-1])
+                data_container.set_train_u_loss(nf, nu, model.train_u_loss)
+                data_container.set_train_f_loss(nf, nu, model.train_f_loss)
+                data_container.set_train_total_loss(nf, nu, model.train_total_loss)
+                data_container.set_val_loss(nf, nu, model.validation_loss)
 
         # Plot results
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final val losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final validation loss',
-                     x_label='Nu',
-                     y_label='Loss [u²]',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train total losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train total loss',
-                     x_label='Nu',
-                     y_label='Loss [u²]',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train u losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train u loss',
-                     x_label='Nu',
-                     y_label='Loss [u²]',
-                     x_scale='log',
-                     y_scale='log')
-        plotter.plot(x_axis=np.array(self.nus_to_test),
-                     y_axis_list=[np.array(plot_dict[nf]['final train f losses']) for nf in self.nfs_to_test],
-                     labels=['Nf = ' + str(nf) for nf in self.nfs_to_test],
-                     title='Final train f loss',
-                     x_label='Nu',
-                     y_label='Loss [u²]',
-                     x_scale='log',
-                     y_scale='log')
+        plotter = Plotter()
+        plotter.text_page('Neural network\'s Nf/Nu test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nAdam epochs -> ' + str(self.adam_epochs) +
+                          '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nPlot scale -> Log 10')
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test.pdf')
+        heatmap_colors = 'Oranges'
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
+                                                                               self.nus_to_test)),
+                             title='Validation L2 error',
+                             x_label='Nu',
+                             y_label='Nf',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.nfs_to_test,
+                                                                                       self.nus_to_test)),
+                             title='Train total L2 error',
+                             x_label='Nu',
+                             y_label='Nf',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.nfs_to_test,
+                                                                                   self.nus_to_test)),
+                             title='Train u L2 error',
+                             x_label='Nu',
+                             y_label='Nf',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.nfs_to_test,
+                                                                                   self.nus_to_test)),
+                             title='Train f L2 error',
+                             x_label='Nu',
+                             y_label='Nf',
+                             row_labels=self.nfs_to_test,
+                             col_labels=self.nus_to_test,
+                             imshow_kw={'cmap': heatmap_colors})
+
+        # Save or show results
+        if results_subdirectory is not None:
+            now = datetime.now()
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.results)
+        else:
+            plotter.show()
 
 
-class BestAndWorstModelTester:
-    def __init__(self, PINNModelClass, best_model_hidden_layers, best_model_units_per_layer, best_model_working_period,
-                 worst_model_hidden_layers, worst_model_units_per_layer, worst_model_working_period,
-                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None,
-                 best_model_key='best', worst_model_key='worst'):
+class ExhaustionTester:
+    def __init__(self, PINNModelClass, hidden_layers, units_per_layer,
+                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
-        self.best_model_hidden_layers = best_model_hidden_layers
-        self.best_model_units_per_layer = best_model_units_per_layer
-        self.best_model_working_period = best_model_working_period
-
-        self.worst_model_hidden_layers = worst_model_hidden_layers
-        self.worst_model_units_per_layer = worst_model_units_per_layer
-        self.worst_model_working_period = worst_model_working_period
+        self.hidden_layers = hidden_layers
+        self.units_per_layer = units_per_layer
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
 
-        self.best_model_key = best_model_key
-        self.worst_model_key = worst_model_key
+        self.dao = JsonDAO()
 
-    def test(self, data_container, results_and_models_subdirectory):
-        # Train data
-        best_model_np_train_u_X = data_container.get_train_u_X(self.best_model_key)
-        best_model_np_train_u_Y = data_container.get_train_u_Y(self.best_model_key)
-        best_model_np_train_f_X = data_container.get_train_f_X(self.best_model_key)
-
-        worst_model_np_train_u_X = data_container.get_train_u_X(self.worst_model_key)
-        worst_model_np_train_u_Y = data_container.get_train_u_Y(self.worst_model_key)
-        worst_model_np_train_f_X = data_container.get_train_f_X(self.worst_model_key)
-
-        # Validation data
-        best_model_np_val_X = data_container.get_val_X(self.best_model_key)
-        best_model_np_val_Y = data_container.get_val_Y(self.best_model_key)
-
-        worst_model_np_val_X = data_container.get_val_X(self.worst_model_key)
-        worst_model_np_val_Y = data_container.get_val_Y(self.worst_model_key)
-
+    def test(self, data_container, results_and_models_subdirectory=None):
         # Normalizers
-        best_model_X_normalizer = Normalizer()
-        best_model_Y_normalizer = Normalizer()
+        X_normalizer = Normalizer()
+        Y_normalizer = Normalizer()
 
-        best_model_X_normalizer.parametrize(np.concatenate([best_model_np_train_u_X, best_model_np_train_f_X]))
-        best_model_Y_normalizer.parametrize(best_model_np_train_u_Y)
+        X_normalizer.parametrize(np.concatenate([data_container.np_train_u_X, data_container.np_train_f_X]))
+        Y_normalizer.parametrize(data_container.np_train_u_Y)
 
-        worst_model_X_normalizer = Normalizer()
-        worst_model_Y_normalizer = Normalizer()
-
-        worst_model_X_normalizer.parametrize(np.concatenate([worst_model_np_train_u_X, worst_model_np_train_f_X]))
-        worst_model_Y_normalizer.parametrize(worst_model_np_train_u_Y)
+        # Start time
+        start_time = datetime.now()
 
         # Instance PINN
         if self.sys_params is None:
-            best_model = self.PINNModelClass(self.best_model_hidden_layers, self.best_model_units_per_layer,
-                                             best_model_X_normalizer, best_model_Y_normalizer)
-            worst_model = self.PINNModelClass(self.worst_model_hidden_layers, self.worst_model_units_per_layer,
-                                              worst_model_X_normalizer, worst_model_Y_normalizer)
+            model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
         else:
-            best_model = self.PINNModelClass(self.sys_params, self.best_model_hidden_layers,
-                                             self.best_model_units_per_layer,
-                                             best_model_X_normalizer, best_model_Y_normalizer)
-            worst_model = self.PINNModelClass(self.sys_params, self.worst_model_hidden_layers,
-                                              self.worst_model_units_per_layer,
-                                              worst_model_X_normalizer, worst_model_Y_normalizer)
+            model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
+                                        X_normalizer, Y_normalizer)
 
         # Train
-        best_model.train(best_model_np_train_u_X, best_model_np_train_u_Y, best_model_np_train_f_X,
-                         best_model_np_val_X, best_model_np_val_Y, self.adam_epochs, self.max_lbfgs_iterations)
+        model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
+                    data_container.train_T,
+                    data_container.np_val_X, data_container.np_val_ic, data_container.val_T, data_container.np_val_Y,
+                    self.adam_epochs, self.max_lbfgs_iterations)
 
-        worst_model.train(worst_model_np_train_u_X, worst_model_np_train_u_Y, worst_model_np_train_f_X,
-                          worst_model_np_val_X, worst_model_np_val_Y, self.adam_epochs, self.max_lbfgs_iterations)
+        # Load train results into the container
+        data_container.val_loss = model.validation_loss
+        data_container.train_total_loss = model.train_total_loss
+        data_container.train_u_loss = model.train_u_loss
+        data_container.train_f_loss = model.train_f_loss
 
-        # Load test data
-        np_test_X = data_container.test_X
-        np_test_Y = data_container.test_Y
-        test_ic = data_container.test_ic
+        # Calculate controls signals an their T
+        np_test_U = data_container.get_np_test_U()
 
         # Test
-        np_best_model_prediction = best_model.predict(np_test_X, np_ic=test_ic,
-                                                      working_period=self.best_model_working_period)
-        np_worst_model_prediction = worst_model.predict(np_test_X, np_ic=test_ic,
-                                                        working_period=self.worst_model_working_period)
+        model_prediction = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
+        data_container.np_test_NN = model_prediction
 
         # Plotter
-        plotter = PdfPlotter()
-        plotter.text_page('Best and worst model:' +
+        plotter = Plotter()
+        plotter.text_page('Exhaustion test:' +
+                          '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nBest model neural network\'s structure -> ' + str(self.best_model_hidden_layers) +
-                          ' hidden layers of ' + str(self.best_model_units_per_layer) + ' neurons' +
-                          '\nBest model working period -> ' + str(self.best_model_working_period) + ' s' +
-                          '\nBest model train Nu -> ' + str(best_model_np_train_u_X.shape[0]) +
-                          '\nBest model train Nf -> ' + str(best_model_np_train_f_X.shape[0]) +
-                          '\nBest model validation points -> ' + str(best_model_np_val_X.shape[0]) +
-                          '\nWorst model neural network\'s structure -> ' + str(self.worst_model_hidden_layers) +
-                          ' hidden layers of ' + str(self.worst_model_units_per_layer) + ' neurons' +
-                          '\nWorst model working period -> ' + str(self.worst_model_working_period) + ' s' +
-                          '\nWorst model train Nu -> ' + str(worst_model_np_train_u_X.shape[0]) +
-                          '\nWorst model train Nf -> ' + str(worst_model_np_train_f_X.shape[0]) +
-                          '\nWorst model validation points -> ' + str(worst_model_np_val_X.shape[0]) +
-                          '\nTest points -> ' + str(np_test_X.shape[0]),
-                          vertical_position=0.25,
-                          size=20)
+                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
+                          '\nTrain T -> ' + str(data_container.train_T) + ' s' +
+                          '\nTrain Nu -> ' + str(data_container.np_train_u_X.shape[0]) +
+                          '\nTrain Nf -> ' + str(data_container.np_train_f_X.shape[0]) +
+                          '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
+                          '\nValidation T -> ' + str(data_container.val_T) + ' s' +
+                          '\nTest points -> ' + str(data_container.np_test_X.shape[0]) +
+                          '\nTest T -> ' + str(data_container.test_T) + ' s',
+                          vertical_position=0.25)
 
         # Plot train and validation losses
-        loss_len = min(len(best_model.train_total_loss), len(worst_model.train_total_loss))
-        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-                     y_axis_list=[np.array(best_model.validation_loss[:loss_len]),
-                                  np.array(worst_model.validation_loss[:loss_len])],
-                     labels=['Best model', 'Worst model'],
-                     title='Validation loss',
+        loss_len = len(model.train_total_loss)
+        loss_x_axis = np.linspace(1, loss_len, loss_len)
+        np_c_base = np.array([0, 255, 204])/255.0
+        plotter.plot(x_axis=loss_x_axis,
+                     y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
+                     labels=['Train', 'Validation'],
+                     title='L2 error',
                      x_label='Epoch',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-                     y_axis_list=[np.array(best_model.train_total_loss[:loss_len]),
-                                  np.array(worst_model.train_total_loss[:loss_len])],
-                     labels=['Best model', 'Worst model'],
-                     title='Train total loss',
+                     y_label=None,
+                     y_scale='log',
+                     np_c_base=np_c_base)
+        plotter.plot(x_axis=loss_x_axis,
+                     y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
+                     labels=['u', 'f'],
+                     title='Train L2 error',
                      x_label='Epoch',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-                     y_axis_list=[np.array(best_model.train_u_loss[:loss_len]),
-                                  np.array(worst_model.train_u_loss[:loss_len])],
-                     labels=['Best model', 'Worst model'],
-                     title='Train u loss',
-                     x_label='Epoch',
-                     y_label='Loss [u²]',
-                     y_scale='log')
-        plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
-                     y_axis_list=[np.array(best_model.train_f_loss[:loss_len]),
-                                  np.array(worst_model.train_f_loss[:loss_len])],
-                     labels=['Best model', 'Worst model'],
-                     title='Train f loss',
-                     x_label='Epoch',
-                     y_label='Loss [u²]',
-                     y_scale='log')
+                     y_label=None,
+                     y_scale='log',
+                     np_c_base=np_c_base)
 
         # Plot test results
-        np_t = data_container.test_t
-        np_test_U = data_container.get_test_U()
-        plotter.plot(x_axis=np_t,
-                     y_axis_list=[np_u for np_u in np.transpose(np_test_U)],
-                     labels=['u' + str(i + 1) for i in range(np_test_U.shape[1])],
+        plotter.plot(x_axis=data_container.np_test_t,
+                     y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
+                     labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
                      title='Input signal',
-                     x_label='Time [s]',
-                     y_label='Input [u]')
-        for i in range(np_test_Y.shape[1]):
-            plotter.plot(x_axis=np_t,
-                         y_axis_list=[np_best_model_prediction[:, i], np_worst_model_prediction[:, i], np_test_Y[:, i]],
-                         labels=['Best model', 'Worst model', 'Casadi simulator'],
-                         title='Output ' + str(i + 1) + ' prediction',
-                         x_label='Time [s]',
-                         y_label='Output [u]')
+                     x_label='Time',
+                     y_label=None,
+                     draw_styles='steps',
+                     np_c_base=np_c_base)
+        for i in range(data_container.np_test_Y.shape[1]):
+            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
+            mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
+            plotter.plot(x_axis=data_container.np_test_t,
+                         y_axis_list=[data_container.np_test_Y[:, i], data_container.np_test_NN[:, i]],
+                         labels=['$\\hat{y}_{' + str(i + 1) + '}$', '$y_{' + str(i + 1) + '}$'],
+                         title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
+                         x_label='Time',
+                         y_label=None,
+                         line_styles=['--', 'o-'],
+                         markevery=markevery,
+                         np_c_base=np_c_base)
 
-        # Save results
-        now = datetime.datetime.now()
-        plotter.save_pdf('results/' + results_and_models_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-worst-model-test.pdf')
+        # Save model and results or show results
+        if results_and_models_subdirectory is not None:
+            # Save results
+            now = datetime.now()
+            directory_path = 'results/' + results_and_models_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-exhaustion-test'
 
-        # Save models
-        best_model.save('models/' + results_and_models_subdirectory + '/' +
-                        now.strftime('%Y-%m-%d-%H-%M-%S') + '-best-model')
-        worst_model.save('models/' + results_and_models_subdirectory + '/' +
-                         now.strftime('%Y-%m-%d-%H-%M-%S') + '-worst-model')
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
 
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
 
-class WorkingPeriodTestContainer:
-    def __init__(self):
-        self.train_val_data = dict()
-        self.test_t = None
-        self.test_X = None
-        self.test_Y = None
-        self.test_ic = None
-
-    def check_key(self, working_period):
-        if working_period not in self.train_val_data.keys():
-            self.train_val_data[working_period] = dict()
-
-    def get_train_u_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_u_X']
-
-    def get_train_u_Y(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_u_Y']
-
-    def get_train_f_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_train_f_X']
-
-    def get_val_X(self, woking_period):
-        return self.train_val_data[woking_period]['np_val_X']
-
-    def get_val_Y(self, woking_period):
-        return self.train_val_data[woking_period]['np_val_Y']
-
-    def set_train_u_X(self, woking_period, np_train_u_X):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_u_X'] = np_train_u_X
-
-    def set_train_u_Y(self, woking_period, np_train_u_Y):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_u_Y'] = np_train_u_Y
-
-    def set_train_f_X(self, woking_period, np_train_f_X):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_train_f_X'] = np_train_f_X
-
-    def set_val_X(self, woking_period, np_val_X):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_val_X'] = np_val_X
-
-    def set_val_Y(self, woking_period, np_val_Y):
-        self.check_key(woking_period)
-        self.train_val_data[woking_period]['np_val_Y'] = np_val_Y
-
-
-class NfNuTestContainer:
-    def __init__(self):
-        self.data = dict()
-
-    def check_key(self, nf, nu):
-        if nf not in self.data.keys():
-            self.data[nf] = dict()
-            self.data[nf][nu] = dict()
-        elif nu not in self.data[nf].keys():
-            self.data[nf][nu] = dict()
-
-    def get_train_u_X(self, nf, nu):
-        return self.data[nf][nu]['np_train_u_X']
-
-    def get_train_u_Y(self, nf, nu):
-        return self.data[nf][nu]['np_train_u_Y']
-
-    def get_train_f_X(self, nf, nu):
-        return self.data[nf][nu]['np_train_f_X']
-
-    def get_val_X(self, nf, nu):
-        return self.data[nf][nu]['np_val_X']
-
-    def get_val_Y(self, nf, nu):
-        return self.data[nf][nu]['np_val_Y']
-
-    def set_train_u_X(self, nf, nu, np_train_u_X):
-        self.check_key(nf, nu)
-        self.data[nf][nu]['np_train_u_X'] = np_train_u_X
-
-    def set_train_u_Y(self, nf, nu, np_train_u_Y):
-        self.check_key(nf, nu)
-        self.data[nf][nu]['np_train_u_Y'] = np_train_u_Y
-
-    def set_train_f_X(self, nf, nu, np_train_f_X):
-        self.check_key(nf, nu)
-        self.data[nf][nu]['np_train_f_X'] = np_train_f_X
-
-    def set_val_X(self, nf, nu, np_val_X):
-        self.check_key(nf, nu)
-        self.data[nf][nu]['np_val_X'] = np_val_X
-
-    def set_val_Y(self, nf, nu, np_val_Y):
-        self.check_key(nf, nu)
-        self.data[nf][nu]['np_val_Y'] = np_val_Y
-
-
-class BestAndWorstModelTestContainer:
-    def __init__(self):
-        self.keys = ['best', 'worst']
-        self.train_val_data = dict([(key, {'np_train_u_Y': None,
-                                           'np_train_u_X': None,
-                                           'np_train_f_X': None,
-                                           'np_val_X': None,
-                                           'np_val_Y': None}) for key in self.keys])
-
-        self.test_t = None
-        self.test_X = None
-        self.test_Y = None
-        self.test_ic = None
-
-    def check_key(self, key):
-        if key not in self.keys:
-            raise Exception('Model parameter has to be in ' + str(self.keys))
-
-    def get_train_u_X(self, model):
-        return self.train_val_data[model]['np_train_u_X']
-
-    def get_train_u_Y(self, model):
-        return self.train_val_data[model]['np_train_u_Y']
-
-    def get_train_f_X(self, model):
-        return self.train_val_data[model]['np_train_f_X']
-
-    def get_val_X(self, model):
-        return self.train_val_data[model]['np_val_X']
-
-    def get_val_Y(self, model):
-        return self.train_val_data[model]['np_val_Y']
-
-    def set_train_u_X(self, model, np_train_u_X):
-        self.check_key(model)
-        self.train_val_data[model]['np_train_u_X'] = np_train_u_X
-
-    def set_train_u_Y(self, model, np_train_u_Y):
-        self.check_key(model)
-        self.train_val_data[model]['np_train_u_Y'] = np_train_u_Y
-
-    def set_train_f_X(self, model, np_train_f_X):
-        self.check_key(model)
-        self.train_val_data[model]['np_train_f_X'] = np_train_f_X
-
-    def set_val_X(self, model, np_val_X):
-        self.check_key(model)
-        self.train_val_data[model]['np_val_X'] = np_val_X
-
-    def set_val_Y(self, model, np_val_Y):
-        self.check_key(model)
-        self.train_val_data[model]['np_val_Y'] = np_val_Y
-
-    def get_test_U(self):
-        if self.test_X is None:
-            raise Exception('Container\'s test_X data not defined.')
-        elif np.array_equal(self.test_X.flatten(), self.test_t.flatten()):
-            raise Exception('Container\'s test_X equals test_t, so there is no u defined.')
+            # Save model
+            model_dir = 'models/' + results_and_models_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-' + \
+                        str(data_container.train_T) + 's-' + str(self.hidden_layers) + 'l-' + \
+                        str(self.units_per_layer) + 'n-exhausted-model'
+            if data_container.train_T % 1 > 0:
+                model_dir = model_dir.replace('.', 'dot')
+            model.save(model_dir)
         else:
-            i = 0
-            while not np.array_equal(self.test_X[:, i].flatten(), self.test_t.flatten()):
-                i = i + 1
-            return np.delete(self.test_X, i, axis=1)
+            plotter.show()

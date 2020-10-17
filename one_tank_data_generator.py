@@ -31,11 +31,11 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 simulator = CasadiSimulator(sys_params)
 
-# Controls and initial conditions for training and testing
+# Controls and initial conditions
 vs = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios,))
 ics = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios,))
 
-# Neural network's max working period
+# Time
 t = np.linspace(0, t_range, collocation_points)
 
 # Data
@@ -43,13 +43,13 @@ data = {'scenario': np.tile(1, (collocation_points,)),
         't': t,
         'v': np.tile(vs[0], (collocation_points,)),
         'ic': np.tile(ics[0], (collocation_points,)),
-        'h': simulator.run(t, vs[0], ics[0])}
+        'h': simulator.run(t, vs[0], ics[0])[:, 0]}
 
 for i in range(1, scenarios):
     scenario = np.tile(i + 1, (collocation_points,))
     v = np.tile(vs[i], (collocation_points,))
     ic = np.tile(ics[i], (collocation_points,))
-    h = simulator.run(t, vs[i], ics[i])
+    h = simulator.run(t, vs[i], ics[i])[:, 0]
 
     data['scenario'] = np.append(data['scenario'], scenario)
     data['t'] = np.append(data['t'], t)
