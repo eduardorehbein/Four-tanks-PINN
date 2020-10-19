@@ -4,11 +4,11 @@ from util.systems.four_tanks_system import CasadiSimulator
 
 
 # Parameters
-random_seed = 10
+random_seed = 60
 
-sim_time = 150.0
-u_change_t = 2.0
-scenarios = 1
+sim_time = 350.0
+u_change_t = 10.0
+scenarios = 10
 collocation_points_per_v = 10
 
 lowest_v = 0.5

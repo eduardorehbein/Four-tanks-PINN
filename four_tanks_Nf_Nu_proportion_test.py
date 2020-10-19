@@ -53,7 +53,7 @@ data_container = NfNuTestContainer()
 data_container.train_T = train_T
 
 # Validation data
-val_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_60_sim_time_150.0s_10_scenarios_750_collocation_points.csv')
+val_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_60_sim_time_350.0s_10_scenarios_350_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'v1', 'v2']].to_numpy()
 data_container.np_val_Y = val_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 data_container.np_val_ic = val_df[val_df['t'] == 0.0][['h1', 'h2', 'h3', 'h4']].to_numpy()

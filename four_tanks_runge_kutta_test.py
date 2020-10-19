@@ -27,12 +27,12 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 
 # Instance simulator
 simulator = CasadiSimulator(sys_params)
-test_T = 2.0
+test_T = 10.0
 runge_kutta = simulator.get_runge_kutta(test_T)
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_750_collocation_points.csv')
-test_df = test_df[(test_df['t'] % 2) == 0]
+test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
+test_df = test_df[(test_df['t'] % test_T) == 0]
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df[['v1', 'v2']].to_numpy()

@@ -296,7 +296,7 @@ class TTester:
 
 
 class NfNuTester:
-    def __init__(self, PINNModelClass, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
+    def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, nfs_to_test=None, nus_to_test=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
@@ -361,7 +361,23 @@ class NfNuTester:
                           '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
                           '\nValidation T -> ' + str(data_container.val_T) + ' s' +
                           '\nPlot scale -> Log 10')
+        self.plot_graphs(data_container, plotter)
 
+        # Save or show results
+        if results_subdirectory is not None:
+            now = datetime.now()
+            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
+                '%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test'
+
+            if not os.path.isdir(directory_path):
+                os.mkdir(directory_path)
+
+            plotter.save_pdf(directory_path + '/results.pdf')
+            self.dao.save(directory_path + '/data.json', data_container.results)
+        else:
+            plotter.show()
+
+    def plot_graphs(self, data_container, plotter):
         heatmap_colors = 'Oranges'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
                                                                                self.nus_to_test)),
@@ -395,20 +411,6 @@ class NfNuTester:
                              row_labels=self.nfs_to_test,
                              col_labels=self.nus_to_test,
                              imshow_kw={'cmap': heatmap_colors})
-
-        # Save or show results
-        if results_subdirectory is not None:
-            now = datetime.now()
-            directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
-                '%Y-%m-%d-%H-%M-%S') + '-Nf-Nu-proportion-test'
-
-            if not os.path.isdir(directory_path):
-                os.mkdir(directory_path)
-
-            plotter.save_pdf(directory_path + '/results.pdf')
-            self.dao.save(directory_path + '/data.json', data_container.results)
-        else:
-            plotter.show()
 
 
 class ExhaustionTester:
@@ -455,9 +457,6 @@ class ExhaustionTester:
         data_container.train_u_loss = model.train_u_loss
         data_container.train_f_loss = model.train_f_loss
 
-        # Calculate controls signals an their T
-        np_test_U = data_container.get_np_test_U()
-
         # Test
         model_prediction = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
         data_container.np_test_NN = model_prediction
@@ -478,49 +477,7 @@ class ExhaustionTester:
                           '\nTest points -> ' + str(data_container.np_test_X.shape[0]) +
                           '\nTest T -> ' + str(data_container.test_T) + ' s',
                           vertical_position=0.25)
-
-        # Plot train and validation losses
-        loss_len = len(model.train_total_loss)
-        loss_x_axis = np.linspace(1, loss_len, loss_len)
-        np_c_base = np.array([0, 255, 204])/255.0
-        plotter.plot(x_axis=loss_x_axis,
-                     y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
-                     labels=['Train', 'Validation'],
-                     title='L2 error',
-                     x_label='Epoch',
-                     y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
-        plotter.plot(x_axis=loss_x_axis,
-                     y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
-                     labels=['u', 'f'],
-                     title='Train L2 error',
-                     x_label='Epoch',
-                     y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
-
-        # Plot test results
-        plotter.plot(x_axis=data_container.np_test_t,
-                     y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
-                     labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
-                     title='Input signal',
-                     x_label='Time',
-                     y_label=None,
-                     draw_styles='steps',
-                     np_c_base=np_c_base)
-        for i in range(data_container.np_test_Y.shape[1]):
-            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
-            mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
-            plotter.plot(x_axis=data_container.np_test_t,
-                         y_axis_list=[data_container.np_test_Y[:, i], data_container.np_test_NN[:, i]],
-                         labels=['$\\hat{y}_{' + str(i + 1) + '}$', '$y_{' + str(i + 1) + '}$'],
-                         title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
-                         x_label='Time',
-                         y_label=None,
-                         line_styles=['--', 'o-'],
-                         markevery=markevery,
-                         np_c_base=np_c_base)
+        self.plot_graphs(data_container, plotter)
 
         # Save model and results or show results
         if results_and_models_subdirectory is not None:
@@ -544,3 +501,48 @@ class ExhaustionTester:
             model.save(model_dir)
         else:
             plotter.show()
+
+    def plot_graphs(self, data_container, plotter):
+        # Plot train and validation losses
+        loss_len = len(data_container.train_total_loss)
+        loss_x_axis = np.linspace(1, loss_len, loss_len)
+        np_c_base = np.array([0, 255, 204]) / 255.0
+        plotter.plot(x_axis=loss_x_axis,
+                     y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
+                     labels=['Train', 'Validation'],
+                     title='L2 error',
+                     x_label='Epoch',
+                     y_label=None,
+                     y_scale='log',
+                     np_c_base=np_c_base)
+        plotter.plot(x_axis=loss_x_axis,
+                     y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
+                     labels=['u', 'f'],
+                     title='Train L2 error',
+                     x_label='Epoch',
+                     y_label=None,
+                     y_scale='log',
+                     np_c_base=np_c_base)
+
+        # Plot test results
+        np_test_U = data_container.get_np_test_U()
+        plotter.plot(x_axis=data_container.np_test_t,
+                     y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
+                     labels=['$u_{' + str(i + 1) + '}$' for i in range(np_test_U.shape[1])],
+                     title='Input signal',
+                     x_label='Time',
+                     y_label=None,
+                     draw_styles='steps',
+                     np_c_base=np_c_base)
+        for i in range(data_container.np_test_Y.shape[1]):
+            markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
+            mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
+            plotter.plot(x_axis=data_container.np_test_t,
+                         y_axis_list=[data_container.np_test_Y[:, i], data_container.np_test_NN[:, i]],
+                         labels=['$\\hat{y}_{' + str(i + 1) + '}$', '$y_{' + str(i + 1) + '}$'],
+                         title='Output ' + str(i + 1) + ' prediction. MSE: ' + str(round(mse, 3)),
+                         x_label='Time',
+                         y_label=None,
+                         line_styles=['--', 'o-'],
+                         markevery=markevery,
+                         np_c_base=np_c_base)

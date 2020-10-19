@@ -58,13 +58,13 @@ np_train_u_Y = train_u_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 np_train_f_X = train_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].sample(frac=1).to_numpy()
 
 # Validation data
-val_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_60_sim_time_150.0s_10_scenarios_750_collocation_points.csv')
+val_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_60_sim_time_350.0s_10_scenarios_350_collocation_points.csv')
 np_val_X = val_df[['t', 'v1', 'v2']].to_numpy()
 np_val_Y = val_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 np_val_ic = val_df[val_df['t'] == 0.0][['h1', 'h2', 'h3', 'h4']].to_numpy()
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_750_collocation_points.csv')
+test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
 np_test_t = test_df['t'].to_numpy()
 np_test_X = test_df[['t', 'v1', 'v2']].to_numpy()
 np_test_Y = test_df[['h1', 'h2', 'h3', 'h4']].to_numpy()

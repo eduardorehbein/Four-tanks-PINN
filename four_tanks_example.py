@@ -52,7 +52,7 @@ model.load_weights('models/four_tanks/2020-06-08-22-25-06-15s-5l-15n-best-model.
 model.trained_T = 15.0
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_150.0s_750_collocation_points.csv')
+test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df[['v1', 'v2']].to_numpy()
@@ -61,7 +61,7 @@ np_test_Y = test_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 np_test_ic = np.reshape(np_test_Y[0, :], (1, np_test_Y.shape[1]))
 
 # Model prediction
-test_T = 2.0
+test_T = 10.0
 np_test_NN = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
 # Plot test results
