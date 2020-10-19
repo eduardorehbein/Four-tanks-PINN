@@ -85,26 +85,29 @@ class StructTester:
         else:
             plotter.show()
 
-    def plot_graphs(self, data_container, plotter, just_val_loss=False):
-        heatmap_colors = 'Reds'
+    def plot_graphs(self, data_container, plotter, just_val_loss=False, figsize=(4.5, 4)):
+        heatmap_colors = 'Greys' #'Reds'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
                                                                                self.neurons_per_layer_to_test)),
-                             title='Validation L2 error',
-                             x_label='Neurons',
-                             y_label='Layers',
+                             title='L2 error',
+                             x_label='Number of Neurons',
+                             y_label='Number of Layers',
                              row_labels=self.layers_to_test,
                              col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             imshow_kw={'cmap': heatmap_colors},
+                             figsize=figsize
+                             )
         if not just_val_loss:
             plotter.plot_heatmap(data=np.log10(data_container.
                                                get_final_train_total_losses(self.layers_to_test,
                                                                             self.neurons_per_layer_to_test)),
-                                 title='Train total L2 error',
+                                 title='Train L2 error',
                                  x_label='Neurons',
                                  y_label='Layers',
                                  row_labels=self.layers_to_test,
                                  col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
+                                 imshow_kw={'cmap': heatmap_colors},
+                                 figsize=figsize)
             plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
                                                                                        self.neurons_per_layer_to_test)),
                                  title='Train u L2 error',
@@ -112,7 +115,8 @@ class StructTester:
                                  y_label='Layers',
                                  row_labels=self.layers_to_test,
                                  col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
+                                 imshow_kw={'cmap': heatmap_colors},
+                                 figsize=figsize)
             plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
                                                                                        self.neurons_per_layer_to_test)),
                                  title='Train f L2 error',
@@ -120,7 +124,8 @@ class StructTester:
                                  y_label='Layers',
                                  row_labels=self.layers_to_test,
                                  col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
+                                 imshow_kw={'cmap': heatmap_colors},
+                                 figsize=figsize)
 
 
 class TTester:
@@ -214,6 +219,24 @@ class TTester:
             self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
         else:
             plotter.show()
+
+    def plot_graph(self, data_container, plotter, type='validation error', color=[0, 153, 51], figsize=(4.5, 4)):
+        import pdb
+        #pdb.set_trace()
+        np_train_Ts = np.array(self.train_Ts)
+        np_c_base = np.array(color) / 255.0
+        if type == 'validation error':
+            plotter.plot(x_axis=np_train_Ts,
+                     y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
+                     labels=['val loss'],
+                     title=None,
+                     x_label='T',
+                     y_label='L2 error',
+                     x_scale='log',
+                     y_scale='log',
+                     line_styles='o-',
+                     np_c_base=np_c_base,
+                     figsize =figsize)
 
     def plot_graphs(self, data_container, plotter):
         np_train_Ts = np.array(self.train_Ts)
