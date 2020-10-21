@@ -284,3 +284,15 @@ class ExhaustionTestContainer:
         while not np.array_equal(self.np_test_X[:, t_index].flatten(), self.np_test_t.flatten()):
             t_index = t_index + 1
         return np.delete(self.np_test_X, t_index, axis=1)
+
+    def load_results(self, dictionary):
+        self.val_loss = dictionary['val_loss']
+        self.train_total_loss = dictionary['train_total_loss']
+        self.train_u_loss = dictionary['train_u_loss']
+        self.train_f_loss = dictionary['train_f_loss']
+
+        self.np_test_t = np.array(dictionary['np_test_t'])
+        test_t_matrix = np.transpose(np.array([dictionary['np_test_t']]))
+        self.np_test_X = np.append(test_t_matrix, dictionary['np_test_U'], axis=1)
+        self.np_test_Y = np.array(dictionary['np_test_Y'])
+        self.np_test_NN = np.array(dictionary['np_test_NN'])

@@ -391,7 +391,7 @@ class NfNuTester:
 
 
 class ExhaustionTester:
-    def __init__(self, PINNModelClass, hidden_layers, units_per_layer,
+    def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None,
                  adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
@@ -473,8 +473,7 @@ class ExhaustionTester:
             model_dir = 'models/' + results_and_models_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-' + \
                         str(data_container.train_T) + 's-' + str(self.hidden_layers) + 'l-' + \
                         str(self.units_per_layer) + 'n-exhausted-model'
-            if data_container.train_T % 1 > 0:
-                model_dir = model_dir.replace('.', 'dot')
+            model_dir = model_dir.replace('.', 'dot')
             model.save(model_dir)
         else:
             plotter.show()
