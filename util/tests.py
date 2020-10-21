@@ -61,6 +61,7 @@ class StructTester:
         plotter = Plotter()
         plotter.text_page('Neural network\'s structural test:' +
                           '\nTest duration -> ' + data_container.test_duration +
+                          '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain T -> ' + str(data_container.train_T) + ' s' +

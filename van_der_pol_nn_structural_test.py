@@ -4,6 +4,7 @@ import pandas as pd
 from util.pinn import VanDerPolPINN
 from util.tests import StructTester
 from util.data_container import StructTestContainer
+import time
 
 # Structural test parameters
 layers_to_test = (2, 4, 5, 8, 10)
@@ -16,7 +17,7 @@ train_T = 0.5
 val_T = 0.5
 
 # Other parameters
-random_seed = 30
+random_seed = int(time.time())
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -31,6 +32,7 @@ tf.random.set_seed(random_seed)
 
 # Load data into a container
 data_container = StructTestContainer()
+data_container.random_seed = random_seed
 data_container.train_T = train_T
 
 # Train data

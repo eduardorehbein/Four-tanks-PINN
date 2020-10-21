@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from util.systems.one_tank_system import CasadiSimulator
+from util.systems import OneTankSystem
 
 
 # Parameters
@@ -28,7 +28,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'A': 28.0,  # [cm^2]
               'k': 3.14,  # [cm^3/Vs]
               }
-simulator = CasadiSimulator(sys_params)
+simulator = OneTankSystem(sys_params)
 
 # Controls and initial conditions
 np_vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(sim_time / v_change_t),))

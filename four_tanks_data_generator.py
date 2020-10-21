@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from util.systems.four_tanks_system import CasadiSimulator
+from util.systems import FourTanksSystem
 
 
 # Parameters
@@ -40,7 +40,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # System simulator
-simulator = CasadiSimulator(sys_params)
+simulator = FourTanksSystem(sys_params)
 
 # Controls and initial conditions
 vs = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios, 2))

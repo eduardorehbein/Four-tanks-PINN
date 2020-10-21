@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from util.systems.van_der_pol_system import CasadiSimulator
+from util.systems import VanDerPolSystem
 
 
 # Parameters
@@ -24,7 +24,7 @@ file_name = 'rand_seed_' + str(random_seed) + \
 np.random.seed(random_seed)
 
 # System simulator
-simulator = CasadiSimulator()
+simulator = VanDerPolSystem()
 
 # Controls and initial conditions
 us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios,))

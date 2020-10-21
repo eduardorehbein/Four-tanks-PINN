@@ -5,6 +5,7 @@ import copy
 class StructTestContainer:
     def __init__(self):
         self.results = dict()
+        self.random_seed = None
         self.train_T = None
         self.np_train_u_X = None
         self.np_train_u_Y = None
