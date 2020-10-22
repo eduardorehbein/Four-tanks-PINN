@@ -1,7 +1,8 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.tests import TTester, TTestContainer
+from util.tests import TTester
+from util.data_container import TTestContainer
 from util.pinn import FourTanksPINN
 
 # Working period test's parameters
@@ -9,12 +10,12 @@ train_Ts_to_test = (1.0, 5.0, 10.0, 15.0, 20.0, 50.0)
 
 # Neural network's parameters
 hidden_layers = 5
-units_per_layer = 10
+units_per_layer = 20
 
 # Train parameters
 adam_epochs = 500
 max_lbfgs_iterations = 2000
-val_T = 2.0
+val_T = 10.0
 test_T = val_T
 
 # Other parameters
@@ -83,4 +84,4 @@ for train_T in train_Ts_to_test:
 # Test
 tester = TTester(FourTanksPINN, hidden_layers, units_per_layer, train_Ts_to_test,
                  adam_epochs, max_lbfgs_iterations, sys_params)
-tester.test(data_container, results_subdirectory, save_mode='all')
+tester.test(data_container, results_subdirectory)
