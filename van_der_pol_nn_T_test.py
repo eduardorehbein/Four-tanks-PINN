@@ -66,5 +66,6 @@ for train_T in train_Ts_to_test:
     data_container.set_train_f_X(train_T, np_train_f_X)
 
 # Test
-tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, train_Ts_to_test, adam_epochs, max_lbfgs_iterations)
+tester = TTester(VanDerPolPINN, hidden_layers, units_per_layer, train_Ts_to_test, adam_epochs, max_lbfgs_iterations,
+                 random_seed=random_seed)
 tester.test(data_container, results_subdirectory)

@@ -8,7 +8,7 @@ from util.data_interface import JsonDAO
 
 class StructTester:
     def __init__(self, PINNModelClass=None, layers_to_test=None, neurons_per_layer_to_test=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -17,6 +17,8 @@ class StructTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -36,9 +38,10 @@ class StructTester:
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
                 if self.sys_params is None:
-                    model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer, random_seed=None)
                 else:
-                    model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer,
+                                                random_seed=None)
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
@@ -126,7 +129,7 @@ class StructTester:
 
 class TTester:
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, Ts=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -137,6 +140,8 @@ class TTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -158,10 +163,11 @@ class TTester:
 
             # Instance PINN
             if self.sys_params is None:
-                model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+                model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                            random_seed=self.random_seed)
             else:
                 model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                            X_normalizer, Y_normalizer)
+                                            X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
             # Train
             print('Model training with T of ' + str(train_T) + ' seconds:')
@@ -275,7 +281,7 @@ class TTester:
 
 class NfNuTester:
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, nfs_to_test=None, nus_to_test=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -287,6 +293,8 @@ class NfNuTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -309,10 +317,11 @@ class NfNuTester:
 
                 # Instance PINN
                 if self.sys_params is None:
-                    model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                                random_seed=self.random_seed)
                 else:
                     model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                                X_normalizer, Y_normalizer)
+                                                X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
@@ -393,7 +402,7 @@ class NfNuTester:
 
 class ExhaustionTester:
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None,
-                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -402,6 +411,8 @@ class ExhaustionTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -418,10 +429,11 @@ class ExhaustionTester:
 
         # Instance PINN
         if self.sys_params is None:
-            model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+            model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                        random_seed=self.random_seed)
         else:
             model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                        X_normalizer, Y_normalizer)
+                                        X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
         # Train
         model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,

@@ -61,5 +61,5 @@ for nf in nfs_to_test:
 
 # Test
 tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
-                    adam_epochs, max_lbfgs_iterations)
+                    adam_epochs, max_lbfgs_iterations, random_seed=random_seed)
 tester.test(data_container, results_subdirectory)

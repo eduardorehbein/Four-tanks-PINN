@@ -60,7 +60,8 @@ data_container.np_test_ic = np.reshape(data_container.np_test_Y[0], (1, data_con
 data_container.test_T = test_T
 
 # Tester
-tester = ExhaustionTester(VanDerPolPINN, hidden_layers, units_per_layer, adam_epochs, max_lbfgs_iterations)
+tester = ExhaustionTester(VanDerPolPINN, hidden_layers, units_per_layer, adam_epochs, max_lbfgs_iterations,
+                          random_seed=random_seed)
 
 # Test
 tester.test(data_container, results_and_models_subdirectory)

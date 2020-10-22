@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from util.pinn import FourTanksPINN
-from util.tests import NfNuTester, NfNuTestContainer
+from util.tests import NfNuTester
+from util.data_container import NfNuTestContainer
 
 # Nf/Nu proportion test's parameters
 nfs_to_test = (2000, 4000, 10000, 100000)
@@ -16,7 +17,7 @@ units_per_layer = 10
 adam_epochs = 500
 max_lbfgs_iterations = 2000
 train_T = 15.0
-val_T = 2.0
+val_T = 10.0
 
 # Other parameters
 random_seed = 30
@@ -77,4 +78,4 @@ for nf in nfs_to_test:
 # Test
 tester = NfNuTester(FourTanksPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
                     adam_epochs, max_lbfgs_iterations, sys_params)
-tester.test(data_container, results_subdirectory, save_mode='all')
+tester.test(data_container, results_subdirectory)
