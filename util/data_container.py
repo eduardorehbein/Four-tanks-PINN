@@ -90,6 +90,9 @@ class TTestContainer:
     def get_train_f_X(self, train_T):
         return self.train_data[train_T]['np_train_f_X']
 
+    def get_val_loss(self, train_T):
+        return self.results[train_T]['val_loss']
+
     def get_final_val_losses(self, train_Ts):
         return np.array([self.results[T]['val_loss'][-1] for T in train_Ts])
 
