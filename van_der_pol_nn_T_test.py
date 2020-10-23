@@ -6,7 +6,7 @@ from util.data_container import TTestContainer
 from util.pinn import VanDerPolPINN
 
 # Working period test's parameters
-train_Ts_to_test = (0.1, 0.5, 1.0, 2.0, 4.0, 8.0)
+train_Ts_to_test = (0.5, 0.6, 1.0, 2.0, 4.0, 8.0)
 
 # Neural network's parameters
 hidden_layers = 4
