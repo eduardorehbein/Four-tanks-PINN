@@ -35,7 +35,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 # Load data into a container
 data_container = TTestContainer()
 
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
+test_df = pd.read_csv('data/one_tank/rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
 data_container.np_test_t = test_df['t'].to_numpy()
 data_container.np_test_X = test_df[['t', 'v']].to_numpy()
 data_container.np_test_Y = test_df[['h']].to_numpy()

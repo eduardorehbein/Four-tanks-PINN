@@ -52,7 +52,7 @@ model.load_weights('models/four_tanks/2020-06-08-22-25-06-15s-5l-15n-best-model.
 model.trained_T = 15.0
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
+test_df = pd.read_csv('data/four_tanks/rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df[['v1', 'v2']].to_numpy()

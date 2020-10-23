@@ -16,7 +16,7 @@ model.trained_T = 0.5
 model.load('models/van_der_pol/2020-10-08-12-54-45-0dot5s-2l-20n-exhausted-model')
 
 # Test data
-test_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_10_sim_time_10.0s_200_collocation_points.csv')
+test_df = pd.read_csv('data/van_der_pol/rand_seed_10_sim_time_10.0s_200_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_u = test_df['u'].to_numpy()

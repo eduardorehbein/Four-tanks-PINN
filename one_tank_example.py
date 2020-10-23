@@ -27,7 +27,7 @@ model = OneTankPINN(sys_params=sys_params,
 model.load('models/one_tank/2020-08-06-11-24-21-10s-2l-10n-best-model')
 
 # Test data
-test_df = pd.read_csv('data/one_tank/long_signal_rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
+test_df = pd.read_csv('data/one_tank/rand_seed_30_sim_time_160.0s_1600_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df['v'].to_numpy()

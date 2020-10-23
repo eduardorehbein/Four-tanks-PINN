@@ -2,11 +2,12 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 from util.pinn import OneTankPINN
-from util.tests import NfNuTester, NfNuTestContainer
+from util.tests import NfNuTester
+from util.data_container import NfNuTestContainer
 
 # Nf/Nu proportion test's parameters
 nfs_to_test = (2000, 4000, 10000, 100000)
-nus_to_test = (40, 70, 100, 500, 1000)
+nus_to_test = (40, 80, 100, 500, 1000)
 
 # Neural network's parameters
 hidden_layers = 2

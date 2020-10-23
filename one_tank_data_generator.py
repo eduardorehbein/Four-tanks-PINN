@@ -8,7 +8,7 @@ random_seed = 30
 
 scenarios = 1100
 collocation_points = 2
-t_range = 0.001
+T = 0.001
 
 lowest_v = 0.5
 highest_v = 4.45
@@ -16,7 +16,7 @@ lowest_h = 2.0
 highest_h = 20.0
 
 file_name = 'rand_seed_' + str(random_seed) + \
-            '_t_range_' + str(t_range) + 's_' + \
+            '_t_range_' + str(T) + 's_' + \
             str(scenarios) + '_scenarios_' + \
             str(collocation_points) + '_collocation_points'
 
@@ -36,7 +36,7 @@ vs = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios,))
 ics = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios,))
 
 # Time
-t = np.linspace(0, t_range, collocation_points)
+t = np.linspace(0, T, collocation_points)
 
 # Data
 data = {'scenario': np.tile(1, (collocation_points,)),

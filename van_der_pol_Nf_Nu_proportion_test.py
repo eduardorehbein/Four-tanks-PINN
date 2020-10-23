@@ -4,14 +4,21 @@ import pandas as pd
 from util.pinn import VanDerPolPINN
 from util.tests import NfNuTester
 from util.data_container import NfNuTestContainer
+from util.data_interface import TrainDataGenerator
 
 # Nf/Nu proportion test's parameters
 nfs_to_test = (2000, 4000, 10000, 100000)
-nus_to_test = (40, 70, 100, 500, 1000)
+nus_to_test = (40, 80, 100, 500, 1000)
 
 # Neural network's parameters
 hidden_layers = 4
-units_per_layer = 15
+units_per_layer = 20
+
+# Train data parameters
+np_lowest_u = np.array([-1.0])
+np_highest_u = np.array([1.0])
+np_lowest_x = np.array([-3.0, -3.0])
+np_highest_x = np.array([3.0, 3.0])
 
 # Train parameters
 adam_epochs = 500
@@ -38,23 +45,22 @@ data_container = NfNuTestContainer()
 data_container.train_T = train_T
 
 # Validation data
-val_df = pd.read_csv('data/van_der_pol/long_signal_rand_seed_60_sim_time_10.0s_10_scenarios_200_collocation_points.csv')
+val_df = pd.read_csv('data/van_der_pol/rand_seed_60_sim_time_10.0s_10_scenarios_200_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'u']].to_numpy()
 data_container.np_val_Y = val_df[['x1', 'x2']].to_numpy()
 data_container.np_val_ic = val_df[val_df['t'] == 0.0][['x1', 'x2']].to_numpy()
 data_container.val_T = val_T
 
+# Train data generator
+train_data_gen = TrainDataGenerator(np_lowest_u=np_lowest_u,
+                                    np_highest_u=np_highest_u,
+                                    np_lowest_y=np_lowest_x,
+                                    np_highest_y=np_highest_x)
+
 for nf in nfs_to_test:
     for nu in nus_to_test:
-        train_df = pd.read_csv('data/van_der_pol/rand_seed_30_T_' + str(train_T) + 's_' + str(nu) +
-                               '_scenarios_' + str(int(nf/nu)) + '_collocation_points.csv')
-
         # Train data
-        train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
-        np_train_u_X = train_u_df[['t', 'u', 'x1_0', 'x2_0']].to_numpy()
-        np_train_u_Y = train_u_df[['x1', 'x2']].to_numpy()
-        np_train_f_X = train_df[['t', 'u', 'x1_0', 'x2_0']].sample(frac=1).to_numpy()
-
+        np_train_u_X, np_train_u_Y, np_train_f_X = train_data_gen.get_data(nu, int(nf/nu), train_T)
         data_container.set_train_u_X(nf, nu, np_train_u_X)
         data_container.set_train_u_Y(nf, nu, np_train_u_Y)
         data_container.set_train_f_X(nf, nu, np_train_f_X)
