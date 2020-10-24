@@ -9,11 +9,11 @@ from util.data_interface import TrainDataGenerator
 
 # Neural networks' parameters
 hidden_layers = 4
-units_per_layer = 15
+units_per_layer = 20
 
 # Train data parameters
 scenarios = 1000
-collocation_points = 10
+collocation_points = 100
 
 np_lowest_u = np.array([-1.0])
 np_highest_u = np.array([1.0])
