@@ -89,42 +89,37 @@ class StructTester:
         else:
             plotter.show()
 
-    def plot_graphs(self, data_container, plotter, just_val_loss=False):
-        heatmap_colors = 'Reds'
+    def plot_graphs(self, data_container, plotter):
+        # heatmap_colors = 'Reds'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
                                                                                self.neurons_per_layer_to_test)),
                              title='Validation L2 error',
                              x_label='Neurons',
                              y_label='Layers',
                              row_labels=self.layers_to_test,
-                             col_labels=self.neurons_per_layer_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
-        if not just_val_loss:
-            plotter.plot_heatmap(data=np.log10(data_container.
-                                               get_final_train_total_losses(self.layers_to_test,
-                                                                            self.neurons_per_layer_to_test)),
-                                 title='Train total L2 error',
-                                 x_label='Neurons',
-                                 y_label='Layers',
-                                 row_labels=self.layers_to_test,
-                                 col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
-            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
-                                                                                       self.neurons_per_layer_to_test)),
-                                 title='Train u L2 error',
-                                 x_label='Neurons',
-                                 y_label='Layers',
-                                 row_labels=self.layers_to_test,
-                                 col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
-            plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
-                                                                                       self.neurons_per_layer_to_test)),
-                                 title='Train f L2 error',
-                                 x_label='Neurons',
-                                 y_label='Layers',
-                                 row_labels=self.layers_to_test,
-                                 col_labels=self.neurons_per_layer_to_test,
-                                 imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(data_container.
+                                           get_final_train_total_losses(self.layers_to_test,
+                                                                        self.neurons_per_layer_to_test)),
+                             title='Train total L2 error',
+                             x_label='Neurons',
+                             y_label='Layers',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.layers_to_test,
+                                                                                   self.neurons_per_layer_to_test)),
+                             title='Train u L2 error',
+                             x_label='Neurons',
+                             y_label='Layers',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
+        plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.layers_to_test,
+                                                                                   self.neurons_per_layer_to_test)),
+                             title='Train f L2 error',
+                             x_label='Neurons',
+                             y_label='Layers',
+                             row_labels=self.layers_to_test,
+                             col_labels=self.neurons_per_layer_to_test)
 
 
 class TTester:
@@ -224,7 +219,7 @@ class TTester:
 
     def plot_graphs(self, data_container, plotter):
         np_train_Ts = np.array(self.train_Ts)
-        np_c_base = np.array([0, 153, 51]) / 255.0
+        # np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
                      labels=['val loss'],
@@ -233,8 +228,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_total_losses(self.train_Ts)],
                      labels=['train loss'],
@@ -243,8 +237,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_u_losses(self.train_Ts),
                                   data_container.get_final_train_f_losses(self.train_Ts)],
@@ -254,8 +247,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
 
         # Plot test results
         for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
@@ -275,8 +267,7 @@ class TTester:
                              x_label='Time',
                              y_label=None,
                              line_styles=['--', 'o-'],
-                             markevery=markevery,
-                             np_c_base=np_c_base)
+                             markevery=markevery)
 
 
 class NfNuTester:
@@ -365,39 +356,35 @@ class NfNuTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
-        heatmap_colors = 'Oranges'
+        # heatmap_colors = 'Oranges'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
                                                                                self.nus_to_test)),
                              title='Validation L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.nfs_to_test,
                                                                                        self.nus_to_test)),
                              title='Train total L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.nfs_to_test,
                                                                                    self.nus_to_test)),
                              title='Train u L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.nfs_to_test,
                                                                                    self.nus_to_test)),
                              title='Train f L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
 
 
 class ExhaustionTester:
@@ -495,23 +482,21 @@ class ExhaustionTester:
         # Plot train and validation losses
         loss_len = len(data_container.train_total_loss)
         loss_x_axis = np.linspace(1, loss_len, loss_len)
-        np_c_base = np.array([0, 255, 204]) / 255.0
+        # np_c_base = np.array([0, 255, 204]) / 255.0
         plotter.plot(x_axis=loss_x_axis,
                      y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
                      labels=['Train', 'Validation'],
                      title='L2 error',
                      x_label='Epoch',
                      y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
+                     y_scale='log')
         plotter.plot(x_axis=loss_x_axis,
                      y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
                      labels=['u', 'f'],
                      title='Train L2 error',
                      x_label='Epoch',
                      y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
+                     y_scale='log')
 
         # Plot test results
         np_test_U = data_container.get_np_test_U()
@@ -521,8 +506,7 @@ class ExhaustionTester:
                      title='Input signal',
                      x_label='Time',
                      y_label=None,
-                     draw_styles='steps',
-                     np_c_base=np_c_base)
+                     draw_styles='steps')
         for i in range(data_container.np_test_Y.shape[1]):
             markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
             mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
@@ -533,5 +517,4 @@ class ExhaustionTester:
                          x_label='Time',
                          y_label=None,
                          line_styles=['--', 'o-'],
-                         markevery=markevery,
-                         np_c_base=np_c_base)
+                         markevery=markevery)

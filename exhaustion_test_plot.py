@@ -4,7 +4,7 @@ from util.plot import Plotter
 
 tester = ExhaustionTester()
 
-dictionary = tester.dao.load('results/van_der_pol/2020-10-19-12-37-58-exhaustion-test/data.json')
+dictionary = tester.dao.load('results/van_der_pol/2020-10-25-04-19-43-exhaustion-test/data.json')
 
 data_container = ExhaustionTestContainer()
 data_container.test_T = 0.5

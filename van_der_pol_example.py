@@ -9,11 +9,11 @@ tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
 # Instance PINN
-model = VanDerPolPINN(hidden_layers=2, units_per_layer=20)
+model = VanDerPolPINN(hidden_layers=4, units_per_layer=20)
 model.trained_T = 0.5
 
 # Load model
-model.load('models/van_der_pol/2020-10-08-12-54-45-0dot5s-2l-20n-exhausted-model')
+model.load('models/van_der_pol/2020-10-25-04-19-43-0dot5s-4l-20n-exhausted-model')
 
 # Test data
 test_df = pd.read_csv('data/van_der_pol/rand_seed_10_sim_time_10.0s_200_collocation_points.csv')
