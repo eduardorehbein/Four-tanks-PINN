@@ -331,6 +331,7 @@ class NfNuTester:
         plotter = Plotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nNeural network\'s structure -> ' + str(self.hidden_layers) +

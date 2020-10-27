@@ -38,6 +38,9 @@ class StructTestContainer:
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_f_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
 
+    def get_val_loss(self, layers, neurons):
+        return self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['val_loss']
+
     def set_val_loss(self, layers, neurons, val_loss):
         layers_key = 'Layers = ' + str(layers)
         neurons_key = 'Neurons = ' + str(neurons)
@@ -177,6 +180,7 @@ class NfNuTestContainer:
     def __init__(self):
         self.train_data = dict()
         self.results = dict()
+        self.random_seed = None
         self.train_T = None
         self.np_val_X = None
         self.np_val_ic = None

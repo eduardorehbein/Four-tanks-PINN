@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+import time
 from util.pinn import VanDerPolPINN
 from util.tests import NfNuTester
 from util.data_container import NfNuTestContainer
@@ -27,7 +28,7 @@ train_T = 0.5
 val_T = 0.5
 
 # Other parameters
-random_seed = 30
+random_seed = int(time.time())
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'van_der_pol'
@@ -42,6 +43,7 @@ tf.random.set_seed(random_seed)
 
 # Load data into a container
 data_container = NfNuTestContainer()
+data_container.random_seed = random_seed
 data_container.train_T = train_T
 
 # Validation data
@@ -67,5 +69,5 @@ for nf in nfs_to_test:
 
 # Test
 tester = NfNuTester(VanDerPolPINN, hidden_layers, units_per_layer, nfs_to_test, nus_to_test,
-                    adam_epochs, max_lbfgs_iterations, random_seed=random_seed)
+                    adam_epochs, max_lbfgs_iterations)
 tester.test(data_container, results_subdirectory)
