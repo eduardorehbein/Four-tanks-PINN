@@ -219,6 +219,9 @@ class NfNuTestContainer:
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_f_loss'][-1] for nu in nus]
                          for nf in nfs])
 
+    def get_val_loss(self, nf, nu):
+        return self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['val_loss']
+
     def set_train_u_X(self, nf, nu, np_train_u_X):
         self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_u_X'] = np_train_u_X

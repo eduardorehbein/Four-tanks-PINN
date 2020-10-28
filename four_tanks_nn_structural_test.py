@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+import time
 from util.pinn import FourTanksPINN
 from util.tests import StructTester
 from util.data_container import StructTestContainer
@@ -26,7 +27,7 @@ train_T = 15.0
 val_T = 10.0
 
 # Other parameters
-random_seed = 30
+random_seed = int(time.time())
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'four_tanks'
@@ -57,6 +58,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 
 # Load data into a container
 data_container = StructTestContainer()
+data_container.random_seed = random_seed
 
 # Train data
 train_data_gen = TrainDataGenerator(np_lowest_u=np_lowest_v,
@@ -76,5 +78,5 @@ data_container.val_T = val_T
 
 # Test
 tester = StructTester(FourTanksPINN, layers_to_test, neurons_per_layer_to_test,
-                      adam_epochs, max_lbfgs_iterations, sys_params, random_seed=random_seed)
+                      adam_epochs, max_lbfgs_iterations, sys_params)
 tester.test(data_container, results_subdirectory)

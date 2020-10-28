@@ -4,7 +4,7 @@ from util.systems import OneTankSystem
 
 
 # Parameters
-random_seed = 30
+random_seed = 60
 
 sim_time = 160.0
 v_change_t = 20.0
