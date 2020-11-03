@@ -19,8 +19,8 @@ class Plotter:
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
-             x_scale='linear', y_scale='linear', line_styles='-',
-             markevery=None, draw_styles='default', np_c_base=np.array([200, 200, 200])/255):
+             x_scale='linear', y_scale='linear', line_styles='-', markevery=None, draw_styles='default',
+             np_c_base=np.array([200, 200, 200])/255):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -42,10 +42,47 @@ class Plotter:
                     ds = draw_styles
                 else:
                     ds = draw_styles[i]
+                if np_c_base is None:
+                    color = None
+                else:
+                    color = c_step * (i + 1) * np_c_base
                 plt.plot(x_axis, np_y, line_style,
-                         label=labels[i], c=c_step * (i + 1) * np_c_base, markevery=markevery, ds=ds)
+                         label=labels[i], c=color, markevery=markevery, ds=ds)
             if len(y_axis_list) > 1:
                 plt.legend()
+
+    def multiplot(self, x_axis, y_axis_matrices, labels_list, title, x_label, y_labels_list,
+                  line_styles='-', markevery=None, draw_styles='default',
+                  np_c_base=np.array([200, 200, 200])/255):
+        rows = len(y_axis_matrices)
+        fig, axs = plt.subplots(rows, sharex=True)
+        fig.suptitle(title)
+        for i, (ax, y_axis_list, labels, y_label) \
+                in enumerate(zip(axs, y_axis_matrices, labels_list, y_labels_list)):
+            if len(y_axis_list) != len(labels):
+                raise Exception('y_axis_list\'s length and label\'s length do not match.')
+            else:
+                ax.set(ylabel=y_label)
+                c_step = 1/len(y_axis_list)
+                for j in range(len(y_axis_list)):
+                    np_y = y_axis_list[j]
+                    if isinstance(line_styles, str):
+                        line_style = line_styles
+                    else:
+                        line_style = line_styles[i][j]
+                    if isinstance(draw_styles, str):
+                        ds = draw_styles
+                    else:
+                        ds = draw_styles[i][j]
+                    if np_c_base is None:
+                        color = None
+                    else:
+                        color = c_step * (j + 1) * np_c_base
+                    ax.plot(x_axis, np_y, line_style,
+                            label=labels[j], c=color, markevery=markevery, ds=ds)
+                if len(y_axis_list) > 1:
+                    ax.legend()
+        axs[-1].set(xlabel=x_label)
 
     def plot_heatmap(self, data, title, x_label, y_label, row_labels, col_labels,
                      cbar_kw={}, imshow_kw={'cmap': 'Greys'}, txt_val_fmt="{x:.2f}", txt_colors=("black", "white"),
