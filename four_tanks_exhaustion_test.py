@@ -8,7 +8,7 @@ from util.data_interface import TrainDataGenerator
 
 
 # Neural networks' parameters
-hidden_layers = 5
+hidden_layers = 8
 units_per_layer = 20
 
 # Train data parameters
@@ -16,14 +16,14 @@ scenarios = 1000
 collocation_points = 100
 
 np_lowest_v = np.array([0.5, 0.5])
-np_highest_v = np.array([3.0, 3.0])
-np_lowest_h = np.array([2.0, 2.0, 2.0, 2.0])
-np_highest_h = np.array([20.0, 20.0, 20.0, 20.0])
+np_highest_v = np.array([3.38, 3.38])
+np_lowest_h = np.array([0.2, 0.4, 0.06, 0.1])
+np_highest_h = np.array([13.0, 20.0, 3.3, 5.0])
 
 # Train parameters
 adam_epochs = 500
-max_lbfgs_iterations = 10000
-train_T = 15.0
+max_lbfgs_iterations = 30000
+train_T = 10.0
 val_T = 10.0
 
 # Test parameters

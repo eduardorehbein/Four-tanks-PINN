@@ -1,5 +1,4 @@
 import json
-import copy
 import numpy as np
 
 
@@ -50,3 +49,4 @@ class TrainDataGenerator:
             np_train_f_X = np.append(np_train_f_X, np_X, axis=0)
 
         return np_train_u_X, np_train_u_Y, np_train_f_X
+

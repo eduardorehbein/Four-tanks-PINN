@@ -17,9 +17,7 @@ k1 = 3.33  # [cm^3/Vs]
 k2 = 3.35  # [cm^3/Vs]
 
 lowest_v = 0.5
-highest_v = 3.0
-lowest_h = 2.0
-highest_h = 20.0
+highest_v = 3.38
 
 var_v = np.linspace(lowest_v, highest_v, 50)
 base_v = np.linspace(lowest_v, highest_v, 5)
@@ -98,8 +96,8 @@ plotter.plot(var_v,
 
 plotter.show()
 
-v1 = 2.0
-v2 = 2.75
+v1 = 3.38
+v2 = 3.38
 
 h4 = (1 / (2 * g)) * (((1 - alpha1) * k1 * v1) / a4) ** 2
 h3 = (1 / (2 * g)) * (((1 - alpha2) * k2 * v2) / a3) ** 2

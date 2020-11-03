@@ -25,7 +25,7 @@ class PINNController:
 
         return self.Y_normalizer.denormalize(cs_a)
 
-    def predict_horizon(self, np_ref, np_y0, np_min_u, np_max_u, prediction_horizon, T,
+    def predict_horizon(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                         outputs_to_control=None, use_runge_kutta=False):
         n = int(prediction_horizon / T)
 
@@ -47,6 +47,8 @@ class PINNController:
         for j in range(max(cs_nn.shape[1], cs_u.shape[1])):
             if j < cs_nn.shape[1]:
                 self.optimizer.subject_to(cs_nn[0, j] == cs_y[0, j])
+                self.optimizer.subject_to(cs_y[0, j] >= np_min_y[0, j])
+                self.optimizer.subject_to(cs_y[0, j] <= np_max_y[0, j])
             if j < cs_u.shape[1]:
                 self.optimizer.subject_to(cs_u[0, j] >= np_min_u[0, j])
                 self.optimizer.subject_to(cs_u[0, j] <= np_max_u[0, j])
@@ -63,15 +65,17 @@ class PINNController:
             for j in range(max(cs_nn.shape[1], cs_u.shape[1])):
                 if j < cs_nn.shape[1]:
                     self.optimizer.subject_to(cs_nn[0, j] == cs_y[i, j])
+                    self.optimizer.subject_to(cs_y[i, j] >= np_min_y[0, j])
+                    self.optimizer.subject_to(cs_y[i, j] <= np_max_y[0, j])
                 if j < cs_u.shape[1]:
                     self.optimizer.subject_to(cs_u[i, j] >= np_min_u[0, j])
                     self.optimizer.subject_to(cs_u[i, j] <= np_max_u[0, j])
 
         if outputs_to_control is None:
-            cost_function = sum((cs_y[i, j] - np_ref[0, j]) ** 2
+            cost_function = sum((cs_y[i, j] - np_ref[i, j]) ** 2
                                 for j in range(cs_y.shape[1]) for i in range(cs_y.shape[0]))
         else:
-            cost_function = sum((cs_y[i, j] - np_ref[0, j]) ** 2
+            cost_function = sum((cs_y[i, j] - np_ref[i, j]) ** 2
                                 for j in outputs_to_control for i in range(cs_y.shape[0]))
 
         self.optimizer.minimize(cost_function)
@@ -80,32 +84,43 @@ class PINNController:
 
         return sol.value(cs_u)
 
-    def control(self, np_ref, np_y0, np_min_u, np_max_u, sim_time, prediction_horizon, T, collocation_points_per_T,
+    def control(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y,
+                sim_time, prediction_horizon, T, collocation_points_per_T,
                 outputs_to_control=None, use_runge_kutta=False):
+        n = int(prediction_horizon / T)
+
         np_T = np.linspace(0, T, collocation_points_per_T)
         np_t = np_T
 
         np_states = np_y0
-        us = self.predict_horizon(np_ref, np_y0, np_min_u, np_max_u, prediction_horizon, T,
+        us = self.predict_horizon(np_ref[:n, :], np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                                   outputs_to_control, use_runge_kutta)
 
         np_controls = np.tile(us[0], (collocation_points_per_T, np_min_u.shape[1]))
+        np_new_ref = np.tile(np_ref[0, :], (collocation_points_per_T, 1))
         np_states = np.append(np_states,
                               self.system_simulator.run(np_T, np.array(us[0]), np_states[0], output_t0=False),
                               axis=0)
 
-        for i in range(int(sim_time / T) - 1):
+        for i in range(1, int(sim_time / T)):
             np_t = np.append(np_t, np_T[1:] + np_t[-1])
-
             np_ic = np.reshape(np_states[-1], np_y0.shape)
-            us = self.predict_horizon(np_ref, np_ic, np_min_u, np_max_u, prediction_horizon, T,
-                                      outputs_to_control, use_runge_kutta)
 
+            if i + n > np_ref.shape[0]:
+                np_ref_window = np_ref[-n:, :]
+            else:
+                np_ref_window = np_ref[i:i + n, :]
+
+            us = self.predict_horizon(np_ref_window, np_ic, np_min_u, np_max_u, np_min_y, np_max_y,
+                                      prediction_horizon, T, outputs_to_control, use_runge_kutta)
             np_controls = np.append(np_controls,
                                     np.tile(us[0], (collocation_points_per_T - 1, np_min_u.shape[1])),
                                     axis=0)
+            np_new_ref = np.append(np_new_ref,
+                                   np.tile(np_ref[i, :], (collocation_points_per_T - 1, 1)),
+                                   axis=0)
             np_states = np.append(np_states,
-                                  self.system_simulator.run(np_T, np.array(us[0]), np_states[-1], output_t0=False),
+                                  self.system_simulator.run(np_T, np.array(us[0]), np_states[-1, :], output_t0=False),
                                   axis=0)
 
-        return np_t, np_controls, np_states
+        return np_t, np_controls, np_new_ref, np_states

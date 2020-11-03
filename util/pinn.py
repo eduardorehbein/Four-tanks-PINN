@@ -1,14 +1,11 @@
 import os
 import copy
-import json
 import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 from util.factory_lbfgs import function_factory
 from util.normalizer import Normalizer
 from util.data_interface import JsonDAO
-
-# TODO: Improve it basing on https://github.com/pierremtb/PINNs-TF2.0/blob/master/utils/neuralnetwork.py
 
 
 class PINN:
