@@ -87,6 +87,8 @@ class PINNController:
     def control(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y,
                 sim_time, prediction_horizon, T, collocation_points_per_T,
                 outputs_to_control=None, use_runge_kutta=False):
+        self.optimizer = cs.Opti()
+
         n = int(prediction_horizon / T)
 
         np_T = np.linspace(0, T, collocation_points_per_T)

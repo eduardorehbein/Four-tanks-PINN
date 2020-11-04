@@ -28,7 +28,6 @@ T = 10.0
 collocation_points_per_T = 10
 prediction_horizon = 5*T
 sim_time = 1000.0
-use_runge_kutta = False
 
 # Configure parallel threads
 tf.config.threading.set_inter_op_parallelism_threads(8)
@@ -50,25 +49,40 @@ simulator = OneTankSystem(sys_params)
 
 # Reference adjustment
 tile_points = int(sim_time / T / np_ref.shape[0])
-new_np_ref = np.tile(np_ref[0, :], (tile_points, 1))
+np_adj_ref = np.tile(np_ref[0, :], (tile_points, 1))
 for i in range(1, np_ref.shape[0]):
-    new_np_ref = np.append(new_np_ref, np.tile(np_ref[i, :], (tile_points, 1)), axis=0)
+    np_adj_ref = np.append(np_adj_ref, np.tile(np_ref[i, :], (tile_points, 1)), axis=0)
 
-# Control
+# Controller
 controller = PINNController(model, simulator)
-np_t, np_controls, np_new_ref, np_states = controller.control(new_np_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
-                                                              sim_time, prediction_horizon, T, collocation_points_per_T,
-                                                              use_runge_kutta=use_runge_kutta)
+
+# Control using PINN
+np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
+                                                              sim_time, prediction_horizon, T, collocation_points_per_T)
+
+# Control using Runge-Kutta
+np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
+                                                                          np_min_v, np_max_v, np_min_h, np_max_h,
+                                                                          sim_time, prediction_horizon, T,
+                                                                          collocation_points_per_T,
+                                                                          use_runge_kutta=True)
+
+# IAEs
+pinn_iae = np.sum(np.abs(np_new_ref - np_states))
+rk_iae = np.sum(np.abs(np_new_ref - np_rk_states))
+
+print('PINN IAE:', pinn_iae)
+print('Runge-Kutta IAE', rk_iae)
 
 # Plot
 plotter = Plotter()
 plotter.plot(x_axis=np_t,
-             y_axis_list=[np_controls[:, 0], np_states[:, 0], np_new_ref[:, 0]],
-             labels=['$u$', '$h$', None],
+             y_axis_list=[np_controls[:, 0], np_rk_controls[:, 0], np_states[:, 0], np_rk_states[:, 0], np_new_ref[:, 0]],
+             labels=['PINN V', 'RK V', 'PINN H', 'RK H', None],
              title='One tank control',
              x_label='Time',
              y_label=None,
-             line_styles=['-', '-', '--'],
-             draw_styles=['steps', 'default', 'default'],
+             line_styles=['-', '-', '-', '-', '--'],
+             draw_styles=['steps', 'steps', 'default', 'default', 'default'],
              np_c_base=None)
 plotter.show()

@@ -26,7 +26,6 @@ collocation_points_per_T = 10
 prediction_horizon = 5*T
 sim_time = 1200.0
 outputs_to_control = [0, 1]
-use_runge_kutta = False
 
 # System parameters' dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
@@ -58,35 +57,52 @@ simulator = FourTanksSystem(sys_params)
 
 # Reference adjustment
 tile_points = int(sim_time / T / np_ref.shape[0])
-new_np_ref = np.tile(np_ref[0, :], (tile_points, 1))
+np_adj_ref = np.tile(np_ref[0, :], (tile_points, 1))
 for i in range(1, np_ref.shape[0]):
-    new_np_ref = np.append(new_np_ref, np.tile(np_ref[i, :], (tile_points, 1)), axis=0)
+    np_adj_ref = np.append(np_adj_ref, np.tile(np_ref[i, :], (tile_points, 1)), axis=0)
 
 # Control
 controller = PINNController(model, simulator)
-np_t, np_controls, np_new_ref, np_states = controller.control(new_np_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
+
+# Control using PINN
+np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T,
-                                                              outputs_to_control, use_runge_kutta)
+                                                              outputs_to_control)
+
+# Control using Runge-Kutta
+np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
+                                                                          np_min_v, np_max_v, np_min_h, np_max_h,
+                                                                          sim_time, prediction_horizon, T,
+                                                                          collocation_points_per_T,
+                                                                          outputs_to_control, True)
+
+# IAEs
+pinn_iae = np.sum(np.abs(np_new_ref - np_states))
+rk_iae = np.sum(np.abs(np_new_ref - np_rk_states))
+
+print('PINN IAE:', pinn_iae)
+print('Runge-Kutta IAE', rk_iae)
 
 # Plot
 plotter = Plotter()
 plotter.plot(x_axis=np_t,
-             y_axis_list=[np_controls[:, 0], np_controls[:, 1]],
-             labels=['$v_1$', '$v_2$'],
+             y_axis_list=[np_controls[:, 0], np_controls[:, 1], np_rk_controls[:, 0], np_rk_controls[:, 1]],
+             labels=['PINN V1', 'PINN V2', 'RK V1', 'RK V2'],
              title='Four tanks\' control signals',
              x_label='Time',
              y_label='Inputs',
              draw_styles='steps',
              np_c_base=None)
 plotter.multiplot(x_axis=np_t,
-                  y_axis_matrices=[[np_states[:, 2], np_states[:, 3]],
-                                   [np_states[:, 0], np_states[:, 1], np_new_ref[:, 0], np_new_ref[:, 1]]],
-                  labels_list=[['$h_3$', '$h_4$'],
-                               ['$h_1$', '$h_2$', None, None]],
+                  y_axis_matrices=[[np_states[:, 2], np_states[:, 3], np_rk_states[:, 2], np_rk_states[:, 3]],
+                                   [np_states[:, 0], np_states[:, 1], np_rk_states[:, 0], np_rk_states[:, 1],
+                                    np_new_ref[:, 0], np_new_ref[:, 1]]],
+                  labels_list=[['PINN H3', 'PINN H4', 'RK H3', 'RK H4'],
+                               ['PINN H1', 'PINN H2', 'RK H1', 'RK H2', None, None]],
                   title='Four tanks\' levels',
                   x_label='Time',
                   y_labels_list=[None, None],
-                  line_styles=[['-', '-'],
-                               ['-', '-', '--', '--']],
+                  line_styles=[['-', '-', '-', '-'],
+                               ['-', '-', '-', '-', '--', '--']],
                   np_c_base=None)
 plotter.show()
