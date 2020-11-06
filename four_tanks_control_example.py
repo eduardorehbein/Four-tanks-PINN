@@ -45,11 +45,11 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 
 # Instance PINN
 model = FourTanksPINN(sys_params=sys_params,
-                      hidden_layers=5,
+                      hidden_layers=8,
                       units_per_layer=20)
 
 # Load model
-model.load('models/four_tanks/2020-10-27-18-39-55-10dot0s-5l-20n-exhausted-model')
+model.load('models/four_tanks/2020-11-06-04-46-56-10dot0s-8l-20n-exhausted-model')
 model.trained_T = 10.0
 
 # Instance simulator
