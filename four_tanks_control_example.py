@@ -77,8 +77,8 @@ np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj
                                                                           outputs_to_control, True)
 
 # IAEs
-pinn_iae = np.sum(np.abs(np_new_ref - np_states))
-rk_iae = np.sum(np.abs(np_new_ref - np_rk_states))
+pinn_iae = np.sum(np.abs(np_new_ref[:, :2] - np_states[:, :2]))
+rk_iae = np.sum(np.abs(np_new_ref[:, :2] - np_rk_states[:, :2]))
 
 print('PINN IAE:', pinn_iae)
 print('Runge-Kutta IAE', rk_iae)
@@ -90,7 +90,7 @@ plotter.plot(x_axis=np_t,
              labels=['PINN V1', 'PINN V2', 'RK V1', 'RK V2'],
              title='Four tanks\' control signals',
              x_label='Time',
-             y_label='Inputs',
+             y_label=None,
              draw_styles='steps',
              np_c_base=None)
 plotter.multiplot(x_axis=np_t,
