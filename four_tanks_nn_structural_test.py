@@ -1,13 +1,24 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
+import time
 from util.pinn import FourTanksPINN
 from util.tests import StructTester
 from util.data_container import StructTestContainer
+from util.data_interface import TrainDataGenerator
 
 # Structural test parameters
 layers_to_test = (2, 4, 5, 8, 10)
 neurons_per_layer_to_test = (3, 5, 10, 15, 20)
+
+# Train data parameters
+scenarios = 1000
+collocation_points = 100
+
+np_lowest_v = np.array([0.5, 0.5])
+np_highest_v = np.array([3.0, 3.0])
+np_lowest_h = np.array([2.0, 2.0, 2.0, 2.0])
+np_highest_h = np.array([20.0, 20.0, 20.0, 20.0])
 
 # Train parameters
 adam_epochs = 500
@@ -16,7 +27,7 @@ train_T = 15.0
 val_T = 10.0
 
 # Other parameters
-random_seed = 30
+random_seed = int(time.time())
 
 # Directory under 'results' where the plots are going to be saved
 results_subdirectory = 'four_tanks'
@@ -47,17 +58,19 @@ sys_params = {'g': 981.0,  # [cm/s^2]
 
 # Load data into a container
 data_container = StructTestContainer()
-data_container.train_T = train_T
+data_container.random_seed = random_seed
 
 # Train data
-train_df = pd.read_csv('data/four_tanks/rand_seed_30_T_' + str(train_T) + 's_1000_scenarios_100_collocation_points.csv')
-train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
-data_container.np_train_u_X = train_u_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].to_numpy()
-data_container.np_train_u_Y = train_u_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
-data_container.np_train_f_X = train_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].sample(frac=1).to_numpy()
+train_data_gen = TrainDataGenerator(np_lowest_u=np_lowest_v,
+                                    np_highest_u=np_highest_v,
+                                    np_lowest_y=np_lowest_h,
+                                    np_highest_y=np_highest_h)
+data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X = \
+    train_data_gen.get_data(scenarios, collocation_points, train_T)
+data_container.train_T = train_T
 
 # Validation data
-val_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_60_sim_time_350.0s_10_scenarios_350_collocation_points.csv')
+val_df = pd.read_csv('data/four_tanks/rand_seed_60_sim_time_350.0s_10_scenarios_350_collocation_points.csv')
 data_container.np_val_X = val_df[['t', 'v1', 'v2']].to_numpy()
 data_container.np_val_Y = val_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
 data_container.np_val_ic = val_df[val_df['t'] == 0.0][['h1', 'h2', 'h3', 'h4']].to_numpy()

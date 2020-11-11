@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.normalizer import Normalizer
 from util.pinn import FourTanksPINN
 from util.plot import Plotter
 
@@ -25,34 +24,17 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Train data
-train_df = pd.read_csv('data/four_tanks/rand_seed_30_T_15.0s_1000_scenarios_100_collocation_points.csv')
-
-train_u_df = train_df[train_df['t'] == 0.0].sample(frac=1)
-np_train_u_X = train_u_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].to_numpy()
-np_train_u_Y = train_u_df[['h1', 'h2', 'h3', 'h4']].to_numpy()
-np_train_f_X = train_df[['t', 'v1', 'v2', 'h1_0', 'h2_0', 'h3_0', 'h4_0']].sample(frac=1).to_numpy()
-
-# Normalizers
-X_normalizer = Normalizer()
-Y_normalizer = Normalizer()
-
-X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
-Y_normalizer.parametrize(np_train_u_Y)
-
 # Instance PINN
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=5,
-                      units_per_layer=15,
-                      X_normalizer=X_normalizer,
-                      Y_normalizer=Y_normalizer)
+                      units_per_layer=20)
 
 # Load model
-model.load_weights('models/four_tanks/2020-06-08-22-25-06-15s-5l-15n-best-model.h5')
-model.trained_T = 15.0
+model.load('models/four_tanks/2020-10-27-18-39-55-10dot0s-5l-20n-exhausted-model')
+model.trained_T = 10.0
 
 # Test data
-test_df = pd.read_csv('data/four_tanks/long_signal_rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
+test_df = pd.read_csv('data/four_tanks/rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
 np_test_v = test_df[['v1', 'v2']].to_numpy()

@@ -8,7 +8,7 @@ from util.data_interface import JsonDAO
 
 class StructTester:
     def __init__(self, PINNModelClass=None, layers_to_test=None, neurons_per_layer_to_test=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -17,6 +17,8 @@ class StructTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -36,9 +38,10 @@ class StructTester:
             for neurons in self.neurons_per_layer_to_test:
                 # Instance PINN
                 if self.sys_params is None:
-                    model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer, random_seed=None)
                 else:
-                    model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer,
+                                                random_seed=None)
 
                 # Train
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
@@ -61,6 +64,7 @@ class StructTester:
         plotter = Plotter()
         plotter.text_page('Neural network\'s structural test:' +
                           '\nTest duration -> ' + data_container.test_duration +
+                          '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nTrain T -> ' + str(data_container.train_T) + ' s' +
@@ -128,9 +132,10 @@ class StructTester:
                                  figsize=figsize)
 
 
+
 class TTester:
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, Ts=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -141,6 +146,8 @@ class TTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -162,10 +169,11 @@ class TTester:
 
             # Instance PINN
             if self.sys_params is None:
-                model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+                model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                            random_seed=self.random_seed)
             else:
                 model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                            X_normalizer, Y_normalizer)
+                                            X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
             # Train
             print('Model training with T of ' + str(train_T) + ' seconds:')
@@ -240,7 +248,7 @@ class TTester:
 
     def plot_graphs(self, data_container, plotter):
         np_train_Ts = np.array(self.train_Ts)
-        np_c_base = np.array([0, 153, 51]) / 255.0
+        # np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_val_losses(self.train_Ts)],
                      labels=['val loss'],
@@ -249,8 +257,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_total_losses(self.train_Ts)],
                      labels=['train loss'],
@@ -259,8 +266,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
         plotter.plot(x_axis=np_train_Ts,
                      y_axis_list=[data_container.get_final_train_u_losses(self.train_Ts),
                                   data_container.get_final_train_f_losses(self.train_Ts)],
@@ -270,8 +276,7 @@ class TTester:
                      y_label=None,
                      x_scale='log',
                      y_scale='log',
-                     line_styles='o-',
-                     np_c_base=np_c_base)
+                     line_styles='o-')
 
         # Plot test results
         for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
@@ -291,13 +296,12 @@ class TTester:
                              x_label='Time',
                              y_label=None,
                              line_styles=['--', 'o-'],
-                             markevery=markevery,
-                             np_c_base=np_c_base)
+                             markevery=markevery)
 
 
 class NfNuTester:
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, nfs_to_test=None, nus_to_test=None,
-                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None):
+                 adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -309,6 +313,8 @@ class NfNuTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -331,10 +337,11 @@ class NfNuTester:
 
                 # Instance PINN
                 if self.sys_params is None:
-                    model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+                    model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                                random_seed=self.random_seed)
                 else:
                     model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                                X_normalizer, Y_normalizer)
+                                                X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
                 # Train
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
@@ -353,6 +360,7 @@ class NfNuTester:
         plotter = Plotter()
         plotter.text_page('Neural network\'s Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
+                          '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
                           '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
@@ -378,44 +386,40 @@ class NfNuTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
-        heatmap_colors = 'Oranges'
+        # heatmap_colors = 'Oranges'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
                                                                                self.nus_to_test)),
                              title='Validation L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_total_losses(self.nfs_to_test,
                                                                                        self.nus_to_test)),
                              title='Train total L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_u_losses(self.nfs_to_test,
                                                                                    self.nus_to_test)),
                              title='Train u L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
         plotter.plot_heatmap(data=np.log10(data_container.get_final_train_f_losses(self.nfs_to_test,
                                                                                    self.nus_to_test)),
                              title='Train f L2 error',
                              x_label='Nu',
                              y_label='Nf',
                              row_labels=self.nfs_to_test,
-                             col_labels=self.nus_to_test,
-                             imshow_kw={'cmap': heatmap_colors})
+                             col_labels=self.nus_to_test)
 
 
 class ExhaustionTester:
-    def __init__(self, PINNModelClass, hidden_layers, units_per_layer,
-                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None):
+    def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None,
+                 adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None, random_seed=None):
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -424,6 +428,8 @@ class ExhaustionTester:
 
         self.adam_epochs = adam_epochs
         self.max_lbfgs_iterations = max_lbfgs_iterations
+
+        self.random_seed = random_seed
 
         self.dao = JsonDAO()
 
@@ -440,10 +446,11 @@ class ExhaustionTester:
 
         # Instance PINN
         if self.sys_params is None:
-            model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer)
+            model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
+                                        random_seed=self.random_seed)
         else:
             model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
-                                        X_normalizer, Y_normalizer)
+                                        X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
         # Train
         model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
@@ -496,8 +503,7 @@ class ExhaustionTester:
             model_dir = 'models/' + results_and_models_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-' + \
                         str(data_container.train_T) + 's-' + str(self.hidden_layers) + 'l-' + \
                         str(self.units_per_layer) + 'n-exhausted-model'
-            if data_container.train_T % 1 > 0:
-                model_dir = model_dir.replace('.', 'dot')
+            model_dir = model_dir.replace('.', 'dot')
             model.save(model_dir)
         else:
             plotter.show()
@@ -506,23 +512,21 @@ class ExhaustionTester:
         # Plot train and validation losses
         loss_len = len(data_container.train_total_loss)
         loss_x_axis = np.linspace(1, loss_len, loss_len)
-        np_c_base = np.array([0, 255, 204]) / 255.0
+        # np_c_base = np.array([0, 255, 204]) / 255.0
         plotter.plot(x_axis=loss_x_axis,
                      y_axis_list=[np.array(data_container.train_total_loss), np.array(data_container.val_loss)],
                      labels=['Train', 'Validation'],
                      title='L2 error',
                      x_label='Epoch',
                      y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
+                     y_scale='log')
         plotter.plot(x_axis=loss_x_axis,
                      y_axis_list=[np.array(data_container.train_u_loss), np.array(data_container.train_f_loss)],
                      labels=['u', 'f'],
                      title='Train L2 error',
                      x_label='Epoch',
                      y_label=None,
-                     y_scale='log',
-                     np_c_base=np_c_base)
+                     y_scale='log')
 
         # Plot test results
         np_test_U = data_container.get_np_test_U()
@@ -532,8 +536,7 @@ class ExhaustionTester:
                      title='Input signal',
                      x_label='Time',
                      y_label=None,
-                     draw_styles='steps',
-                     np_c_base=np_c_base)
+                     draw_styles='steps')
         for i in range(data_container.np_test_Y.shape[1]):
             markevery = int(data_container.np_test_t.size / (data_container.np_test_t[-1] / data_container.test_T))
             mse = (np.square(data_container.np_test_NN[:, i] - data_container.np_test_Y[:, i])).mean()
@@ -544,5 +547,4 @@ class ExhaustionTester:
                          x_label='Time',
                          y_label=None,
                          line_styles=['--', 'o-'],
-                         markevery=markevery,
-                         np_c_base=np_c_base)
+                         markevery=markevery)

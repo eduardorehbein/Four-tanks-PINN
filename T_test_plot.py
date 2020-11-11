@@ -5,7 +5,7 @@ from util.plot import Plotter
 tester = TTester()
 tester.train_Ts = (0.1, 0.5, 1.0, 2.0, 4.0, 8.0)
 
-dictionary = tester.dao.load('results/van_der_pol/2020-10-15-22-58-51-nn-T-test/data.json')
+dictionary = tester.dao.load('results/van_der_pol/2020-10-23-21-06-49-nn-T-test/data.json')
 
 import pdb
 pdb.set_trace()

@@ -5,6 +5,7 @@ import copy
 class StructTestContainer:
     def __init__(self):
         self.results = dict()
+        self.random_seed = None
         self.train_T = None
         self.np_train_u_X = None
         self.np_train_u_Y = None
@@ -36,6 +37,9 @@ class StructTestContainer:
     def get_final_train_f_losses(self, layers_group, neurons_group):
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_f_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
+
+    def get_val_loss(self, layers, neurons):
+        return self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['val_loss']
 
     def set_val_loss(self, layers, neurons, val_loss):
         layers_key = 'Layers = ' + str(layers)
@@ -88,6 +92,9 @@ class TTestContainer:
 
     def get_train_f_X(self, train_T):
         return self.train_data[train_T]['np_train_f_X']
+
+    def get_val_loss(self, train_T):
+        return self.results[train_T]['val_loss']
 
     def get_final_val_losses(self, train_Ts):
         return np.array([self.results[T]['val_loss'][-1] for T in train_Ts])
@@ -173,6 +180,7 @@ class NfNuTestContainer:
     def __init__(self):
         self.train_data = dict()
         self.results = dict()
+        self.random_seed = None
         self.train_T = None
         self.np_val_X = None
         self.np_val_ic = None
@@ -210,6 +218,9 @@ class NfNuTestContainer:
     def get_final_train_f_losses(self, nfs, nus):
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_f_loss'][-1] for nu in nus]
                          for nf in nfs])
+
+    def get_val_loss(self, nf, nu):
+        return self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['val_loss']
 
     def set_train_u_X(self, nf, nu, np_train_u_X):
         self.check_key(nf, nu, self.train_data)
@@ -284,3 +295,15 @@ class ExhaustionTestContainer:
         while not np.array_equal(self.np_test_X[:, t_index].flatten(), self.np_test_t.flatten()):
             t_index = t_index + 1
         return np.delete(self.np_test_X, t_index, axis=1)
+
+    def load_results(self, dictionary):
+        self.val_loss = dictionary['val_loss']
+        self.train_total_loss = dictionary['train_total_loss']
+        self.train_u_loss = dictionary['train_u_loss']
+        self.train_f_loss = dictionary['train_f_loss']
+
+        self.np_test_t = np.array(dictionary['np_test_t'])
+        test_t_matrix = np.transpose(np.array([dictionary['np_test_t']]))
+        self.np_test_X = np.append(test_t_matrix, dictionary['np_test_U'], axis=1)
+        self.np_test_Y = np.array(dictionary['np_test_Y'])
+        self.np_test_NN = np.array(dictionary['np_test_NN'])
