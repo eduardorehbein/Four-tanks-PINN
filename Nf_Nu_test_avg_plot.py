@@ -39,13 +39,17 @@ for nf in val_losses.keys():
 
 plot_matrix = sum(final_val_losses_matrixes)/len(final_val_losses_matrixes)
 
-plotter = Plotter()
+plotter = Plotter(fontsize=11)
+figsize=(4.5, 3.2)
+
 plotter.plot_heatmap(data=np.log10(plot_matrix),
-                     title='Validation L2 error',
-                     x_label='Nu',
+                     title='L2 error', # validation
+                     x_label='Nt',
                      y_label='Nf',
                      row_labels=nfs_to_test,
-                     col_labels=nus_to_test)
+                     col_labels=nus_to_test,
+                     figsize=figsize)
+
 plotter.plot(x_axis=np.linspace(1, val_losses_len, val_losses_len),
              y_axis_list=y_axis_list,
              labels=labels,

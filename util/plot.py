@@ -50,7 +50,7 @@ class Plotter:
                 else:
                     color = c_step * (i + 1) * np_c_base
                 plt.plot(x_axis, np_y, line_style,
-                         label=labels[i], c=c_step * (i + 1) * np_c_base, markevery=markevery, ds=ds)
+                         label=labels[i], c=color, markevery=markevery, ds=ds)
             if x_scale == 'log':
                 ax.set_xticks(x_axis)
                 ax.set_xticklabels( map(str, x_axis) )
@@ -129,8 +129,8 @@ class Plotter:
             ax = plt.gca()
 
         # Plot the heatmap
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
         im = ax.imshow(data, **kwargs)
 
         plt.title(title)
