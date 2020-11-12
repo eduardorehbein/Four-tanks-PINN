@@ -8,23 +8,26 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plotter:
-    def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix'):
+    def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix', fontsize=12):
         rcParams['font.family'] = font_family
         rcParams['font.sans-serif'] = [font]
         rcParams['mathtext.fontset'] = mathtext_font
+        rcParams['axes.titlesize'] = fontsize
+        rcParams['axes.labelsize'] = fontsize
 
     def text_page(self, text, vertical_position=0.3, size=24):
-        firstPage = plt.figure(figsize=(11.69, 8.27))
+        firstPage = plt.figure(figsize=(21.69, 8.27))
         firstPage.clf()
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
 
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
-             x_scale='linear', y_scale='linear', line_styles='-', markevery=None, draw_styles='default',
-             np_c_base=np.array([200, 200, 200])/255):
+             x_scale='linear', y_scale='linear', line_styles='-',
+             markevery=None, draw_styles='default', np_c_base=np.array([200, 200, 200])/255, figsize=(4.5, 4)):
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
-            plt.figure()
+            #plt.figure()
+            fig, ax = plt.subplots(figsize=figsize)
             plt.title(title)
             plt.xlabel(x_label)
             plt.ylabel(y_label)
@@ -48,8 +51,14 @@ class Plotter:
                     color = c_step * (i + 1) * np_c_base
                 plt.plot(x_axis, np_y, line_style,
                          label=labels[i], c=color, markevery=markevery, ds=ds)
+            if x_scale == 'log':
+                ax.set_xticks(x_axis)
+                ax.set_xticklabels( map(str, x_axis) )
+
             if len(y_axis_list) > 1:
                 plt.legend()
+
+            plt.tight_layout()
 
     def multiplot(self, x_axis, y_axis_matrices, labels_list, title, x_label, y_labels_list,
                   line_styles='-', markevery=None, draw_styles='default',
@@ -86,10 +95,11 @@ class Plotter:
 
     def plot_heatmap(self, data, title, x_label, y_label, row_labels, col_labels,
                      cbar_kw={}, imshow_kw={'cmap': 'Greys'}, txt_val_fmt="{x:.2f}", txt_colors=("black", "white"),
-                     txt_threshold=None, text_kw={}):
-        fig, ax = plt.subplots()
-        im, cbar = self.get_heatmap(data, title, x_label, y_label, row_labels, col_labels,
-                                    ax=ax, cbar_kw=cbar_kw, **imshow_kw)
+                     txt_threshold=None, figsize=(4.5, 4), text_kw={}):
+        fig, ax = plt.subplots(figsize=figsize)
+        heatmap = self.get_heatmap(data, title, x_label, y_label, row_labels, col_labels, ax=ax, cbar_kw=cbar_kw,
+                                   **imshow_kw)
+        im, cbar = heatmap
         self.annotate_heatmap(im, data, txt_val_fmt, txt_colors, txt_threshold, **text_kw)
 
     def get_heatmap(self, data, title, x_label, y_label, row_labels, col_labels, ax=None, cbar_kw={}, **kwargs):
@@ -119,6 +129,8 @@ class Plotter:
             ax = plt.gca()
 
         # Plot the heatmap
+        #import pdb
+        #pdb.set_trace()
         im = ax.imshow(data, **kwargs)
 
         plt.title(title)
@@ -139,7 +151,8 @@ class Plotter:
         ax.set_yticklabels(row_labels)
 
         # Rotate the tick labels and set their alignment.
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+        # plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+        # ERIC: I disabled this for heatmap since not needed
 
         # Turn spines off and create white grid.
         for edge, spine in ax.spines.items():
@@ -149,6 +162,8 @@ class Plotter:
         ax.set_yticks(np.arange(data.shape[0] + 1) - .5, minor=True)
         ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
         ax.tick_params(which="minor", bottom=False, left=False)
+
+        plt.tight_layout()
 
         return im, cbar
 
