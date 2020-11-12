@@ -8,12 +8,14 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plotter:
-    def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix', fontsize=12):
+    def __init__(self, font_family='serif', font=['Times New Roman'], mathtext_font='stix', fontsize=11):
         rcParams['font.family'] = font_family
-        rcParams['font.sans-serif'] = [font]
+        rcParams['font.sans-serif'] = font
+        rcParams['font.size'] = fontsize
         rcParams['mathtext.fontset'] = mathtext_font
         rcParams['axes.titlesize'] = fontsize
         rcParams['axes.labelsize'] = fontsize
+        rcParams['text.usetex'] = True
 
     def text_page(self, text, vertical_position=0.3, size=24):
         firstPage = plt.figure(figsize=(21.69, 8.27))
@@ -60,6 +62,45 @@ class Plotter:
 
             plt.tight_layout()
 
+    # temporary solution for subplots
+    def subplot(self, fig, ax, x_axis, y_axis_list, labels, title, x_label, y_label,
+             x_scale='linear', y_scale='linear', line_styles='-',
+                width=None, markevery=None, draw_styles='default', colors=None):
+
+        feature = lambda x, i: None if (x is None or (type(x[i]) == int and x[i] == -1)) else x[i] 
+        
+        if labels is not None and len(y_axis_list) != len(labels):
+            raise Exception('y_axis_list\'s length and label\'s length do not match.')
+        else:
+            # fig, ax = plt.subplots(figsize=figsize)
+            fig.suptitle(title)
+            ax.set(xlabel=x_label, ylabel=y_label)
+            ax.set(xscale=x_scale, yscale=y_scale)
+
+            for i in range(len(y_axis_list)):
+                np_y = y_axis_list[i]
+                if isinstance(line_styles, str):
+                    line_style = line_styles
+                else:
+                    line_style = line_styles[i]
+                if isinstance(draw_styles, str):
+                    ds = draw_styles
+                else:
+                    ds = draw_styles[i]
+                lab = feature(labels, i)  #None if labels is None else labels[i]
+                wid = feature(width, i)
+                color = feature(colors, i)
+                ax.plot(x_axis, np_y, line_style,
+                        label=lab, c=color, markevery=markevery,
+                        ds=ds, linewidth=wid)
+            if x_scale == 'log':
+                ax.set_xticks(x_axis)
+                ax.set_xticklabels( map(str, x_axis) )
+
+            if len(y_axis_list) > 1:
+                ax.legend()
+
+                
     def multiplot(self, x_axis, y_axis_matrices, labels_list, title, x_label, y_labels_list,
                   line_styles='-', markevery=None, draw_styles='default',
                   np_c_base=np.array([200, 200, 200])/255):
