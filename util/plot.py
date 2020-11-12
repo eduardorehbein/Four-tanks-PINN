@@ -73,7 +73,7 @@ class Plotter:
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
             # fig, ax = plt.subplots(figsize=figsize)
-            fig.suptitle(title)
+            ax.set_title(title)
             ax.set(xlabel=x_label, ylabel=y_label)
             ax.set(xscale=x_scale, yscale=y_scale)
 
