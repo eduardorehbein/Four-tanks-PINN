@@ -10,25 +10,26 @@ from util.plot import Plotter
 
 
 # Constraints
-np_min_v = np.array([[0.5, 0.5]])
-np_max_v = np.array([[3.0, 3.0]])
+np_min_v = np.array([[0.0, 0.0]])
+np_max_v = np.array([[5.0, 5.0]])
 
-np_min_h = np.array([[2.0, 2.0, 2.0, 2.0]])
-np_max_h = np.array([[20.0, 20.0, 20.0, 20.0]])
+np_min_h = np.array([[2.0, 2.0, 0.5, 0.5]])
+np_max_h = np.array([[20.0, 20.0, 12.0, 12.0]])
 
 # Inital condition
 np_h0 = np_min_h
 
 # Reference
-np_ref = np.array([[9.159582958982018, 14.211590549777885, 2.1452569119256757, 3.7846331863579774],
-                   [10.151255120853042, 15.750223780923415, 2.5530330191512176, 3.9140130625937135],
-                   [8.226164209850278, 12.763340653079485, 2.385667521229082, 2.7180646268011888]])
+#np_ref = np.array([[9.159582958982018, 14.211590549777885, 2.1452569119256757, 3.7846331863579774],
+#                   [10.151255120853042, 15.750223780923415, 2.5530330191512176, 3.9140130625937135],
+#                   [8.226164209850278, 12.763340653079485, 2.385667521229082, 2.7180646268011888]])
+np_ref = 10.0*np.random.rand(10,4) + 5.0
 
 # Controller and simulation parameters
 T = 10.0
 collocation_points_per_T = 10
 prediction_horizon = 5*T
-sim_time = 1200.0
+sim_time = 2400.0
 outputs_to_control = [0, 1]
 
 # System parameters' dictionary
@@ -87,9 +88,18 @@ rk_iae = np.sum(np.abs(np_new_ref[:, :2] - np_rk_states[:, :2]))
 print('PINN IAE:', pinn_iae)
 print('Runge-Kutta IAE', rk_iae)
 
-## - save control results
+# - save control results
 from scipy.io import savemat, loadmat
-savemat("../results/fourtanks/control.mat",
+#savemat("../results/fourtanks/control.mat",
+#        {'np_t': np_t, 'np_controls': np_controls,
+#         'np_rk_controls': np_rk_controls,
+#         'np_states': np_states,
+#         'np_rk_states': np_rk_states,
+#         'np_new_ref': np_new_ref,
+#        }
+#)
+
+savemat("control.mat",
         {'np_t': np_t, 'np_controls': np_controls,
          'np_rk_controls': np_rk_controls,
          'np_states': np_states,
