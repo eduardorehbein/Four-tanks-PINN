@@ -25,7 +25,7 @@ class PINNController:
 
         return self.Y_normalizer.denormalize(cs_a)
 
-    def predict_horizon(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
+    def predict_horizon(self, last_u, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                         outputs_to_control=None, use_runge_kutta=False):
         n = int(prediction_horizon / T)
 
@@ -70,18 +70,35 @@ class PINNController:
                 if j < cs_u.shape[1]:
                     self.optimizer.subject_to(cs_u[i, j] >= np_min_u[0, j])
                     self.optimizer.subject_to(cs_u[i, j] <= np_max_u[0, j])
-
+        
+        
+        cost_function = cs.MX.sym('J') #simuolic representation of the cost function
+        L_sym = cs.MX.sym('L') #simbolic representation of the lagrangian
+        cost_ode = {'x':cost_function,'p':L_sym,'ode':L_sym} #integrator ode to compute cost function
+        J = 0 #Cost function in optiomization variable terms
         if outputs_to_control is None:
-            cost_function = sum((cs_y[i, j] - np_ref[i, j]) ** 2
-                                for j in range(cs_y.shape[1]) for i in range(cs_y.shape[0]))
-        else:
-            cost_function = sum((cs_y[i, j] - np_ref[i, j]) ** 2
-                                for j in outputs_to_control for i in range(cs_y.shape[0]))
+            for i in range(cs_y.shape[0]):
+                L = sum((cs_y[i, :] - np_ref[i, :]) ** 2) #Add terms to the lagrangian
+                cost_F = cs.integrator('F','cvodes',cost_ode,{'t0':0,'tf':T}) #implement cost function, integrated
+                J = cost_F(x0=J,p = L) #add result to optimization.
 
-        self.optimizer.minimize(cost_function)
+        else:
+            # Peso 10 para o erro em relação ao controle
+            L = 0
+            for i in range(cs_y.shape[0]):
+                for j in outputs_to_control:
+                    L = L + 10*(cs_y[i, j] - np_ref[i, j]) ** 2
+                    if i == 0:
+                        L = L + (cs_u[i , j] - last_u[j]) ** 2
+                    if i >= 1:
+                        L = L + (cs_u[i , j] - cs_u[i-1 , j]) ** 2
+                cost_F = cs.integrator('F','cvodes',cost_ode,{'t0':0,'tf':T})
+                result = cost_F(x0=J,p = L)
+                J = J + result['xf']
+
+        self.optimizer.minimize(J)
         self.optimizer.solver('ipopt')
         sol = self.optimizer.solve()
-
         return sol.value(cs_u)
 
     def control(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y,
@@ -95,7 +112,8 @@ class PINNController:
         np_t = np_T
 
         np_states = np_y0
-        us = self.predict_horizon(np_ref[:n, :], np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
+        us = np.array([0, 0, 0, 0])
+        us = self.predict_horizon(us, np_ref[:n, :], np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                                   outputs_to_control, use_runge_kutta)
 
         np_controls = np.tile(us[0], (collocation_points_per_T, np_min_u.shape[1]))
@@ -113,7 +131,7 @@ class PINNController:
             else:
                 np_ref_window = np_ref[i:i + n, :]
 
-            us = self.predict_horizon(np_ref_window, np_ic, np_min_u, np_max_u, np_min_y, np_max_y,
+            us = self.predict_horizon(us[0], np_ref_window, np_ic, np_min_u, np_max_u, np_min_y, np_max_y,
                                       prediction_horizon, T, outputs_to_control, use_runge_kutta)
             np_controls = np.append(np_controls,
                                     np.tile(us[0], (collocation_points_per_T - 1, np_min_u.shape[1])),
