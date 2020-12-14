@@ -93,7 +93,7 @@ class PINNController:
                     if i >= 1:
                         L = L + (cs_u[i , j] - cs_u[i-1 , j]) ** 2
                 cost_F = cs.integrator('F','cvodes',cost_ode,{'t0':0,'tf':T})
-                result = cost_F(x0=J,p = L)
+                result = cost_F(x0=0,p = L)
                 J = J + result['xf']
 
         self.optimizer.minimize(J)
