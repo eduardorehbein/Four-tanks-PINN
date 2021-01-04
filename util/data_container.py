@@ -3,8 +3,19 @@ import copy
 
 
 class StructTestContainer:
+    """A container for the neural network structural test's data"""
+
     def __init__(self):
+        # Results' structure: {'Layers = l1':
+        #                          {'Neurons = n1':
+        #                               {'train_u_loss': list,
+        #                                'train_f_loss': list,
+        #                                'train_total_loss': list,
+        #                                'val_loss': list},
+        #                           'Neurons = n2': {...}},
+        #                      'Layers = l2': {...}, ...}
         self.results = dict()
+
         self.random_seed = None
         self.train_T = None
         self.np_train_u_X = None
@@ -16,6 +27,15 @@ class StructTestContainer:
         self.np_val_Y = None
 
     def check_key(self, layers, neurons):
+        """
+        Makes sure that the given keys of layers and neurons are registered in the results dictionary.
+
+        :param layers: Key of layers ('Layers = a')
+        :type layers: str
+        :param neurons: Key of neurons ('Neurons = b')
+        :type neurons: str
+        """
+
         if layers not in self.results.keys():
             self.results[layers] = dict()
             self.results[layers][neurons] = dict()
@@ -23,43 +43,146 @@ class StructTestContainer:
             self.results[layers][neurons] = dict()
 
     def get_final_val_losses(self, layers_group, neurons_group):
+        """
+        Returns a matrix list(list) with the final validation losses for each combination of layers and neurons. Layers
+        number changes through the rows, while neurons number changes through the columns.
+
+        :param layers_group: Layers numbers of interest
+        :type layers_group: list or tuple
+        :param neurons_group: Neurons numbers of interest
+        :type neurons_group: list or tuple
+        :returns: Matrix with the final validation losses
+        :rtype: list
+        """
+
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['val_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
 
     def get_final_train_total_losses(self, layers_group, neurons_group):
+        """
+        Returns a matrix list(list) with the final train total losses for each combination of layers and neurons. Layers
+        number changes through the rows, while neurons number changes through the columns.
+
+        :param layers_group: Layers numbers of interest
+        :type layers_group: list or tuple
+        :param neurons_group: Neurons numbers of interest
+        :type neurons_group: list or tuple
+        :returns: Matrix with the final train total losses
+        :rtype: list
+        """
+
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_total_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
 
     def get_final_train_u_losses(self, layers_group, neurons_group):
+        """
+        Returns a matrix list(list) with the final train u losses for each combination of layers and neurons. Layers
+        number changes through the rows, while neurons number changes through the columns.
+
+        :param layers_group: Layers numbers of interest
+        :type layers_group: list or tuple
+        :param neurons_group: Neurons numbers of interest
+        :type neurons_group: list or tuple
+        :returns: Matrix with the final train u losses
+        :rtype: list
+        """
+
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_u_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
 
     def get_final_train_f_losses(self, layers_group, neurons_group):
+        """
+        Returns a matrix list(list) with the final train f losses for each combination of layers and neurons. Layers
+        number changes through the rows, while neurons number changes through the columns.
+
+        :param layers_group: Layers numbers of interest
+        :type layers_group: list or tuple
+        :param neurons_group: Neurons numbers of interest
+        :type neurons_group: list or tuple
+        :returns: Matrix with the final train f losses
+        :rtype: list
+        """
+
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_f_loss'][-1]
                           for neurons in neurons_group] for layers in layers_group])
 
     def get_val_loss(self, layers, neurons):
+        """
+        Returns all the validation losses for the given combination of layers and neurons.
+
+        :param layers: Number of layers
+        :type layers: int
+        :param neurons: Number of Neurons
+        :type neurons: int
+        :returns: Validation losses
+        :rtype: list
+        """
+
         return self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['val_loss']
 
     def set_val_loss(self, layers, neurons, val_loss):
+        """
+        Sets the validation losses for the given combination of layers and neurons in the results dictionary.
+
+        :param layers: Number of layers
+        :type layers: int
+        :param neurons: Number of Neurons
+        :type neurons: int
+        :param val_loss: Validation losses
+        :type val_loss: list
+        """
+
         layers_key = 'Layers = ' + str(layers)
         neurons_key = 'Neurons = ' + str(neurons)
         self.check_key(layers_key, neurons_key)
         self.results[layers_key][neurons_key]['val_loss'] = val_loss
 
     def set_train_total_loss(self, layers, neurons, train_total_loss):
+        """
+        Sets the train total losses for the given combination of layers and neurons in the results dictionary.
+
+        :param layers: Number of layers
+        :type layers: int
+        :param neurons: Number of Neurons
+        :type neurons: int
+        :param train_total_loss: Train total losses
+        :type train_total_loss: list
+        """
+
         layers_key = 'Layers = ' + str(layers)
         neurons_key = 'Neurons = ' + str(neurons)
         self.check_key(layers_key, neurons_key)
         self.results[layers_key][neurons_key]['train_total_loss'] = train_total_loss
 
     def set_train_u_loss(self, layers, neurons, train_u_loss):
+        """
+        Sets the train u losses for the given combination of layers and neurons in the results dictionary.
+
+        :param layers: Number of layers
+        :type layers: int
+        :param neurons: Number of Neurons
+        :type neurons: int
+        :param train_u_loss: Train u losses
+        :type train_u_loss: list
+        """
+
         layers_key = 'Layers = ' + str(layers)
         neurons_key = 'Neurons = ' + str(neurons)
         self.check_key(layers_key, neurons_key)
         self.results[layers_key][neurons_key]['train_u_loss'] = train_u_loss
 
     def set_train_f_loss(self, layers, neurons, train_f_loss):
+        """
+        Sets the train f losses for the given combination of layers and neurons in the results dictionary.
+
+        :param layers: Number of layers
+        :type layers: int
+        :param neurons: Number of Neurons
+        :type neurons: int
+        :param train_f_loss: Train f losses
+        :type train_f_loss: list
+        """
+
         layers_key = 'Layers = ' + str(layers)
         neurons_key = 'Neurons = ' + str(neurons)
         self.check_key(layers_key, neurons_key)

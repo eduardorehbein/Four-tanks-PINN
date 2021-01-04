@@ -49,7 +49,7 @@ class PINNController:
     def predict_horizon(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                         outputs_to_control=None, use_runge_kutta=False):
         """
-        Uses a PINN or a Runge-Kutta model to optimize the control signals for a prediction horizon basing on a
+        Uses a PINN or a Runge-Kutta model to optimize the control signals for a prediction horizon based on a
         reference and some control and output constraints.
 
         :param np_ref: Reference in each optimization point.
@@ -68,7 +68,7 @@ class PINNController:
         :type prediction_horizon: float
         :param T: Controller's sample period.
         :type T: float
-        :param outputs_to_control: Which outputs must follow the reference. If it is None, consider all.
+        :param outputs_to_control: Which outputs must follow the reference. If it is None, the function considers all.
             (default is None)
         :type outputs_to_control: list
         :param use_runge_kutta: Sets the function to use Runge-Kutta model instead of PINN model.
@@ -89,7 +89,7 @@ class PINNController:
         self.optimizer.set_initial(cs_u, np.tile(np_max_u, (cs_u.shape[0], 1)))
         self.optimizer.set_initial(cs_y, np.tile(np_y0, (cs_y.shape[0], 1)))
 
-        # Calculus of the first state after the first control input
+        # Calculus of the first state after the first control step
         if use_runge_kutta:
             runge_kutta = self.system_simulator.get_runge_kutta(T)
             cs_nn = runge_kutta(u=cs.horzcat(*[cs_u[0, j] for j in range(cs_u.shape[1])]), y0=np_y0)['yf']
@@ -102,7 +102,7 @@ class PINNController:
         # Constraints for the first step
         for j in range(max(cs_nn.shape[1], cs_u.shape[1])):
             if j < cs_nn.shape[1]:
-                # Binding of the neural network's output to the optimizer's variable
+                # Binding of the neural network's outputs to the optimizer's variables
                 self.optimizer.subject_to(cs_nn[0, j] == cs_y[0, j])
 
                 # Minimum and maximum output constraints
@@ -113,7 +113,7 @@ class PINNController:
                 self.optimizer.subject_to(cs_u[0, j] >= np_min_u[0, j])
                 self.optimizer.subject_to(cs_u[0, j] <= np_max_u[0, j])
 
-        # Output calculus and constraint settings for the subsequent steps (same procedure)
+        # Outputs and constraint settings for the subsequent steps (same procedure)
         for i in range(1, n):
             if use_runge_kutta:
                 cs_nn = runge_kutta(u=cs.horzcat(*[cs_u[i, j] for j in range(cs_u.shape[1])]),
@@ -152,7 +152,7 @@ class PINNController:
                 sim_time, prediction_horizon, T, collocation_points_per_T,
                 outputs_to_control=None, use_runge_kutta=False):
         """
-        Generates a complete control example based on the given parameters using moving horizon MPC with a PINN or a
+        Generates a complete control example based on the given parameters, using moving horizon MPC with a PINN or a
         Runge-Kutta model.
 
         :param np_ref: Reference in each optimization point of the whole simulation.
@@ -173,17 +173,17 @@ class PINNController:
         :type prediction_horizon: float
         :param T: Controller's sample period.
         :type T: float
-        :param collocation_points_per_T: The number of collocation points simulated in each T to analyse the system's
+        :param collocation_points_per_T: Number of collocation points simulated in each T for analysis of the system's
             behavior between control changes.
         :type collocation_points_per_T: int
-        :param outputs_to_control: Which outputs must follow the reference. If it is None, consider all.
+        :param outputs_to_control: Which outputs must follow the reference. If it is None, the function considers all.
             (default is None)
         :type outputs_to_control: list
         :param use_runge_kutta: Sets the function to use Runge-Kutta model instead of PINN model.
             (default is False)
         :type use_runge_kutta: bool
         :returns: Time vector, control matrix, reference matrix and state matrix.
-        :rtype: list of numpy.ndarray
+        :rtype: list
         """
 
         # Optimizer cleaning
