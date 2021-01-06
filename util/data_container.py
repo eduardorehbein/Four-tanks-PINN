@@ -31,9 +31,9 @@ class StructTestContainer:
         Makes sure that the given keys of layers and neurons are registered in the results dictionary. If they are not
         registered yet, this function registers and links them to their respective dictionaries.
 
-        :param layers: Key of layers ('Layers = a')
+        :param layers: Key of layers ('Layers = l')
         :type layers: str
-        :param neurons: Key of neurons ('Neurons = b')
+        :param neurons: Key of neurons ('Neurons = n')
         :type neurons: str
         """
 
@@ -45,15 +45,15 @@ class StructTestContainer:
 
     def get_final_val_losses(self, layers_group, neurons_group):
         """
-        Returns a matrix list(list) with the final validation loss for each combination of layers and neurons. Layers
-        number changes through the rows, while neurons number changes through the columns.
+        Returns a matrix with the final validation loss for each combination of layers and neurons. Layers number
+        changes through the rows, while neurons number changes through the columns.
 
         :param layers_group: Layers numbers of interest
         :type layers_group: list or tuple
         :param neurons_group: Neurons numbers of interest
         :type neurons_group: list or tuple
         :returns: Matrix with the final validation losses
-        :rtype: list
+        :rtype: numpy.ndarray
         """
 
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['val_loss'][-1]
@@ -61,15 +61,15 @@ class StructTestContainer:
 
     def get_final_train_total_losses(self, layers_group, neurons_group):
         """
-        Returns a matrix list(list) with the final MSE for each combination of layers and neurons. Layers number changes
-        through the rows, while neurons number changes through the columns.
+        Returns a matrix with the final MSE for each combination of layers and neurons. Layers number changes through
+        the rows, while neurons number changes through the columns.
 
         :param layers_group: Layers numbers of interest
         :type layers_group: list or tuple
         :param neurons_group: Neurons numbers of interest
         :type neurons_group: list or tuple
         :returns: Final MSEs
-        :rtype: list
+        :rtype: numpy.ndarray
         """
 
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_total_loss'][-1]
@@ -77,15 +77,15 @@ class StructTestContainer:
 
     def get_final_train_u_losses(self, layers_group, neurons_group):
         """
-        Returns a matrix list(list) with the final MSEu for each combination of layers and neurons. Layers number
-        changes through the rows, while neurons number changes through the columns.
+        Returns a matrix with the final MSEu for each combination of layers and neurons. Layers number changes through
+        the rows, while neurons number changes through the columns.
 
         :param layers_group: Layers numbers of interest
         :type layers_group: list or tuple
         :param neurons_group: Neurons numbers of interest
         :type neurons_group: list or tuple
         :returns: Final MSEus
-        :rtype: list
+        :rtype: numpy.ndarray
         """
 
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_u_loss'][-1]
@@ -93,15 +93,15 @@ class StructTestContainer:
 
     def get_final_train_f_losses(self, layers_group, neurons_group):
         """
-        Returns a matrix list(list) with the final MSEf for each combination of layers and neurons. Layers number
-        changes through the rows, while neurons number changes through the columns.
+        Returns a matrix with the final MSEf for each combination of layers and neurons. Layers number changes through
+        the rows, while neurons number changes through the columns.
 
         :param layers_group: Layers numbers of interest
         :type layers_group: list or tuple
         :param neurons_group: Neurons numbers of interest
         :type neurons_group: list or tuple
         :returns: Final MSEfs
-        :rtype: list
+        :rtype: numpy.ndarray
         """
 
         return np.array([[self.results['Layers = ' + str(layers)]['Neurons = ' + str(neurons)]['train_f_loss'][-1]
@@ -109,7 +109,7 @@ class StructTestContainer:
 
     def get_val_loss(self, layers, neurons):
         """
-        Returns all the validation losses for the given combination of layers and neurons.
+        Returns all the validation losses linked to the given combination of layers and neurons.
 
         :param layers: Number of layers
         :type layers: int
@@ -203,7 +203,7 @@ class TTestContainer:
 
         # Results' structure: {T1:
         #                          {'nn': numpy.ndarray,
-        #                           'title': 'T = x s.',
+        #                           'title': 'T = t s.',
         #                           'train_u_loss': list,
         #                           'train_f_loss': list,
         #                           'train_total_loss': list,
@@ -273,7 +273,7 @@ class TTestContainer:
 
     def get_val_loss(self, train_T):
         """
-        Returns all the validation losses for the given T.
+        Returns all the validation losses linked to the given T.
 
         :param train_T: Period T
         :type train_T: float
@@ -333,7 +333,7 @@ class TTestContainer:
 
     def get_nn(self, train_T):
         """
-        Returns the neural network's test output for the given T.
+        Returns the neural network's test output linked to the given T.
 
         :param train_T: Period T
         :type train_T: float
@@ -405,7 +405,7 @@ class TTestContainer:
 
     def set_train_u_X(self, train_T, np_train_u_X):
         """
-        Sets the MSEu inputs for the given T.
+        Sets the MSEu inputs for to the given T.
 
         :param train_T: Period T
         :type train_T: float
@@ -418,7 +418,7 @@ class TTestContainer:
 
     def set_train_u_Y(self, train_T, np_train_u_Y):
         """
-        Sets the MSEu labels for the given T.
+        Sets the MSEu labels for to the given T.
 
         :param train_T: Period T
         :type train_T: float
@@ -431,7 +431,7 @@ class TTestContainer:
 
     def set_train_f_X(self, train_T, np_train_f_X):
         """
-        Sets the MSEf inputs for the given T.
+        Sets the MSEf inputs for to the given T.
 
         :param train_T: Period T
         :type train_T: float
@@ -444,7 +444,7 @@ class TTestContainer:
 
     def set_val_loss(self, train_T, val_loss):
         """
-        Sets the validation losses for the given T in the results dictionary.
+        Sets the validation losses for to the given T in the results dictionary.
 
         :param train_T: Period T
         :type train_T: float
@@ -456,30 +456,96 @@ class TTestContainer:
         self.results[train_T]['val_loss'] = val_loss
 
     def set_train_total_loss(self, train_T, train_total_loss):
+        """
+        Sets the total MSEs for to the given T in the results dictionary.
+
+        :param train_T: Period T
+        :type train_T: float
+        :param train_total_loss: Total MSEs
+        :type train_total_loss: list
+        """
+
         self.check_key(train_T, self.results)
         self.results[train_T]['train_total_loss'] = train_total_loss
 
     def set_train_u_loss(self, train_T, train_u_loss):
+        """
+        Sets the MSEus for to the given T in the results dictionary.
+
+        :param train_T: Period T
+        :type train_T: float
+        :param train_u_loss: MSEus
+        :type train_u_loss: list
+        """
+
         self.check_key(train_T, self.results)
         self.results[train_T]['train_u_loss'] = train_u_loss
 
     def set_train_f_loss(self, train_T, train_f_loss):
+        """
+        Sets the MSEfs for to the given T in the results dictionary.
+
+        :param train_T: Period T
+        :type train_T: float
+        :param train_f_loss: MSEfs
+        :type train_f_loss: list
+        """
+
         self.check_key(train_T, self.results)
         self.results[train_T]['train_f_loss'] = train_f_loss
 
     def set_nn(self, train_T, np_nn):
+        """
+        Sets the neural network's test output for to the given T in the results dictionary.
+
+        :param train_T: Period T
+        :type train_T: float
+        :param np_nn: Neural network's test output
+        :type np_nn: numpy.ndarray
+        """
+
         self.check_key(train_T, self.results)
         self.results[train_T]['nn'] = np_nn
 
     def set_title(self, train_T, title):
+        """
+        Sets the plot title for to the given T in the results dictionary.
+
+        :param train_T: Period T
+        :type train_T: float
+        :param title: Plot title
+        :type title: str
+        """
+
         self.check_key(train_T, self.results)
         self.results[train_T]['title'] = title
 
 
 class NfNuTestContainer:
+    """A container for the Nf/Nu test's data"""
+
     def __init__(self):
+        # TODO: Set str or int as the only dictionaries' key type, for now they're both in use
+
+        # Train datas' structure: {nf1:
+        #                              {nu1:
+        #                                   {'np_train_u_X': numpy.ndarray,
+        #                                    'np_train_u_Y': numpy.ndarray,
+        #                                    'np_train_f_X': numpy.ndarray},
+        #                               nu2: {...},...},
+        #                          nf2: {...}, ...}
         self.train_data = dict()
+
+        # Results' structure: {'Nf = nf1':
+        #                          {'Nu = nu1':
+        #                               {'train_u_loss': list,
+        #                                'train_f_loss': list,
+        #                                'train_total_loss': list,
+        #                                'val_loss': list},
+        #                           'Nu = nu2': {...},...},
+        #                      'Nf = nf2': {...}, ...}
         self.results = dict()
+
         self.random_seed = None
         self.train_T = None
         self.np_val_X = None
@@ -488,6 +554,18 @@ class NfNuTestContainer:
         self.np_val_Y = None
 
     def check_key(self, nf, nu, dictionary):
+        """
+        Makes sure that the given combination of Nf and Nu is registered in the dictionary. If it is not, this function
+        registers and links a new dictionary to it.
+
+        :param nf: Nf
+        :type nf: int or str
+        :param nu: Nu
+        :type nu: int or str
+        :param dictionary: 'train_data' or 'results' dictionary
+        :type dictionary: dict
+        """
+
         if nf not in dictionary.keys():
             dictionary[nf] = dict()
             dictionary[nf][nu] = dict()
@@ -495,64 +573,233 @@ class NfNuTestContainer:
             dictionary[nf][nu] = dict()
 
     def get_train_u_X(self, nf, nu):
+        """
+        Returns the MSEu inputs linked to the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :returns: MSEu inputs
+        :rtype: numpy.ndarray
+        """
+
         return self.train_data[nf][nu]['np_train_u_X']
 
     def get_train_u_Y(self, nf, nu):
+        """
+        Returns the MSEu labels linked to the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :returns: MSEu labels
+        :rtype: numpy.ndarray
+        """
+
         return self.train_data[nf][nu]['np_train_u_Y']
 
     def get_train_f_X(self, nf, nu):
+        """
+        Returns the MSEf inputs linked to the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :returns: MSEf inputs
+        :rtype: numpy.ndarray
+        """
+
         return self.train_data[nf][nu]['np_train_f_X']
 
     def get_final_val_losses(self, nfs, nus):
+        """
+        Returns a matrix (numpy.ndarray) with the final validation loss for each combination of Nf and Nu. Nf changes
+        through the rows, while Nu changes through the columns.
+
+        :param nfs: Nfs of interest
+        :type nfs: list or tuple
+        :param nus: Nus of interest
+        :type nus: list or tuple
+        :returns: Matrix with the final validation losses
+        :rtype: numpy.ndarray
+        """
+
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['val_loss'][-1] for nu in nus]
                          for nf in nfs])
 
     def get_final_train_total_losses(self, nfs, nus):
+        """
+        Returns a matrix (numpy.ndarray) with the final MSE for each combination of Nf and Nu. Nf changes through the
+        rows, while Nu changes through the columns.
+
+        :param nfs: Nfs of interest
+        :type nfs: list or tuple
+        :param nus: Nus of interest
+        :type nus: list or tuple
+        :returns: Matrix with the final MSEs
+        :rtype: numpy.ndarray
+        """
+
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_total_loss'][-1] for nu in nus]
                          for nf in nfs])
 
     def get_final_train_u_losses(self, nfs, nus):
+        """
+        Returns a matrix (numpy.ndarray) with the final MSEu for each combination of Nf and Nu. Nf changes through the
+        rows, while Nu changes through the columns.
+
+        :param nfs: Nfs of interest
+        :type nfs: list or tuple
+        :param nus: Nus of interest
+        :type nus: list or tuple
+        :returns: Matrix with the final MSEus
+        :rtype: numpy.ndarray
+        """
+
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_u_loss'][-1] for nu in nus]
                          for nf in nfs])
 
     def get_final_train_f_losses(self, nfs, nus):
+        """
+        Returns a matrix (numpy.ndarray) with the final MSEf for each combination of Nf and Nu. Nf changes through the
+        rows, while Nu changes through the columns.
+
+        :param nfs: Nfs of interest
+        :type nfs: list or tuple
+        :param nus: Nus of interest
+        :type nus: list or tuple
+        :returns: Matrix with the final MSEfs
+        :rtype: numpy.ndarray
+        """
+
         return np.array([[self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['train_f_loss'][-1] for nu in nus]
                          for nf in nfs])
 
     def get_val_loss(self, nf, nu):
+        """
+        Returns all the validation losses linked to the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :returns: Validation losses
+        :rtype: list
+        """
+
         return self.results['Nf = ' + str(nf)]['Nu = ' + str(nu)]['val_loss']
 
     def set_train_u_X(self, nf, nu, np_train_u_X):
+        """
+        Sets the MSEu inputs for the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param np_train_u_X: MSEu inputs
+        :type np_train_u_X: numpy.ndarray
+        """
+
         self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_u_X'] = np_train_u_X
 
     def set_train_u_Y(self, nf, nu, np_train_u_Y):
+        """
+        Sets the MSEu labels for the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param np_train_u_Y: MSEu inputs
+        :type np_train_u_Y: numpy.ndarray
+        """
+
         self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_u_Y'] = np_train_u_Y
 
     def set_train_f_X(self, nf, nu, np_train_f_X):
+        """
+        Sets the MSEf inputs for the given combination of Nf and Nu.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param np_train_f_X: MSEf inputs
+        :type np_train_f_X: numpy.ndarray
+        """
+
         self.check_key(nf, nu, self.train_data)
         self.train_data[nf][nu]['np_train_f_X'] = np_train_f_X
 
     def set_val_loss(self, nf, nu, val_loss):
+        """
+        Sets the validation losses for the given combination of Nf and Nu in the results dictionary.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param val_loss: Validation losses
+        :type val_loss: list
+        """
+
         nf_key = 'Nf = ' + str(nf)
         nu_key = 'Nu = ' + str(nu)
         self.check_key(nf_key, nu_key, self.results)
         self.results[nf_key][nu_key]['val_loss'] = val_loss
 
     def set_train_total_loss(self, nf, nu, train_total_loss):
+        """
+        Sets the total MSE for the given combination of Nf and Nu in the results dictionary.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param train_total_loss: Total MSE
+        :type train_total_loss: list
+        """
+
         nf_key = 'Nf = ' + str(nf)
         nu_key = 'Nu = ' + str(nu)
         self.check_key(nf_key, nu_key, self.results)
         self.results[nf_key][nu_key]['train_total_loss'] = train_total_loss
 
     def set_train_u_loss(self, nf, nu, train_u_loss):
+        """
+        Sets the MSEu for the given combination of Nf and Nu in the results dictionary.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param train_u_loss: MSEu
+        :type train_u_loss: list
+        """
+
         nf_key = 'Nf = ' + str(nf)
         nu_key = 'Nu = ' + str(nu)
         self.check_key(nf_key, nu_key, self.results)
         self.results[nf_key][nu_key]['train_u_loss'] = train_u_loss
 
     def set_train_f_loss(self, nf, nu, train_f_loss):
+        """
+        Sets the MSEf for the given combination of Nf and Nu in the results dictionary.
+
+        :param nf: Nf
+        :type nf: int
+        :param nu: Nu
+        :type nu: int
+        :param train_f_loss: MSEf
+        :type train_f_loss: list
+        """
+
         nf_key = 'Nf = ' + str(nf)
         nu_key = 'Nu = ' + str(nu)
         self.check_key(nf_key, nu_key, self.results)
@@ -560,6 +807,8 @@ class NfNuTestContainer:
 
 
 class ExhaustionTestContainer:
+    """A container for the exhaustion test's data"""
+
     def __init__(self):
         self.np_train_u_X = None
         self.np_train_u_Y = None
@@ -581,6 +830,24 @@ class ExhaustionTestContainer:
         self.val_loss = None
 
     def get_results_dict(self):
+        """
+        Returns all results in a dictionary.
+
+        {'val_loss': val_loss,
+         'train_total_loss': train_total_loss,
+         'train_u_loss': train_u_loss,
+         'train_f_loss': train_f_loss,
+         'np_test_t': test_t,
+         'np_test_U': test_U,
+         'np_test_Y': test_Y,
+         'np_test_NN': test_NN}.
+
+         OBS: Every numpy.ndarray object is converted into list in the process.
+
+        :returns: Results dictionary
+        :rtype: dict
+        """
+
         return {'val_loss': self.val_loss,
                 'train_total_loss': self.train_total_loss,
                 'train_u_loss': self.train_u_loss,
@@ -591,12 +858,26 @@ class ExhaustionTestContainer:
                 'np_test_NN': self.np_test_NN.tolist()}
 
     def get_np_test_U(self):
+        """
+        Returns the test's control inputs.
+
+        :returns: Test's control inputs
+        :rtype: numpy.ndarray
+        """
+
         t_index = 0
         while not np.array_equal(self.np_test_X[:, t_index].flatten(), self.np_test_t.flatten()):
             t_index = t_index + 1
         return np.delete(self.np_test_X, t_index, axis=1)
 
     def load_results(self, dictionary):
+        """
+        Loads the input dictionary's data into the class' variables.
+
+        :param dictionary: Loaded results
+        :type dictionary: dict
+        """
+
         self.val_loss = dictionary['val_loss']
         self.train_total_loss = dictionary['train_total_loss']
         self.train_u_loss = dictionary['train_u_loss']
