@@ -3,7 +3,7 @@ import copy
 
 
 class StructTestContainer:
-    """A container for the neural network structural test's data"""
+    """A container for the neural network structural test's data."""
 
     def __init__(self):
         # Results' structure: {'Layers = l1':
@@ -191,7 +191,7 @@ class StructTestContainer:
 
 
 class TTestContainer:
-    """A container for the neural network T test's data"""
+    """A container for the neural network T test's data."""
 
     def __init__(self):
         # Train data's structure: {T1:
@@ -522,7 +522,7 @@ class TTestContainer:
 
 
 class NfNuTestContainer:
-    """A container for the Nf/Nu test's data"""
+    """A container for the Nf/Nu test's data."""
 
     def __init__(self):
         # TODO: Set str or int as the only dictionaries' key type, for now they're both in use
