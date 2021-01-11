@@ -9,8 +9,35 @@ from util.data_interface import JsonDAO
 
 
 class PINN:
+    """Physics informed neural network's main class"""
+
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
+        """
+        Initializes some PINN's parameters regarding to the network's structure mainly.
+
+        :param n_inputs: Number of neural network's inputs
+        :type n_inputs: int
+        :param n_outputs: Number of neural network's outputs
+        :type n_outputs: int
+        :param hidden_layers: Number of hidden layers
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons in each hidden layer
+        :type units_per_layer: int
+        :param X_normalizer: Object responsible for the neural network's input normalization
+            (default is None)
+        :type X_normalizer: util.normalizer.Normalizer
+        :param Y_normalizer: Object responsible for the neural network's output denormalization
+            (default is None)
+        :type Y_normalizer: util.normalizer.Normalizer
+        :param learning_rate: Learning rate
+            (default is 0.001)
+        :type learning_rate: float
+        :param random_seed: Random seed for weight and bias initialization
+            (default is None)
+        :type random_seed: int
+        """
+
         # Neural network's structure
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -46,6 +73,14 @@ class PINN:
         self.dao = JsonDAO()
 
     def model_init(self, random_seed=None):
+        """
+        Initializes a Keras model based on the class' attributes.
+
+        :param random_seed: Random seed for weight and bias generation
+            (default is None)
+        :type random_seed: int
+        """
+
         if self.X_normalizer is None or self.Y_normalizer is None:
             raise Exception('Before initializing the neural network, the class\' normalizers must be defined.')
         else:
@@ -55,18 +90,36 @@ class PINN:
                 tf.random.set_seed(random_seed)
             self.model = tf.keras.Sequential()
             self.model.add(tf.keras.Input(shape=(self.n_inputs,)))
-            # Normalize data
+            # Normalizer
             self.model.add(tf.keras.layers.Lambda(lambda tf_X: self.X_normalizer.normalize(tf_X)))
             for i in range(self.hidden_layers):
-                self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer="glorot_normal"))
-            self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer="glorot_normal"))
+                self.model.add(tf.keras.layers.Dense(self.units_per_layer, 'tanh', kernel_initializer='glorot_normal'))
+            self.model.add(tf.keras.layers.Dense(self.n_outputs, None, kernel_initializer='glorot_normal'))
 
     def predict(self, np_X, np_ic=None, prediction_T=None, return_raw=False, time_column=0):
-        '''
-        Predict the output NN(X)
-        :param np_X: numpy data input points X
-        :return: NN(X)
-        '''
+        """
+        Feeds Keras model with the input X and returns its prediction. If X's time column contains t > T and the
+        initial conditions are given, the function split and processes X based on the given T before feeding the neural
+        network. Otherwise, the function expects X to contain the initial condition and t < trained T in each row. The
+        function also makes possible to put multiple simulations [0, tf] with tf > T in a single X input.
+
+        :param np_X: Input X
+        :type np_X: numpy.ndarray
+        :param np_ic: Initial conditions
+            (default is None)
+        :type np_ic: numpy.ndarray
+        :param prediction_T: Prediction period
+            (default is None)
+        :type prediction_T: float
+        :param return_raw: Sets the function to return a Tensor instead of a ndarray
+            (default is False)
+        :type return_raw: bool
+        :param time_column: Time column in X
+            (default is 0)
+        :type time_column: int
+        :returns: Neural network's response
+        :rtype: numpy.ndarray or tensorflow.Tensor
+        """
 
         if np_ic is None:
             tf_X = self.tensor(np_X)
@@ -92,21 +145,41 @@ class PINN:
             raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
 
     def process_input(self, np_X, np_ic, prediction_T, time_column):
-        # Check trained T
+        """
+        Processes the input X, which contains time instants bigger than the minimum between neural network's training T
+        and the given prediction T, to shape it for feeding directly into the neural network. The function also works
+        for multiple simulations [0, tf] with tf > T in a single X input.
+
+        :param np_X: Input X
+        :type np_X: numpy.ndarray
+        :param np_ic: Initial conditions
+            (default is None)
+        :type np_ic: numpy.ndarray
+        :param prediction_T: Prediction period
+            (default is None)
+        :type prediction_T: float
+        :param time_column: Time column in X
+            (default is 0)
+        :type time_column: int
+        :returns: Processed X
+        :rtype: numpy.ndarray
+        """
+
+        # Checks trained T
         if self.trained_T is None:
             raise Exception('The parameter "trained_T" must be set before a long signal prediction.')
 
-        # Detect different simulations
+        # Detects different simulations
         simulation_indexes = np.where(np_X[:, time_column] == 0.0)[0].tolist()
         simulation_indexes.append(np_X.shape[0])
 
-        # Process each simulation
+        # Processes each simulation
         res = []
         min_T = min(prediction_T, self.trained_T)
         for k in range(len(simulation_indexes) - 1):
             np_Z = copy.deepcopy(np_X[simulation_indexes[k]:simulation_indexes[k+1], :])
 
-            # Fill spaces bigger than T by inserting some extra samples
+            # Fills spaces bigger than T by inserting some extra samples
             if prediction_T > self.trained_T:
                 previous_t = np_Z[0, time_column]
                 inserted_lines = []
@@ -120,10 +193,10 @@ class PINN:
                     previous_t = np_Z[i, time_column]
                     i = i + 1
 
-            # Rewrite time values to fit them in T
+            # Rewrites time values to fit them in T
             np_Z[:, time_column] = np_Z[:, time_column] % min_T
 
-            # Calculate initial conditions
+            # Calculates initial conditions
             previous_t = np_Z[0, time_column]
             np_y0 = np.reshape(np_ic[k, :], (1, np_ic[k, :].size))
             new_columns = [np_y0]
@@ -137,26 +210,48 @@ class PINN:
                 previous_t = row[time_column]
                 new_columns.append(np_y0)
 
-            # Merge time/control inputs and initial conditions
+            # Merges time/control inputs and initial conditions
             np_new_columns = np.concatenate(new_columns)
             if len(np_new_columns.shape) == 1:
                 np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
 
             np_sim_res = np.append(np_Z, np_new_columns, axis=1)
 
-            # Delete inserted data
+            # Deletes inserted data
             if prediction_T > self.trained_T:
                 np_sim_res = np.delete(np_sim_res, inserted_lines, axis=0)
 
-            # Save simulation processed data
+            # Saves simulation processed data
             res.append(np_sim_res)
 
         return np.concatenate(res)
 
     def tensor(self, np_X):
+        """
+        Converts a ndarray into a Tensor.
+
+        :param np_X: Numpy X
+        :type np_X: numpy.ndarray
+        :returns: Tensorflow X
+        :rtype: tensorflow.Tensor
+        """
+
         return tf.convert_to_tensor(np_X, dtype=tf.dtypes.float64)
 
     def set_opt_params(self, learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-7):
+        """
+        Sets Adam optimizer's parameters.
+
+        :param learning_rate: Learning rate
+        :type learning_rate: float
+        :param beta_1: Beta 1
+        :type beta_1: float
+        :param beta_2: Beta 2
+        :type beta_2: float
+        :param epsilon: Epsilon
+        :type epsilon: float
+        """
+
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=beta_1,
                                                   beta_2=beta_2, epsilon=epsilon)
 
@@ -257,10 +352,10 @@ class PINN:
         return tf_total_loss, tf_weighted_u_loss, tf_weighted_f_loss
 
     def f(self, tf_X):
-        '''
+        """
         Compute function physics informed f(X) for minimization
         :return: f(X)
-        '''
+        """
 
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
