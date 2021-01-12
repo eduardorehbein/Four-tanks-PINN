@@ -6,7 +6,7 @@ class Normalizer:
 
     def __init__(self, dictionary=None, analysis_axis=0):
         """
-        Defines the analysis axis. If it is 0, the class' functions will work with row vectors, if it is 1, column
+        It defines the analysis axis. If it is 0, the class' functions will work with row vectors, if it is 1, column
         vectors. It also makes possible the normalizer's parameters initialization through a preloaded dictionary.
 
         :param dictionary: Preloaded dictionary with the normalizer's parameters
@@ -26,7 +26,7 @@ class Normalizer:
 
     def parametrize(self, data):
         """
-        Defines the class' parameters using the given set of data.
+        It defines the class' parameters using the given set of data.
 
         :param data: Data
         :type data: numpy.ndarray or tensorflow.Tensor
@@ -41,7 +41,7 @@ class Normalizer:
 
     def normalize(self, data):
         """
-        Returns the input data normalized based on the class' parameters. If these parameters are undefined, the
+        It returns the input data normalized based on the class' parameters. If these parameters are undefined, the
         function uses the input data to define them before the normalization.
 
         :param data: Data
@@ -56,7 +56,7 @@ class Normalizer:
 
     def denormalize(self, data):
         """
-        Returns the input data denormalized based on the class' parameters. If these parameters are undefined, the
+        It returns the input data denormalized based on the class' parameters. If these parameters are undefined, the
         function throws an exception.
 
         :param data: Data

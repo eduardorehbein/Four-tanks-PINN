@@ -14,7 +14,7 @@ class PINN:
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
         """
-        Initializes some PINN's parameters regarding to the network's structure mainly.
+        It initializes some PINN's parameters regarding to the network's structure mainly.
 
         :param n_inputs: Number of neural network's inputs
         :type n_inputs: int
@@ -74,7 +74,7 @@ class PINN:
 
     def model_init(self, random_seed=None):
         """
-        Initializes a Keras model based on the class' attributes.
+        It initializes a Keras model based on the class' attributes.
 
         :param random_seed: Random seed for weight and bias generation
             (default is None)
@@ -98,7 +98,7 @@ class PINN:
 
     def predict(self, np_X, np_ic=None, prediction_T=None, return_raw=False, time_column=0):
         """
-        Feeds Keras model with the input X and returns its prediction. If X's time column contains t > T and the
+        It feeds Keras model with the input X and returns its prediction. If X's time column contains t > T and the
         initial conditions are given, the function split and processes X based on the given T before feeding the neural
         network. Otherwise, the function expects X to contain the initial condition and t < trained T in each row. The
         function also makes possible to put multiple simulations [0, tf] with tf > T in a single X input.
@@ -146,8 +146,8 @@ class PINN:
 
     def process_input(self, np_X, np_ic, prediction_T, time_column):
         """
-        Processes the input X, which contains time instants bigger than the minimum between neural network's training T
-        and the given prediction T, to shape it for feeding directly into the neural network. The function also works
+        It processes the input X, which contains time instants bigger than the minimum between neural network's training
+        T and the given prediction T, to shape it for feeding directly into the neural network. The function also works
         for multiple simulations [0, tf] with tf > T in a single X input.
 
         :param np_X: Input X
@@ -165,21 +165,21 @@ class PINN:
         :rtype: numpy.ndarray
         """
 
-        # Checks trained T
+        # Checking trained T
         if self.trained_T is None:
             raise Exception('The parameter "trained_T" must be set before a long signal prediction.')
 
-        # Detects different simulations
+        # Detecting different simulations
         simulation_indexes = np.where(np_X[:, time_column] == 0.0)[0].tolist()
         simulation_indexes.append(np_X.shape[0])
 
-        # Processes each simulation
+        # Processing each simulation
         res = []
         min_T = min(prediction_T, self.trained_T)
         for k in range(len(simulation_indexes) - 1):
             np_Z = copy.deepcopy(np_X[simulation_indexes[k]:simulation_indexes[k+1], :])
 
-            # Fills spaces bigger than T by inserting some extra samples
+            # Filling spaces bigger than T by inserting some extra samples
             if prediction_T > self.trained_T:
                 previous_t = np_Z[0, time_column]
                 inserted_lines = []
@@ -193,10 +193,10 @@ class PINN:
                     previous_t = np_Z[i, time_column]
                     i = i + 1
 
-            # Rewrites time values to fit them in T
+            # Rewriting time values to fit them in T
             np_Z[:, time_column] = np_Z[:, time_column] % min_T
 
-            # Calculates initial conditions
+            # Calculating initial conditions
             previous_t = np_Z[0, time_column]
             np_y0 = np.reshape(np_ic[k, :], (1, np_ic[k, :].size))
             new_columns = [np_y0]
@@ -210,28 +210,28 @@ class PINN:
                 previous_t = row[time_column]
                 new_columns.append(np_y0)
 
-            # Merges time/control inputs and initial conditions
+            # Merging time/control inputs and initial conditions
             np_new_columns = np.concatenate(new_columns)
             if len(np_new_columns.shape) == 1:
                 np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
 
             np_sim_res = np.append(np_Z, np_new_columns, axis=1)
 
-            # Deletes inserted data
+            # Deleting inserted data
             if prediction_T > self.trained_T:
                 np_sim_res = np.delete(np_sim_res, inserted_lines, axis=0)
 
-            # Saves simulation processed data
+            # Saving simulation processed data
             res.append(np_sim_res)
 
         return np.concatenate(res)
 
     def tensor(self, np_X):
         """
-        Converts a ndarray into a Tensor.
+        It converts a ndarray into a Tensor.
 
         :param np_X: Numpy X
-        :type np_X: numpy.ndarray
+        :type np_X: numpy.ndarray or list or float
         :returns: Tensorflow X
         :rtype: tensorflow.Tensor
         """
@@ -240,7 +240,7 @@ class PINN:
 
     def set_opt_params(self, learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-7):
         """
-        Sets Adam optimizer's parameters.
+        It sets Adam optimizer's parameters.
 
         :param learning_rate: Learning rate
         :type learning_rate: float
@@ -258,28 +258,97 @@ class PINN:
     def train(self, np_train_u_X, np_train_u_Y, np_train_f_X, train_T, np_val_X, np_val_ic, val_T, np_val_Y,
               adam_epochs=500, max_lbfgs_iterations=1000, epochs_per_print=100,
               u_loss_weight=1.0, f_loss_weight=0.1, save_losses=True):
-        # Update trained T parameter
+        """
+        It trains the neural network using Adam and L-BFGS algorithms. It does not split training data into
+        mini-batches.
+
+        :param np_train_u_X: MSEu inputs
+        :type np_train_u_X: numpy.ndarray
+        :param np_train_u_Y: MSEu labels
+        :type np_train_u_Y: numpy.ndarray
+        :param np_train_f_X: MSEf inputs
+        :type np_train_f_X: numpy.ndarray
+        :param train_T: Max t the neural network is going to be able to predict
+        :type train_T: float
+        :param np_val_X: Validation inputs
+        :type np_val_X: numpy.ndarray
+        :param np_val_ic: Validation initial conditions
+        :type np_val_ic: numpy.ndarray
+        :param val_T: Validation T
+        :type val_T: float
+        :param np_val_Y: Validation labels
+        :type np_val_Y: numpy.ndarray
+        :param adam_epochs: Epochs to train with Adam
+            (default is 500)
+        :type adam_epochs: int
+        :param max_lbfgs_iterations: Iterations to train with L-BFGS
+            (default is 1000)
+        :type max_lbfgs_iterations: int
+        :param epochs_per_print: The function prints the total MSE each time epochs % epochs_per_print = 0
+            (default is 100)
+        :type epochs_per_print: int
+        :param u_loss_weight: MSEu weight
+            (default is 1.0)
+        :type u_loss_weight: float
+        :param f_loss_weight: MSEf weight
+            (default is 0.1)
+        :type f_loss_weight: float
+        :param save_losses: To save or not the losses in the class' attributes
+            (default is True)
+        :type save_losses: bool
+        """
+
+        # Trained T parameter update
         self.trained_T = train_T
 
-        # Train numpy data to tensorflow data
+        # Numpy data to tensorflow data
         tf_train_u_X = self.tensor(np_train_u_X)
         tf_train_u_Y = self.tensor(self.Y_normalizer.normalize(np_train_u_Y))
         tf_train_f_X = self.tensor(np_train_f_X)
 
-        # Val normalized labels
+        # Validation normalized labels
         tf_val_Y = self.tensor(self.Y_normalizer.normalize(np_val_Y))
 
-        # Train with Adam
+        # Training with Adam
         self.train_adam(tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                         adam_epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
-        # Train with L-BFGS
+        # Training with L-BFGS
         self.train_lbfgs(tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                          max_lbfgs_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
     def train_adam(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                    epochs, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
-        # Train states and variables
+        """
+        It trains the neural network using Adam algorithm. It does not split training data into mini-batches.
+
+        :param tf_train_u_X: MSEu inputs
+        :type tf_train_u_X: tensorflow.Tensor
+        :param tf_train_u_Y: MSEu labels
+        :type tf_train_u_Y: tensorflow.tensor
+        :param tf_train_f_X: MSEf inputs
+        :type tf_train_f_X: tensorflow.Tensor
+        :param np_val_X: Validation inputs
+        :type np_val_X: numpy.ndarray
+        :param np_val_ic: Validation initial conditions
+        :type np_val_ic: numpy.ndarray
+        :param val_T: Validation T
+        :type val_T: float
+        :param tf_val_Y: Validation labels
+        :type tf_val_Y: tensorflow.Tensor
+        :param epochs: Epochs to train
+        :type epochs: int
+        :param epochs_per_print: The function prints the total MSE each time epochs % epochs_per_print = 0
+        :type epochs_per_print: int
+        :param u_loss_weight: MSEu weight
+        :type u_loss_weight: float
+        :param f_loss_weight: MSEf weight
+        :type f_loss_weight: float
+        :param save_losses: To save or not the losses in the class' attributes
+        :type save_losses: bool
+        """
+
+        # Training states and variables
         epoch = 0
         grads = None
 
@@ -288,9 +357,9 @@ class PINN:
 
         best_weights = copy.deepcopy(self.model.get_weights())
 
-        # Train process
+        # Training process
         while epoch <= epochs:
-            # Update weights and biases
+            # Updating weights and biases
             if grads is not None:
                 self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
@@ -314,7 +383,7 @@ class PINN:
                 tf_best_val_loss = copy.deepcopy(tf_val_loss)
                 best_weights = copy.deepcopy(self.model.get_weights())
 
-            # Save loss values
+            # Saving loss values
             if save_losses:
                 self.train_total_loss.append(tf_total_loss.numpy())
                 self.train_u_loss.append(tf_u_loss.numpy())
@@ -331,20 +400,40 @@ class PINN:
         # Epoch adjustment
         epoch = epoch - 1
 
-        # Set best weights
+        # Setting best weights
         self.model.set_weights(best_weights)
 
-        # Print final validation loss
+        # Printing final validation loss
         print('Validation loss at the Adam\'s end -> Epoch:', str(epoch), '-',
               'validation loss:', tf_best_val_loss.numpy())
 
     def get_losses(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight):
+        """
+        It returns the MSE, MSEu and MSEf values for the given inputs.
+
+        :param tf_u_X: MSEu inputs
+        :type tf_u_X: tensorflow.Tensor
+        :param tf_u_Y: MSEu labels
+        :type tf_u_Y: tensorflow.Tensor
+        :param tf_f_X: MSEf inputs
+        :type tf_f_X: tensorflow.Tensor
+        :param u_loss_weight: MSEu weight
+        :type u_loss_weight: float
+        :param f_loss_weight: MSEf weight
+        :type f_loss_weight: float
+        :returns: MSE, MSEu and MSEf
+        :rtype: tuple
+        """
+
+        # MSEu
         tf_u_NN = self.model(tf_u_X)
         tf_u_loss = tf.reduce_mean(tf.square(tf_u_NN - tf_u_Y))
 
+        # MSEf
         tf_f_NN = self.f(tf_f_X)
         tf_f_loss = tf.reduce_mean(tf.square(tf_f_NN))
 
+        # MSE
         tf_weighted_u_loss = u_loss_weight * tf_u_loss
         tf_weighted_f_loss = f_loss_weight * tf_f_loss
         tf_total_loss = tf_weighted_u_loss + tf_weighted_f_loss
@@ -353,13 +442,21 @@ class PINN:
 
     def f(self, tf_X):
         """
-        Compute function physics informed f(X) for minimization
-        :return: f(X)
+        It computes the physics informed function f(X) for minimization.
+
+        :param tf_X: MSEf inputs
+        :type tf_X: tensorflow.Tensor
+        :returns: f(X)
+        :rtype: tensorflow.Tensor
         """
 
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
+
+            # Calculus of the neural network's output
             tf_NN = self.Y_normalizer.denormalize(self.model(tf_X))
+
+            # Output decomposition
             np_output_selector = np.eye(self.n_outputs)
             decomposed_NN = []
             for i in range(self.n_outputs):
@@ -370,10 +467,39 @@ class PINN:
 
     def train_lbfgs(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                     max_iterations, epochs_per_print, u_loss_weight, f_loss_weight, save_losses):
+        """
+        It trains the neural network using Adam algorithm. It does not split training data into mini-batches.
+
+        :param tf_train_u_X: MSEu inputs
+        :type tf_train_u_X: tensorflow.Tensor
+        :param tf_train_u_Y: MSEu labels
+        :type tf_train_u_Y: tensorflow.tensor
+        :param tf_train_f_X: MSEf inputs
+        :type tf_train_f_X: tensorflow.Tensor
+        :param np_val_X: Validation inputs
+        :type np_val_X: numpy.ndarray
+        :param np_val_ic: Validation initial conditions
+        :type np_val_ic: numpy.ndarray
+        :param val_T: Validation T
+        :type val_T: float
+        :param tf_val_Y: Validation labels
+        :type tf_val_Y: tensorflow.Tensor
+        :param max_iterations: Max iterations to train
+        :type max_iterations: int
+        :param epochs_per_print: The function prints the total MSE each time epochs % epochs_per_print = 0
+        :type epochs_per_print: int
+        :param u_loss_weight: MSEu weight
+        :type u_loss_weight: float
+        :param f_loss_weight: MSEf weight
+        :type f_loss_weight: float
+        :param save_losses: To save or not the losses in the class' attributes
+        :type save_losses: bool
+        """
+
         func = function_factory(self, tf_train_u_X, tf_train_u_Y, tf_train_f_X, np_val_X, np_val_ic, val_T, tf_val_Y,
                                 epochs_per_print, u_loss_weight, f_loss_weight, save_losses)
 
-        # Convert initial model parameters to a 1D tf.Tensor
+        # Converting initial model parameters to a 1D tf.Tensor
         init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
         res = tfp.optimizer.lbfgs_minimize(value_and_gradients_function=func, initial_position=init_params,
                                            max_iterations=max_iterations)  # Each iteration is equivalent to 2-4 epochs
@@ -383,6 +509,14 @@ class PINN:
         func.assign_new_model_parameters(res.position)
 
     def save(self, directory_path):
+        """
+        It saves the training losses, the normalizers' attributes and the neural network's weights in the given
+        directory (creating it if necessary).
+
+        :param directory_path: Directory path
+        :type directory_path: str
+        """
+
         if not os.path.isdir(directory_path):
             os.mkdir(directory_path)
 
@@ -391,6 +525,13 @@ class PINN:
         self.save_weights(directory_path + '/weights.h5')
 
     def save_losses(self, file_path):
+        """
+        It saves the training losses in a JSON file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         losses = {'train_u_loss': self.train_u_loss,
                   'train_f_loss': self.train_f_loss,
                   'train_total_loss': self.train_total_loss,
@@ -398,6 +539,13 @@ class PINN:
         self.dao.save(file_path, losses)
 
     def save_normalizers(self, file_path):
+        """
+        It saves the normalizers' attributes in a JSON file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         X_normalizer = copy.deepcopy(self.X_normalizer)
         X_normalizer.mean = X_normalizer.mean.tolist()
         X_normalizer.std = X_normalizer.std.tolist()
@@ -411,14 +559,36 @@ class PINN:
         self.dao.save(file_path, normalizers)
 
     def save_weights(self, file_path):
+        """
+        It saves the neural network's weights and biases in a H5 file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         self.model.save_weights(file_path)
 
     def load(self, directory_path):
+        """
+        It loads the training losses, the normalizers' attributes and the neural network's weights in the given
+        directory.
+
+        :param directory_path: Directory path
+        :type directory_path: str
+        """
+
         self.load_losses(directory_path + '/losses.json')
         self.load_normalizers(directory_path + '/normalizers.json')
         self.load_weights(directory_path + '/weights.h5')
 
     def load_losses(self, file_path):
+        """
+        It loads the training losses from the given JSON file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         losses = self.dao.load(file_path)
         self.train_u_loss = losses['train_u_loss']
         self.train_f_loss = losses['train_f_loss']
@@ -426,6 +596,13 @@ class PINN:
         self.validation_loss = losses['validation_loss']
 
     def load_normalizers(self, file_path):
+        """
+        It loads the normalizers' attributes from the given JSON file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         normalizers = self.dao.load(file_path)
         X_normalizer = Normalizer(normalizers['X_normalizer'])
         Y_normalizer = Normalizer(normalizers['Y_normalizer'])
@@ -436,9 +613,23 @@ class PINN:
         self.model_init()
 
     def load_weights(self, file_path):
+        """
+        It loads the neural network's weights and biases from the given H5 file.
+
+        :param file_path: File path
+        :type file_path: str
+        """
+
         self.model.load_weights(file_path)
 
     def get_weights(self):
+        """
+        Returns the neural network's weights and biases in a list.
+
+        :returns: Neural network's weights and biases
+        :rtype: list
+        """
+
         weights = []
         for layer in self.model.layers:
             weights.append(layer.get_weights())
@@ -446,6 +637,22 @@ class PINN:
         return weights
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
+        """
+        The one sided ODE or PDE expression for the neural network physics informing. This is the function the user must
+        overwrite for each system.
+
+        :param tf_X: Neural network's inputs
+        :type tf_X: tensorflow.Tensor
+        :param tf_NN: Neural network's outputs
+        :type tf_X: tensorflow.Tensor
+        :param decomposed_NN: A list with each output as a vector
+        :type decomposed_NN: list
+        :param tape: Object used in the automatic differentiation
+        :type tape: tensorflow.GradientTape
+        :returns: f value
+        :rtype: tensorflow.Tensor
+        """
+
         return self.tensor(0.0)
 
 

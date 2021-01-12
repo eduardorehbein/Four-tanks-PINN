@@ -7,7 +7,7 @@ class JsonDAO:
 
     def save(self, file_path, data):
         """
-        Saves the given data dictionary in a JSON file.
+        It saves the given data dictionary in a JSON file.
 
         :param file_path: File path
         :type file_path: str
@@ -20,7 +20,7 @@ class JsonDAO:
 
     def load(self, file_path):
         """
-        Loads the specified JSON file and returns a dictionary containing its data.
+        It loads the specified JSON file and returns a dictionary containing its data.
 
         :param file_path: File path
         :type file_path: str
@@ -35,11 +35,11 @@ class JsonDAO:
 
 
 class TrainDataGenerator:
-    """Generates training data based on some parameters."""
+    """It generates training data based on some parameters."""
 
     def __init__(self, np_lowest_u, np_highest_u, np_lowest_y, np_highest_y):
         """
-        Sets constraints for the generation of control inputs and initial conditions.
+        It sets constraints for the generation of control inputs and initial conditions.
 
         :param np_lowest_u: Lowest control inputs' values
         :type np_lowest_u: numpy.ndarray
@@ -59,7 +59,7 @@ class TrainDataGenerator:
 
     def get_data(self, scenarios, collocation_points, T, random_seed=30):
         """
-        Returns the whole set of train data. The set is generated using the given parameters and the preset constraints.
+        It returns the whole set of train data. The set is generated using the given parameters and the preset constraints.
 
         :param scenarios: Number of different (u, y0) pairs to be generated
         :type scenarios: int
@@ -82,11 +82,11 @@ class TrainDataGenerator:
         np_us = np.random.uniform(low=self.np_lowest_u, high=self.np_highest_u, size=(scenarios, self.np_lowest_u.size))
         np_ics = np.random.uniform(low=self.np_lowest_y, high=self.np_highest_y, size=(scenarios, self.np_lowest_y.size))
 
-        # Train MSEu data
+        # MSEu data
         np_train_u_X = np.concatenate([np.zeros((scenarios, 1)), np_us, np_ics], axis=1)
         np_train_u_Y = np_ics
 
-        # Train MSEf data
+        # MSEf data
         np_t = np.reshape(np.linspace(0, T, collocation_points), (collocation_points, 1))
 
         np_train_f_X = np.concatenate([np_t,

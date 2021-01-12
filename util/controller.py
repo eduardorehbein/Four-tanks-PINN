@@ -3,11 +3,11 @@ import numpy as np
 
 
 class PINNController:
-    """Generates control examples based on a given PINN model, a system simulator and some control parameters."""
+    """It generates control examples based on a given PINN model, a system simulator and some control parameters."""
 
     def __init__(self, pinn_model, system_simulator):
         """
-        Loads PINN's parameters to use them in a Casadi function that replicates the neural network's behavior. It also
+        It loads PINN's parameters to use them in a Casadi function that replicates the neural network's behavior. It also
         saves a reference to the system simulator to estimate its response due to the control solution.
 
         :param pinn_model: PINN trained model
@@ -49,7 +49,7 @@ class PINNController:
     def predict_horizon(self, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                         outputs_to_control=None, use_runge_kutta=False):
         """
-        Uses a PINN or a Runge-Kutta model to optimize the control signals for a prediction horizon based on a
+        It uses a PINN or a Runge-Kutta model to optimize the control signals for a prediction horizon based on a
         reference and some control and output constraints.
 
         :param np_ref: Reference in each optimization point.
@@ -152,7 +152,7 @@ class PINNController:
                 sim_time, prediction_horizon, T, collocation_points_per_T,
                 outputs_to_control=None, use_runge_kutta=False):
         """
-        Generates a complete control example based on the given parameters, using moving horizon MPC with a PINN or a
+        It generates a complete control example based on the given parameters, using moving horizon MPC with a PINN or a
         Runge-Kutta model.
 
         :param np_ref: Reference in each optimization point of the whole simulation.
