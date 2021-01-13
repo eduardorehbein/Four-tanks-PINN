@@ -657,8 +657,39 @@ class PINN:
 
 
 class OneTankPINN(PINN):
+    """Physics informed neural network for the one tank system"""
+
     def __init__(self, sys_params, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
+        """
+        It initializes some PINN's parameters regarding to the network's structure mainly.
+
+        :param sys_params: System's parameters. Structure:
+            {
+                'g': g,  # [cm/s^2]
+                'a': a,  # [cm^2]
+                'A': A,  # [cm^2]
+                'k': k   # [cm^3/Vs]
+            }
+        :type sys_params: dict
+        :param hidden_layers: Number of hidden layers
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons in each hidden layer
+        :type units_per_layer: int
+        :param X_normalizer: Object responsible for the neural network's input normalization
+            (default is None)
+        :type X_normalizer: util.normalizer.Normalizer
+        :param Y_normalizer: Object responsible for the neural network's output denormalization
+            (default is None)
+        :type Y_normalizer: util.normalizer.Normalizer
+        :param learning_rate: Learning rate
+            (default is 0.001)
+        :type learning_rate: float
+        :param random_seed: Random seed for weight and bias initialization
+            (default is None)
+        :type random_seed: int
+        """
+
         super().__init__(3, 1, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate, random_seed)
 
         self.k = sys_params['k']
@@ -667,7 +698,21 @@ class OneTankPINN(PINN):
         self.two_g_sqrt = tf.sqrt(self.tensor(2 * sys_params['g']))
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
-        # ODE sys: dh_dt = (k/A)*v - (a/A)*sqrt(2*g*h)
+        """
+        The one sided ODE expression for the one tank system.
+        ODE: dh_dt = (k/A)*v - (a/A)*sqrt(2*g*h)
+
+        :param tf_X: Neural network's inputs
+        :type tf_X: tensorflow.Tensor
+        :param tf_NN: Neural network's outputs
+        :type tf_X: tensorflow.Tensor
+        :param decomposed_NN: A list with each output as a vector
+        :type decomposed_NN: list
+        :param tape: Object used in the automatic differentiation
+        :type tape: tensorflow.GradientTape
+        :returns: f value
+        :rtype: tensorflow.Tensor
+        """
 
         tf_v = tf.slice(tf_X, [0, 1], [tf_X.shape[0], 1])
 
@@ -678,24 +723,61 @@ class OneTankPINN(PINN):
 
 
 class VanDerPolPINN(PINN):
+    """Physics informed neural network for the Van der Pol oscillator"""
+
     def __init__(self, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
+        """
+        It initializes some PINN's parameters regarding to the network's structure mainly.
+
+        :param hidden_layers: Number of hidden layers
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons in each hidden layer
+        :type units_per_layer: int
+        :param X_normalizer: Object responsible for the neural network's input normalization
+            (default is None)
+        :type X_normalizer: util.normalizer.Normalizer
+        :param Y_normalizer: Object responsible for the neural network's output denormalization
+            (default is None)
+        :type Y_normalizer: util.normalizer.Normalizer
+        :param learning_rate: Learning rate
+            (default is 0.001)
+        :type learning_rate: float
+        :param random_seed: Random seed for weight and bias initialization
+            (default is None)
+        :type random_seed: int
+        """
+
         super().__init__(4, 2, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate, random_seed)
 
-        # System parameters for matrix form
+        # System's parameters for matrix form
         self.A = self.tensor([[1, 1],
                               [-1, 0]])
         self.b = self.tensor([[1, 0]])
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
-        # ODE sys: d2x_dt2 = (1 - x^2) * dx_dt - x + u
-        #
-        # As 2 states system: dx1_dt = (1 - x2^2) * x1 - x2 + u
-        #                     dx2_dt = x1
-        #
-        # (x2 is the position variable)
-        #
-        # In matrix form: dX_dt = X*A + (u - x2^2 * x1)*b
+        """
+        The one sided ODE expression for the Van der Pol oscillator.
+        ODE: d2x_dt2 = (1 - x^2) * dx_dt - x + u
+
+        As 2 states system: dx1_dt = (1 - x2^2) * x1 - x2 + u
+                            dx2_dt = x1
+
+        (x2 is the position variable)
+
+        In matrix form: dX_dt = X*A + (u - x2^2 * x1)*b
+
+        :param tf_X: Neural network's inputs
+        :type tf_X: tensorflow.Tensor
+        :param tf_NN: Neural network's outputs
+        :type tf_X: tensorflow.Tensor
+        :param decomposed_NN: A list with each output as a vector
+        :type decomposed_NN: list
+        :param tape: Object used in the automatic differentiation
+        :type tape: tensorflow.GradientTape
+        :returns: f value
+        :rtype: tensorflow.Tensor
+        """
 
         tf_u = tf.slice(tf_X, [0, 1], [tf_X.shape[0], 1])
 
@@ -710,8 +792,48 @@ class VanDerPolPINN(PINN):
 
 
 class FourTanksPINN(PINN):
+    """Physics informed neural network for the four tanks system"""
+
     def __init__(self, sys_params, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
+        """
+        It initializes some PINN's parameters regarding to the network's structure mainly.
+
+        :param sys_params: System's parameters. Structure:
+            {
+                'g': g,            # [cm/s^2]
+                'a1': a1,          # [cm^2]
+                'a2': a2,          # [cm^2]
+                'a3': a3,          # [cm^2]
+                'a4': a4,          # [cm^2]
+                'A1': A1,          # [cm^2]
+                'A2': A2,          # [cm^2]
+                'A3': A3,          # [cm^2]
+                'A4': A4,          # [cm^2]
+                'alpha1': alpha1,  # [adm]
+                'alpha2': alpha2,  # [adm]
+                'k1': k1,          # [cm^3/Vs]
+                'k2': k2,          # [cm^3/Vs]
+            }
+        :type sys_params: dict
+        :param hidden_layers: Number of hidden layers
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons in each hidden layer
+        :type units_per_layer: int
+        :param X_normalizer: Object responsible for the neural network's input normalization
+            (default is None)
+        :type X_normalizer: util.normalizer.Normalizer
+        :param Y_normalizer: Object responsible for the neural network's output denormalization
+            (default is None)
+        :type Y_normalizer: util.normalizer.Normalizer
+        :param learning_rate: Learning rate
+            (default is 0.001)
+        :type learning_rate: float
+        :param random_seed: Random seed for weight and bias initialization
+            (default is None)
+        :type random_seed: int
+        """
+
         super().__init__(7, 4, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate, random_seed)
 
         # System parameters to matrix form
@@ -738,12 +860,26 @@ class FourTanksPINN(PINN):
         self.two_g_sqrt = tf.sqrt(self.tensor(2 * sys_params['g']))
 
     def expression(self, tf_X, tf_NN, decomposed_NN, tape):
-        # ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1
-        #          dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
-        #          dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
-        #          dh4_dt = -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1
-        #
-        # In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
+        """
+        The one sided ODE expression for the four tanks system.
+        ODE sys: dh1_dt = -(a1/A1)*sqrt(2*g*h1) + (a3/A1)*sqrt(2*g*h3) + ((alpha1*k1)/A1)*v1
+                 dh2_dt = -(a2/A2)*sqrt(2*g*h2) + (a4/A2)*sqrt(2*g*h4) + ((alpha2*k2)/A2)*v2
+                 dh3_dt = -(a3/A3)*sqrt(2*g*h3) + (((1 - alpha2)*k2)/A3)*v2
+                 dh4_dt = -(a4/A4)*sqrt(2*g*h4) + (((1 - alpha1)*k1)/A4)*v1
+
+        In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
+
+        :param tf_X: Neural network's inputs
+        :type tf_X: tensorflow.Tensor
+        :param tf_NN: Neural network's outputs
+        :type tf_X: tensorflow.Tensor
+        :param decomposed_NN: A list with each output as a vector
+        :type decomposed_NN: list
+        :param tape: Object used in the automatic differentiation
+        :type tape: tensorflow.GradientTape
+        :returns: f value
+        :rtype: tensorflow.Tensor
+        """
 
         tf_v = tf.transpose(tf.slice(tf_X, [0, 1], [tf_X.shape[0], 2]))
         tf_nn = tf.transpose(tf_NN)
