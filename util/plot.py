@@ -7,12 +7,41 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class Plotter:
+    """Cartesian and heatmap plots"""
+
     def __init__(self, font_family='serif', font='Times New Roman', mathtext_font='stix'):
+        """
+        Font setup.
+
+        :param font_family: Font family
+            (default is 'serif')
+        :type font_family: str
+        :param font: Font
+            (default is 'Times New Roman')
+        :type font: str
+        :param mathtext_font: Math text font
+            (default is 'stix')
+        :type mathtext_font: str
+        """
+
         rcParams['font.family'] = font_family
         rcParams['font.sans-serif'] = [font]
         rcParams['mathtext.fontset'] = mathtext_font
 
     def text_page(self, text, vertical_position=0.3, size=24):
+        """
+        It plots a text page.
+
+        :param text: Text to be plotted
+        :type text: str
+        :param vertical_position: Vertical position of the text
+            (default is 0.3)
+        :type vertical_position: int or float
+        :param size: Text size
+            (default is 24)
+        :type size: int of float
+        """
+
         firstPage = plt.figure(figsize=(11.69, 8.27))
         firstPage.clf()
         firstPage.text(0.5, vertical_position, text, transform=firstPage.transFigure, size=size, ha="center")
@@ -20,6 +49,41 @@ class Plotter:
     def plot(self, x_axis, y_axis_list, labels, title, x_label, y_label,
              x_scale='linear', y_scale='linear', line_styles='-', markevery=None, draw_styles='default',
              np_c_base=np.array([200, 200, 200])/255):
+        """
+        It plots one or multiple curves in a single graph.
+
+        :param x_axis: X axis values
+        :type x_axis: numpy.ndarray
+        :param y_axis_list: List with Y axis values vectors. Each vector is plotted in a different curve
+        :type y_axis_list: list
+        :param labels: Labels for each curve
+        :type labels: list
+        :param title: Plot title
+        :type title: str
+        :param x_label: X axis label
+        :type x_label: str
+        :param y_label: Y axis label
+        :type y_label: str
+        :param x_scale: X axis scale. Examples: 'linear', 'log10', etc
+            (default is 'linear')
+        :type x_scale: str
+        :param y_scale: Y axis scale. Examples: 'linear', 'log10', etc
+            (default is 'linear')
+        :type y_scale: str
+        :param line_styles: Line styles. Examples: '-', 'o-', etc
+            (default is '-')
+        :type line_styles: str or list
+        :param markevery: Mark every n samples
+            (default is None)
+        :type markevery: int
+        :param draw_styles: Styles of drawing between samples. Examples: 'default', 'steps', etc
+            (default is 'default')
+        :type draw_styles: str or list
+        :param np_c_base: RGB color base
+            (default is np.array([200, 200, 200])/255)
+        :type np_c_base: numpy.ndarray
+        """
+
         if len(y_axis_list) != len(labels):
             raise Exception('y_axis_list\'s length and label\'s length do not match.')
         else:
@@ -30,9 +94,15 @@ class Plotter:
             plt.xscale(x_scale)
             plt.yscale(y_scale)
 
+            # Color step for multiple curve plotting
             c_step = 1/len(y_axis_list)
+
+            # Plotting of each curve
             for i in range(len(y_axis_list)):
+                # Curve selection
                 np_y = y_axis_list[i]
+
+                # Curve style
                 if isinstance(line_styles, str):
                     line_style = line_styles
                 else:
@@ -45,26 +115,73 @@ class Plotter:
                     color = None
                 else:
                     color = c_step * (i + 1) * np_c_base
+
+                # Plot
                 plt.plot(x_axis, np_y, line_style,
                          label=labels[i], c=color, markevery=markevery, ds=ds)
+
+            # Legend
             if len(y_axis_list) > 1:
                 plt.legend()
 
     def multiplot(self, x_axis, y_axis_matrices, labels_list, title, x_label, y_labels_list,
                   line_styles='-', markevery=None, draw_styles='default',
                   np_c_base=np.array([200, 200, 200])/255):
+        """
+        It plots one or multiple curves in multiple graphs that share the same X axis.
+
+        :param x_axis: X axis values
+        :type x_axis: numpy.ndarray
+        :param y_axis_matrices: List of list of Y axis values vectors. Each vector is plotted in a different curve in a
+            graph, while each list of vectors is plotted in a different graph.
+        :type y_axis_matrices: list
+        :param labels_list: List of list of labels. Same idea presented in y_axis_matrices
+        :type labels_list: list
+        :param title: Multiplot title
+        :type title: str
+        :param x_label: X axis label
+        :type x_label: str
+        :param y_labels_list: List of Y axis labels
+        :type y_labels_list: list
+        :param line_styles: Line style for each curve. Same idea presented in y_axis_matrices
+            (default is '-')
+        :type line_styles: str or list
+        :param markevery: Mark every n samples
+            (default is None)
+        :type markevery: int
+        :param draw_styles: Styles of drawing between samples. Same idea presented in y_axis_matrices
+            (default is 'default')
+        :type draw_styles: str or list
+        :param np_c_base: RGB color base
+            (default is np.array([200, 200, 200])/255)
+        :type np_c_base: numpy.ndarray
+        """
+
+        # Figure and graphs
         rows = len(y_axis_matrices)
         fig, axs = plt.subplots(rows, sharex=True)
+
+        # Title
         fig.suptitle(title)
+
+        # Plotting in each graph
         for i, (ax, y_axis_list, labels, y_label) \
                 in enumerate(zip(axs, y_axis_matrices, labels_list, y_labels_list)):
             if len(y_axis_list) != len(labels):
                 raise Exception('y_axis_list\'s length and label\'s length do not match.')
             else:
+                # Y label
                 ax.set(ylabel=y_label)
+
+                # Color step for multiple curve plotting
                 c_step = 1/len(y_axis_list)
+
+                # Plotting of each curve
                 for j in range(len(y_axis_list)):
+                    # Curve selection
                     np_y = y_axis_list[j]
+
+                    # Curve style
                     if isinstance(line_styles, str):
                         line_style = line_styles
                     else:
@@ -77,15 +194,55 @@ class Plotter:
                         color = None
                     else:
                         color = c_step * (j + 1) * np_c_base
+
+                    # Plot
                     ax.plot(x_axis, np_y, line_style,
                             label=labels[j], c=color, markevery=markevery, ds=ds)
+
+                # Legend
                 if len(y_axis_list) > 1:
                     ax.legend()
+        # X label
         axs[-1].set(xlabel=x_label)
 
     def plot_heatmap(self, data, title, x_label, y_label, row_labels, col_labels,
-                     cbar_kw={}, imshow_kw={'cmap': 'Greys'}, txt_val_fmt="{x:.2f}", txt_colors=("black", "white"),
+                     cbar_kw={}, imshow_kw={'cmap': 'Greys'}, txt_val_fmt='{x:.2f}', txt_colors=('black', 'white'),
                      txt_threshold=None, text_kw={}):
+        """
+        It plots a table like heatmap.
+
+        :param data: Data
+        :type data: numpy.ndarray
+        :param title: Title
+        :type title: str
+        :param x_label: X axis label
+        :type x_label: str
+        :param y_label: Y axis label
+        :type y_label: str
+        :param row_labels: Row labels
+        :type row_labels: list or tuple
+        :param col_labels: Column labels
+        :type col_labels: list or tuple
+        :param cbar_kw: Color bar args
+            (default is {})
+        :type cbar_kw: dict
+        :param imshow_kw: Imshow args
+            (default is {'cmap': 'Greys'}})
+        :type imshow_kw: dict
+        :param txt_val_fmt: Format of the annotations inside the heatmap
+            (default is '{x:.2f}')
+        :type txt_val_fmt: str
+        :param txt_colors: Text colors
+            (default is ('black', 'white'))
+        :type txt_colors: tuple or list
+        :param txt_threshold: Value in data units according to which the colors from text colors are applied
+            (default is None)
+        :type txt_threshold: float
+        :param text_kw: Extra args for the heatmap annotation
+            (default is {})
+        :type text_kw: dict
+        """
+
         fig, ax = plt.subplots()
         im, cbar = self.get_heatmap(data, title, x_label, y_label, row_labels, col_labels,
                                     ax=ax, cbar_kw=cbar_kw, **imshow_kw)
@@ -117,14 +274,14 @@ class Plotter:
         if not ax:
             ax = plt.gca()
 
-        # Plot the heatmap
+        # Plotting the heatmap
         im = ax.imshow(data, **kwargs)
 
         plt.title(title)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
 
-        # Create colorbar
+        # Creating colorbar
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
 
@@ -137,10 +294,10 @@ class Plotter:
         ax.set_xticklabels(col_labels)
         ax.set_yticklabels(row_labels)
 
-        # Rotate the tick labels and set their alignment.
+        # Rotating the tick labels and setting their alignment.
         plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
 
-        # Turn spines off and create white grid.
+        # Turning spines off and creating white grid.
         for edge, spine in ax.spines.items():
             spine.set_visible(False)
 
@@ -182,24 +339,24 @@ class Plotter:
         if not isinstance(data, (list, np.ndarray)):
             data = im.get_array()
 
-        # Normalize the threshold to the images color range.
+        # Normalizing the threshold to the images color range.
         if threshold is not None:
             threshold = im.norm(threshold)
         else:
             threshold = im.norm(data.max()) / 2.
 
-        # Set default alignment to center, but allow it to be
+        # Setting default alignment to center, but allowing it to be
         # overwritten by textkw.
         kw = dict(horizontalalignment="center",
                   verticalalignment="center")
         kw.update(textkw)
 
-        # Get the formatter in case a string is supplied
+        # Getting the formatter in case a string is supplied
         if isinstance(valfmt, str):
             valfmt = StrMethodFormatter(valfmt)
 
-        # Loop over the data and create a `Text` for each "pixel".
-        # Change the text's color depending on the data.
+        # Looping over the data and creating a `Text` for each "pixel".
+        # Changing the text's color depending on the data.
         texts = []
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):
@@ -210,10 +367,19 @@ class Plotter:
         return texts
 
     def save_pdf(self, path):
+        """
+        It saves all figures in a PDF.
+
+        :param path: File path
+        :type path: str
+        """
+
         pdf = PdfPages(path)
         for fig in range(1, plt.gcf().number + 1):
             pdf.savefig(fig)
         pdf.close()
 
     def show(self):
+        """It shows all figures"""
+
         plt.show()
