@@ -7,8 +7,9 @@ class PINNController:
 
     def __init__(self, pinn_model, system_simulator):
         """
-        It loads PINN's parameters to use them in a Casadi function that replicates the neural network's behavior. It also
-        saves a reference to the system simulator to estimate its response due to the control solution.
+        It loads PINN weights, biases and normalizers to use them in a Casadi function that replicates the neural
+        network behavior. It also saves a reference to the system simulator to estimate its response due to the control
+        solution.
 
         :param pinn_model: PINN trained model
         :type pinn_model: util.pinn.PINN
@@ -30,7 +31,7 @@ class PINNController:
 
         :param cs_x: Input vector (t, u, nn_0)
         :type cs_x: casadi.MX
-        :returns: Neural network's outputs
+        :returns: Neural network outputs
         :rtype: casadi.MX
         """
 
@@ -66,12 +67,12 @@ class PINNController:
         :type np_max_y: numpy.ndarray
         :param prediction_horizon: Prediction horizon, multiple of T.
         :type prediction_horizon: float
-        :param T: Controller's sample period.
+        :param T: Controller sample period.
         :type T: float
         :param outputs_to_control: Which outputs must follow the reference. If it is None, the function considers all.
             (default is None)
         :type outputs_to_control: list
-        :param use_runge_kutta: Sets the function to use Runge-Kutta model instead of PINN model.
+        :param use_runge_kutta: It sets the function to use Runge-Kutta model instead of PINN model.
             (default is False)
         :type use_runge_kutta: bool
         :returns: Optimized control signal for each T.
@@ -171,15 +172,15 @@ class PINNController:
         :type sim_time: float
         :param prediction_horizon: Prediction horizon, multiple of T.
         :type prediction_horizon: float
-        :param T: Controller's sample period.
+        :param T: Controller sample period.
         :type T: float
-        :param collocation_points_per_T: Number of collocation points simulated in each T for analysis of the system's
+        :param collocation_points_per_T: Number of collocation points simulated in each T for analysis of the system
             behavior between control changes.
         :type collocation_points_per_T: int
         :param outputs_to_control: Which outputs must follow the reference. If it is None, the function considers all.
             (default is None)
         :type outputs_to_control: list
-        :param use_runge_kutta: Sets the function to use Runge-Kutta model instead of PINN model.
+        :param use_runge_kutta: It sets the function to use Runge-Kutta model instead of PINN model.
             (default is False)
         :type use_runge_kutta: bool
         :returns: Time vector, control matrix, reference matrix and state matrix.

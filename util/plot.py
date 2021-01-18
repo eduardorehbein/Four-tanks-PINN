@@ -85,7 +85,7 @@ class Plotter:
         """
 
         if len(y_axis_list) != len(labels):
-            raise Exception('y_axis_list\'s length and label\'s length do not match.')
+            raise Exception('y_axis_list length and label length do not match.')
         else:
             plt.figure()
             plt.title(title)
@@ -168,7 +168,7 @@ class Plotter:
         for i, (ax, y_axis_list, labels, y_label) \
                 in enumerate(zip(axs, y_axis_matrices, labels_list, y_labels_list)):
             if len(y_axis_list) != len(labels):
-                raise Exception('y_axis_list\'s length and label\'s length do not match.')
+                raise Exception('y_axis_list length and label length do not match.')
             else:
                 # Y label
                 ax.set(ylabel=y_label)
@@ -319,7 +319,7 @@ class Plotter:
         im
             The AxesImage to be labeled.
         data
-            Data used to annotate.  If None, the image's data is used.  Optional.
+            Data used to annotate.  If None, the image data is used.  Optional.
         valfmt
             The format of the annotations inside the heatmap.  This should either
             use the string format method, e.g. "$ {x:.2f}", or be a
@@ -356,7 +356,7 @@ class Plotter:
             valfmt = StrMethodFormatter(valfmt)
 
         # Looping over the data and creating a `Text` for each "pixel".
-        # Changing the text's color depending on the data.
+        # Changing the text color depending on the data.
         texts = []
         for i in range(data.shape[0]):
             for j in range(data.shape[1]):

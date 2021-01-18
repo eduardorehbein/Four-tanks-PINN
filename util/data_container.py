@@ -3,10 +3,10 @@ import copy
 
 
 class StructTestContainer:
-    """A container for the neural network structural test's data."""
+    """A container for the neural network structural test data."""
 
     def __init__(self):
-        # Results' structure: {'Layers = l1':
+        # Results structure: {'Layers = l1':
         #                          {'Neurons = n1':
         #                               {'train_u_loss': list,
         #                                'train_f_loss': list,
@@ -191,17 +191,17 @@ class StructTestContainer:
 
 
 class TTestContainer:
-    """A container for the neural network T test's data."""
+    """A container for the neural network T test data."""
 
     def __init__(self):
-        # Training data's structure: {T1:
+        # Training data structure: {T1:
         #                              {'np_train_u_X': numpy.ndarray,
         #                               'np_train_u_Y': numpy.ndarray,
         #                               'np_train_f_X': numpy.ndarray},
         #                          T2: {...}, ...}
         self.train_data = dict()
 
-        # Results' structure: {T1:
+        # Results structure: {T1:
         #                          {'nn': numpy.ndarray,
         #                           'title': 'T = t s.',
         #                           'train_u_loss': list,
@@ -333,11 +333,11 @@ class TTestContainer:
 
     def get_nn(self, train_T):
         """
-        It returns the neural network's test output linked to the given T.
+        It returns the neural network test output linked to the given T.
 
         :param train_T: Period T
         :type train_T: float
-        :returns: Neural network's test output
+        :returns: Neural network test output
         :rtype: numpy.ndarray
         """
 
@@ -345,11 +345,11 @@ class TTestContainer:
 
     def get_nns(self, train_Ts):
         """
-        It returns the neural network's test output for each T.
+        It returns the neural network test output for each T.
 
         :param train_Ts: Periods T
         :type train_Ts: list or tuple
-        :returns: Neural network's test outputs
+        :returns: Neural network test outputs
         :rtype: list
         """
 
@@ -385,7 +385,7 @@ class TTestContainer:
 
     def load_results(self, dictionary):
         """
-        It loads the input dictionary's data into the class' results variable.
+        It loads the input dictionary data into the class results variable.
 
         :param dictionary: Loaded results
         :type dictionary: dict
@@ -496,11 +496,11 @@ class TTestContainer:
 
     def set_nn(self, train_T, np_nn):
         """
-        It sets the neural network's test output for to the given T in the results dictionary.
+        It sets the neural network test output for to the given T in the results dictionary.
 
         :param train_T: Period T
         :type train_T: float
-        :param np_nn: Neural network's test output
+        :param np_nn: Neural network test output
         :type np_nn: numpy.ndarray
         """
 
@@ -522,12 +522,12 @@ class TTestContainer:
 
 
 class NfNuTestContainer:
-    """A container for the Nf/Nu test's data."""
+    """A container for the Nf/Nu test data."""
 
     def __init__(self):
-        # TODO: Set str or int as the only dictionaries' key type, for now they're both in use
+        # TODO: Set str or int as the only dictionary key type, for now they're both in use
 
-        # Training data's structure: {nf1:
+        # Training data structure: {nf1:
         #                              {nu1:
         #                                   {'np_train_u_X': numpy.ndarray,
         #                                    'np_train_u_Y': numpy.ndarray,
@@ -536,7 +536,7 @@ class NfNuTestContainer:
         #                          nf2: {...}, ...}
         self.train_data = dict()
 
-        # Results' structure: {'Nf = nf1':
+        # Results structure: {'Nf = nf1':
         #                          {'Nu = nu1':
         #                               {'train_u_loss': list,
         #                                'train_f_loss': list,
@@ -807,7 +807,7 @@ class NfNuTestContainer:
 
 
 class ExhaustionTestContainer:
-    """A container for the exhaustion test's data"""
+    """A container for the exhaustion test data"""
 
     def __init__(self):
         self.np_train_u_X = None
@@ -859,9 +859,9 @@ class ExhaustionTestContainer:
 
     def get_np_test_U(self):
         """
-        It returns the test's control inputs.
+        It returns the test control inputs.
 
-        :returns: Test's control inputs
+        :returns: Test control inputs
         :rtype: numpy.ndarray
         """
 
@@ -872,7 +872,7 @@ class ExhaustionTestContainer:
 
     def load_results(self, dictionary):
         """
-        It loads the input dictionary's data into the class' variables.
+        It loads the input dictionary data into the class variables.
 
         :param dictionary: Loaded results
         :type dictionary: dict

@@ -3,7 +3,22 @@ import numpy as np
 
 
 class OneTankSystem:
+    """One tank system simulator"""
+
     def __init__(self, sys_params):
+        """
+        It defines the system parameters.
+
+        :param sys_params: System parameters. Structure:
+            {
+                'g': g,  # [cm/s^2]
+                'a': a,  # [cm^2]
+                'A': A,  # [cm^2]
+                'k': k   # [cm^3/Vs]
+            }
+        :type sys_params: dict
+        """
+
         # Time
         self.t = cs.MX.sym('t')  # [s]
 
@@ -19,16 +34,43 @@ class OneTankSystem:
         self.A = sys_params['A']  # [cm^2]
         self.k = sys_params['k']  # [cm^3/Vs]
 
+        # ODE
         self.ode = (self.k / self.A) * self.v - (self.a / self.A) * cs.sqrt(2 * self.g * self.h)
         self.dae = {'x': self.h, 'p': self.v, 't': self.t, 'ode': self.ode}
 
     def run(self, np_t, np_v, np_ic, output_t0=True):
+        """
+        Simulation of the system behavior according to the function inputs.
+
+        :param np_t: Time vector
+        :type np_t: numpy.ndarray
+        :param np_v: Control matrix
+        :type np_v: numpy.ndarray
+        :param np_ic: Initial conditions
+        :type np_ic: numpy.ndarray
+        :param output_t0: If the initial conditions must be returned in the output matrix
+        :type output_t0: bool
+        :returns: Tank level through time
+        :rtype: numpy.ndarray
+        """
+
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': output_t0})
         sol = integrator(x0=np.reshape(np_ic, self.h.shape),
                          p=np.reshape(np_v, self.v.shape))
         return np.transpose(np.array(sol['xf']))
 
     def get_runge_kutta(self, T, runge_kutta_steps=4):
+        """
+        Returns a Runge-Kutta model of the system based on the given parameters.
+
+        :param T: Sample period
+        :type T: float
+        :param runge_kutta_steps: Number of Runge-Kutta steps
+        :type runge_kutta_steps: int
+        :return: Runge-Kutta model
+        :rtype: casadi.Function
+        """
+
         DT = T / runge_kutta_steps
         f = cs.Function('f', [self.v, self.h], [self.ode])
 
@@ -48,7 +90,11 @@ class OneTankSystem:
 
 
 class VanDerPolSystem:
+    """Van der Pol oscillator system simulator"""
+
     def __init__(self):
+        """It initializes some attributes."""
+
         # Time
         self.t = cs.MX.sym('t')
 
@@ -61,17 +107,44 @@ class VanDerPolSystem:
         # Control
         self.u = cs.MX.sym('u')
 
+        # ODE
         self.ode = cs.horzcat((1 - self.x2 ** 2) * self.x1 - self.x2 + self.u,
                               self.x1)
         self.dae = {'x': cs.transpose(self.states), 'p': self.u, 't': self.t, 'ode': cs.transpose(self.ode)}
 
     def run(self, np_t, np_u, np_ic, output_t0=True):
+        """
+        Simulation of the system behavior according to the function inputs.
+
+        :param np_t: Time vector
+        :type np_t: numpy.ndarray
+        :param np_u: Control matrix
+        :type np_u: numpy.ndarray
+        :param np_ic: Initial conditions
+        :type np_ic: numpy.ndarray
+        :param output_t0: If the initial conditions must be returned in the output matrix
+        :type output_t0: bool
+        :returns: The oscillator position and its derivative through time
+        :rtype: numpy.ndarray
+        """
+
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': output_t0})
         sol = integrator(x0=np.reshape(np_ic, self.states.shape),
                          p=np.reshape(np_u, self.u.shape))
         return np.transpose(np.array(sol['xf']))
 
     def get_runge_kutta(self, T, runge_kutta_steps=4):
+        """
+        Returns a Runge-Kutta model of the system based on the given parameters.
+
+        :param T: Sample period
+        :type T: float
+        :param runge_kutta_steps: Number of Runge-Kutta steps
+        :type runge_kutta_steps: int
+        :return: Runge-Kutta model
+        :rtype: casadi.Function
+        """
+
         DT = T / runge_kutta_steps
         f = cs.Function('f', [self.u, self.states], [self.ode])
 
@@ -91,7 +164,31 @@ class VanDerPolSystem:
 
 
 class FourTanksSystem:
+    """Four tanks system simulator"""
+
     def __init__(self, sys_params):
+        """
+        It defines the system parameters.
+
+        :param sys_params: System parameters. Structure:
+            {
+                'g': g,            # [cm/s^2]
+                'a1': a1,          # [cm^2]
+                'a2': a2,          # [cm^2]
+                'a3': a3,          # [cm^2]
+                'a4': a4,          # [cm^2]
+                'A1': A1,          # [cm^2]
+                'A2': A2,          # [cm^2]
+                'A3': A3,          # [cm^2]
+                'A4': A4,          # [cm^2]
+                'alpha1': alpha1,  # [adm]
+                'alpha2': alpha2,  # [adm]
+                'k1': k1,          # [cm^3/Vs]
+                'k2': k2,          # [cm^3/Vs]
+            }
+        :type sys_params: dict
+        """
+
         # Time
         self.t = cs.MX.sym('t')  # [s]
 
@@ -128,6 +225,7 @@ class FourTanksSystem:
         self.k1 = sys_params['k1']  # [cm^3/Vs]
         self.k2 = sys_params['k2']  # [cm^3/Vs]
 
+        # ODE
         self.ode = cs.horzcat(-(self.a1 / self.A1) * cs.sqrt(2 * self.g * self.h1) +
                               (self.a3 / self.A1) * cs.sqrt(2 * self.g * self.h3) +
                               ((self.alpha1 * self.k1) / self.A1) * self.v1,
@@ -141,12 +239,38 @@ class FourTanksSystem:
         self.dae = {'x': cs.transpose(self.states), 'p': cs.transpose(self.controls), 't': self.t, 'ode': cs.transpose(self.ode)}
 
     def run(self, np_t, np_v, np_ic, output_t0=True):
+        """
+        Simulation of the system behavior according to the function inputs.
+
+        :param np_t: Time vector
+        :type np_t: numpy.ndarray
+        :param np_v: Control matrix
+        :type np_v: numpy.ndarray
+        :param np_ic: Initial conditions
+        :type np_ic: numpy.ndarray
+        :param output_t0: If the initial conditions must be returned in the output matrix
+        :type output_t0: bool
+        :returns: Tanks level through time
+        :rtype: numpy.ndarray
+        """
+
         integrator = cs.integrator('integrator', 'cvodes', self.dae, {'grid': np_t, 'output_t0': output_t0})
         sol = integrator(x0=np.reshape(np_ic, self.states.shape),
                          p=np.reshape(np_v, self.controls.shape))
         return np.transpose(np.array(sol['xf']))
 
     def get_runge_kutta(self, T, runge_kutta_steps=4):
+        """
+        Returns a Runge-Kutta model of the system based on the given parameters.
+
+        :param T: Sample period
+        :type T: float
+        :param runge_kutta_steps: Number of Runge-Kutta steps
+        :type runge_kutta_steps: int
+        :return: Runge-Kutta model
+        :rtype: casadi.Function
+        """
+
         DT = T / runge_kutta_steps
         f = cs.Function('f', [self.controls, self.states], [self.ode])
 

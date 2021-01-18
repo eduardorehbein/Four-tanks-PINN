@@ -9,25 +9,25 @@ from util.data_interface import JsonDAO
 
 
 class PINN:
-    """Physics informed neural network's main class"""
+    """Physics informed neural network main class"""
 
     def __init__(self, n_inputs, n_outputs, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
         """
-        It initializes some PINN's parameters regarding to the network's structure mainly.
+        It initializes some PINN parameters regarding to the network structure mainly.
 
-        :param n_inputs: Number of neural network's inputs
+        :param n_inputs: Number of neural network inputs
         :type n_inputs: int
-        :param n_outputs: Number of neural network's outputs
+        :param n_outputs: Number of neural network outputs
         :type n_outputs: int
         :param hidden_layers: Number of hidden layers
         :type hidden_layers: int
         :param units_per_layer: Number of neurons in each hidden layer
         :type units_per_layer: int
-        :param X_normalizer: Object responsible for the neural network's input normalization
+        :param X_normalizer: Object responsible for the neural network input normalization
             (default is None)
         :type X_normalizer: util.normalizer.Normalizer
-        :param Y_normalizer: Object responsible for the neural network's output denormalization
+        :param Y_normalizer: Object responsible for the neural network output denormalization
             (default is None)
         :type Y_normalizer: util.normalizer.Normalizer
         :param learning_rate: Learning rate
@@ -38,7 +38,7 @@ class PINN:
         :type random_seed: int
         """
 
-        # Neural network's structure
+        # Neural network structure
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
         self.hidden_layers = hidden_layers
@@ -74,7 +74,7 @@ class PINN:
 
     def model_init(self, random_seed=None):
         """
-        It initializes a Keras model based on the class' attributes.
+        It initializes a Keras model based on the class attributes.
 
         :param random_seed: Random seed for weight and bias generation
             (default is None)
@@ -82,7 +82,7 @@ class PINN:
         """
 
         if self.X_normalizer is None or self.Y_normalizer is None:
-            raise Exception('Before initializing the neural network, the class\' normalizers must be defined.')
+            raise Exception('Before initializing the neural network, the class normalizers must be defined.')
         else:
             tf.keras.backend.set_floatx('float64')
             if random_seed is not None:
@@ -140,9 +140,9 @@ class PINN:
                 else:
                     return self.Y_normalizer.denormalize(tf_NN.numpy())
             else:
-                raise Exception('Missing neural network\'s working period.')
+                raise Exception('Missing neural network working period.')
         else:
-            raise Exception('np_X dimension plus np_ic dimension do not match neural network\'s input dimension')
+            raise Exception('np_X dimension plus np_ic dimension do not match neural network input dimension')
 
     def process_input(self, np_X, np_ic, prediction_T, time_column):
         """
@@ -293,7 +293,7 @@ class PINN:
         :param f_loss_weight: MSEf weight
             (default is 0.1)
         :type f_loss_weight: float
-        :param save_losses: To save or not the losses in the class' attributes
+        :param save_losses: To save or not the losses in the class attributes
             (default is True)
         :type save_losses: bool
         """
@@ -344,7 +344,7 @@ class PINN:
         :type u_loss_weight: float
         :param f_loss_weight: MSEf weight
         :type f_loss_weight: float
-        :param save_losses: To save or not the losses in the class' attributes
+        :param save_losses: To save or not the losses in the class attributes
         :type save_losses: bool
         """
 
@@ -392,7 +392,7 @@ class PINN:
                 self.validation_loss.append(np_val_loss)
 
             if epoch % epochs_per_print == 0:
-                print('Epoch:', str(epoch), '-', 'Adam\'s validation loss:', str(np_val_loss))
+                print('Epoch:', str(epoch), '-', 'Adam validation loss:', str(np_val_loss))
 
             # Epoch count
             epoch = epoch + 1
@@ -404,7 +404,7 @@ class PINN:
         self.model.set_weights(best_weights)
 
         # Printing final validation loss
-        print('Validation loss at the Adam\'s end -> Epoch:', str(epoch), '-',
+        print('Validation loss at the end of Adam -> Epoch:', str(epoch), '-',
               'validation loss:', tf_best_val_loss.numpy())
 
     def get_losses(self, tf_u_X, tf_u_Y, tf_f_X, u_loss_weight, f_loss_weight):
@@ -492,7 +492,7 @@ class PINN:
         :type u_loss_weight: float
         :param f_loss_weight: MSEf weight
         :type f_loss_weight: float
-        :param save_losses: To save or not the losses in the class' attributes
+        :param save_losses: To save or not the losses in the class attributes
         :type save_losses: bool
         """
 
@@ -510,7 +510,7 @@ class PINN:
 
     def save(self, directory_path):
         """
-        It saves the training losses, the normalizers' attributes and the neural network's weights in the given
+        It saves the training losses, the normalizers' attributes and the neural network weights in the given
         directory (creating it if necessary).
 
         :param directory_path: Directory path
@@ -560,7 +560,7 @@ class PINN:
 
     def save_weights(self, file_path):
         """
-        It saves the neural network's weights and biases in a H5 file.
+        It saves the neural network weights and biases in a H5 file.
 
         :param file_path: File path
         :type file_path: str
@@ -570,7 +570,7 @@ class PINN:
 
     def load(self, directory_path):
         """
-        It loads the training losses, the normalizers' attributes and the neural network's weights in the given
+        It loads the training losses, the normalizers' attributes and the neural network weights in the given
         directory.
 
         :param directory_path: Directory path
@@ -614,7 +614,7 @@ class PINN:
 
     def load_weights(self, file_path):
         """
-        It loads the neural network's weights and biases from the given H5 file.
+        It loads the neural network weights and biases from the given H5 file.
 
         :param file_path: File path
         :type file_path: str
@@ -624,9 +624,9 @@ class PINN:
 
     def get_weights(self):
         """
-        Returns the neural network's weights and biases in a list.
+        Returns the neural network weights and biases in a list.
 
-        :returns: Neural network's weights and biases
+        :returns: Neural network weights and biases
         :rtype: list
         """
 
@@ -641,9 +641,9 @@ class PINN:
         The one sided ODE or PDE expression for the neural network physics informing. This is the function the user must
         overwrite for each system.
 
-        :param tf_X: Neural network's inputs
+        :param tf_X: Neural network inputs
         :type tf_X: tensorflow.Tensor
-        :param tf_NN: Neural network's outputs
+        :param tf_NN: Neural network outputs
         :type tf_X: tensorflow.Tensor
         :param decomposed_NN: A list with each output as a vector
         :type decomposed_NN: list
@@ -662,9 +662,9 @@ class OneTankPINN(PINN):
     def __init__(self, sys_params, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
         """
-        It initializes some PINN's parameters regarding to the network's structure mainly.
+        It initializes some PINN parameters regarding to the network structure mainly.
 
-        :param sys_params: System's parameters. Structure:
+        :param sys_params: System parameters. Structure:
             {
                 'g': g,  # [cm/s^2]
                 'a': a,  # [cm^2]
@@ -676,10 +676,10 @@ class OneTankPINN(PINN):
         :type hidden_layers: int
         :param units_per_layer: Number of neurons in each hidden layer
         :type units_per_layer: int
-        :param X_normalizer: Object responsible for the neural network's input normalization
+        :param X_normalizer: Object responsible for the neural network input normalization
             (default is None)
         :type X_normalizer: util.normalizer.Normalizer
-        :param Y_normalizer: Object responsible for the neural network's output denormalization
+        :param Y_normalizer: Object responsible for the neural network output denormalization
             (default is None)
         :type Y_normalizer: util.normalizer.Normalizer
         :param learning_rate: Learning rate
@@ -702,9 +702,9 @@ class OneTankPINN(PINN):
         The one sided ODE expression for the one tank system.
         ODE: dh_dt = (k/A)*v - (a/A)*sqrt(2*g*h)
 
-        :param tf_X: Neural network's inputs
+        :param tf_X: Neural network inputs
         :type tf_X: tensorflow.Tensor
-        :param tf_NN: Neural network's outputs
+        :param tf_NN: Neural network outputs
         :type tf_X: tensorflow.Tensor
         :param decomposed_NN: A list with each output as a vector
         :type decomposed_NN: list
@@ -728,16 +728,16 @@ class VanDerPolPINN(PINN):
     def __init__(self, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
         """
-        It initializes some PINN's parameters regarding to the network's structure mainly.
+        It initializes some PINN parameters regarding to the network structure mainly.
 
         :param hidden_layers: Number of hidden layers
         :type hidden_layers: int
         :param units_per_layer: Number of neurons in each hidden layer
         :type units_per_layer: int
-        :param X_normalizer: Object responsible for the neural network's input normalization
+        :param X_normalizer: Object responsible for the neural network input normalization
             (default is None)
         :type X_normalizer: util.normalizer.Normalizer
-        :param Y_normalizer: Object responsible for the neural network's output denormalization
+        :param Y_normalizer: Object responsible for the neural network output denormalization
             (default is None)
         :type Y_normalizer: util.normalizer.Normalizer
         :param learning_rate: Learning rate
@@ -750,7 +750,7 @@ class VanDerPolPINN(PINN):
 
         super().__init__(4, 2, hidden_layers, units_per_layer, X_normalizer, Y_normalizer, learning_rate, random_seed)
 
-        # System's parameters for matrix form
+        # System parameters for matrix form
         self.A = self.tensor([[1, 1],
                               [-1, 0]])
         self.b = self.tensor([[1, 0]])
@@ -767,9 +767,9 @@ class VanDerPolPINN(PINN):
 
         In matrix form: dX_dt = X*A + (u - x2^2 * x1)*b
 
-        :param tf_X: Neural network's inputs
+        :param tf_X: Neural network inputs
         :type tf_X: tensorflow.Tensor
-        :param tf_NN: Neural network's outputs
+        :param tf_NN: Neural network outputs
         :type tf_X: tensorflow.Tensor
         :param decomposed_NN: A list with each output as a vector
         :type decomposed_NN: list
@@ -797,9 +797,9 @@ class FourTanksPINN(PINN):
     def __init__(self, sys_params, hidden_layers, units_per_layer,
                  X_normalizer=None, Y_normalizer=None, learning_rate=0.001, random_seed=None):
         """
-        It initializes some PINN's parameters regarding to the network's structure mainly.
+        It initializes some PINN parameters regarding to the network structure mainly.
 
-        :param sys_params: System's parameters. Structure:
+        :param sys_params: System parameters. Structure:
             {
                 'g': g,            # [cm/s^2]
                 'a1': a1,          # [cm^2]
@@ -820,10 +820,10 @@ class FourTanksPINN(PINN):
         :type hidden_layers: int
         :param units_per_layer: Number of neurons in each hidden layer
         :type units_per_layer: int
-        :param X_normalizer: Object responsible for the neural network's input normalization
+        :param X_normalizer: Object responsible for the neural network input normalization
             (default is None)
         :type X_normalizer: util.normalizer.Normalizer
-        :param Y_normalizer: Object responsible for the neural network's output denormalization
+        :param Y_normalizer: Object responsible for the neural network output denormalization
             (default is None)
         :type Y_normalizer: util.normalizer.Normalizer
         :param learning_rate: Learning rate
@@ -869,9 +869,9 @@ class FourTanksPINN(PINN):
 
         In matrix form: B[0]*dot_H + sqrt(2*g)*B[1]*sqrt(H) - B[2]*V
 
-        :param tf_X: Neural network's inputs
+        :param tf_X: Neural network inputs
         :type tf_X: tensorflow.Tensor
-        :param tf_NN: Neural network's outputs
+        :param tf_NN: Neural network outputs
         :type tf_X: tensorflow.Tensor
         :param decomposed_NN: A list with each output as a vector
         :type decomposed_NN: list

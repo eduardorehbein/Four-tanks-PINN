@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-from util.systems.four_tanks_system import CasadiSimulator
+from util.systems import FourTanksSystem
 from util.plot import Plotter
 
 
@@ -26,7 +26,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               }
 
 # Instance simulator
-simulator = CasadiSimulator(sys_params)
+simulator = FourTanksSystem(sys_params)
 test_T = 10.0
 runge_kutta = simulator.get_runge_kutta(test_T)
 

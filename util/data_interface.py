@@ -41,13 +41,13 @@ class TrainDataGenerator:
         """
         It sets constraints for the generation of control inputs and initial conditions.
 
-        :param np_lowest_u: Lowest control inputs' values
+        :param np_lowest_u: Lowest control input values
         :type np_lowest_u: numpy.ndarray
-        :param np_highest_u: Highest control inputs' values
+        :param np_highest_u: Highest control input values
         :type np_highest_u: numpy.ndarray
-        :param np_lowest_y: Lowest initial conditions' values
+        :param np_lowest_y: Lowest initial condition values
         :type np_lowest_y: numpy.ndarray
-        :param np_highest_y: Highest initial conditions' values
+        :param np_highest_y: Highest initial condition values
         :type np_highest_y: numpy.ndarray
         """
 
@@ -59,7 +59,8 @@ class TrainDataGenerator:
 
     def get_data(self, scenarios, collocation_points, T, random_seed=30):
         """
-        It returns the whole set of train data. The set is generated using the given parameters and the preset constraints.
+        It returns the whole set of train data. The set is generated using the given parameters and the preset
+        constraints.
 
         :param scenarios: Number of different (u, y0) pairs to be generated
         :type scenarios: int
