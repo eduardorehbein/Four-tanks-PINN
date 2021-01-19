@@ -61,9 +61,9 @@ class Plotter:
         :param title: Plot title
         :type title: str
         :param x_label: X axis label
-        :type x_label: str
+        :type x_label: str or None
         :param y_label: Y axis label
-        :type y_label: str
+        :type y_label: str or None
         :param x_scale: X axis scale. Examples: 'linear', 'log10', etc
             (default is 'linear')
         :type x_scale: str

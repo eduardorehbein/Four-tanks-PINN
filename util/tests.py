@@ -7,8 +7,36 @@ from util.data_interface import JsonDAO
 
 
 class StructTester:
+    """Neural network structural test class"""
+
     def __init__(self, PINNModelClass=None, layers_to_test=None, neurons_per_layer_to_test=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
+        """
+        It sets all the test parameters.
+
+        :param PINNModelClass: The class corresponding to the PINN model you want to test
+            (default is None)
+        :type PINNModelClass: util.pinn.PINN class reference
+        :param layers_to_test: Layer setups to test
+            (default is None)
+        :type layers_to_test: tuple or list
+        :param neurons_per_layer_to_test: Neuron setups to test
+            (default is None)
+        :type neurons_per_layer_to_test: tuple or list
+        :param adam_epochs: Training Adam epochs
+            (default is 500)
+        :type adam_epochs: int
+        :param max_lbfgs_iterations: Training L-BFGS iterations
+            (default is 2000)
+        :type max_lbfgs_iterations: int
+        :param sys_params: PINN model system parameters
+            (default is None)
+        :type sys_params: dict
+        :param random_seed: Random seed
+            (default is None)
+        :type random_seed: int
+        """
+
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -23,6 +51,18 @@ class StructTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        """
+        It trains a grid of layer and neurons setups based on the class attributes. After training these models with
+        data container's training data, the function validates them using data container's validation data and saves all
+        results if the results subdirectory parameter is not None, otherwise it just shows them.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.StructTestContainer
+        :param results_subdirectory: Directory under results folder where the results must be saved
+            (default is None)
+        :type results_subdirectory: str
+        """
+
         # Start time
         start_time = datetime.now()
 
@@ -60,9 +100,9 @@ class StructTester:
         # Ending time
         data_container.test_duration = str(datetime.now() - start_time)
 
-        # Plot results
+        # Plotting results
         plotter = Plotter()
-        plotter.text_page('Neural network\'s structural test:' +
+        plotter.text_page('Neural network structural test:' +
                           '\nTest duration -> ' + data_container.test_duration +
                           '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
@@ -75,7 +115,7 @@ class StructTester:
                           '\nPlot scale -> Log 10')
         self.plot_graphs(data_container, plotter)
 
-        # Save or show results
+        # Saving or showing results
         if results_subdirectory is not None:
             now = datetime.now()
             directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
@@ -90,6 +130,15 @@ class StructTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
+        """
+        It plots a heatmap of final losses for each type of loss saved in the given data container.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.StructTestContainer
+        :param plotter: Plotter
+        :type plotter: util.plot.Plotter
+        """
+
         # heatmap_colors = 'Reds'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.layers_to_test,
                                                                                self.neurons_per_layer_to_test)),
@@ -123,8 +172,39 @@ class StructTester:
 
 
 class TTester:
+    """Neural network period test class"""
+
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, Ts=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
+        """
+        It sets all the test parameters.
+
+        :param PINNModelClass: The class corresponding to the PINN model you want to test
+            (default is None)
+        :type PINNModelClass: util.pinn.PINN class reference
+        :param hidden_layers: Number of hidden layers in the neural network
+            (default is None)
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons per layer in the neural network
+            (default is None)
+        :type units_per_layer: int
+        :param Ts: Periods to test
+            (default is None)
+        :type Ts: tuple or list
+        :param adam_epochs: Training Adam epochs
+            (default is 500)
+        :type adam_epochs: int
+        :param max_lbfgs_iterations: Training L-BFGS iterations
+            (default is 2000)
+        :type max_lbfgs_iterations: int
+        :param sys_params: PINN model system parameters
+            (default is None)
+        :type sys_params: dict
+        :param random_seed: Random seed
+            (default is None)
+        :type random_seed: int
+        """
+
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -141,6 +221,19 @@ class TTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        """
+        It trains a model for each period T based on the class attributes. After training these models with data
+        container's training data, the function validates them using data container's validation data, tests them
+        using data container's test data and saves all results if the results subdirectory parameter is not None,
+        otherwise it just shows them.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.TTestContainer
+        :param results_subdirectory: Directory under results folder where the results must be saved
+            (default is None)
+        :type results_subdirectory: str
+        """
+
         # Start time
         start_time = datetime.now()
         for train_T in self.train_Ts:
@@ -183,18 +276,18 @@ class TTester:
             data_container.set_train_total_loss(train_T, model.train_total_loss)
             data_container.set_val_loss(train_T, model.validation_loss)
 
-        # Plot front page and losses
+        # Plotting of front page and losses
         nu = data_container.get_train_u_X(self.train_Ts[0]).shape[0]
         nf = data_container.get_train_f_X(self.train_Ts[0]).shape[0]
         val_points = data_container.np_val_X.shape[0]
         test_points = data_container.np_test_X.shape[0]
 
         plotter = Plotter()
-        plotter.text_page('Neural network\'s T test:' +
+        plotter.text_page('Neural network T test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nMax L-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          '\nNeural network structure -> ' + str(self.hidden_layers) +
                           ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
                           '\nTrain Nu -> ' + str(nu) +
                           '\nTrain Nf -> ' + str(nf) +
@@ -204,7 +297,7 @@ class TTester:
                           '\nTest T -> ' + str(data_container.test_T) + ' s')
         self.plot_graphs(data_container, plotter)
 
-        # Save or show results
+        # Saving or showing results
         if results_subdirectory is not None:
             now = datetime.now()
             directory_path = 'results/' + results_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-nn-T-test'
@@ -218,6 +311,15 @@ class TTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
+        """
+        It plots each type of loss and the test results saved in the given data container.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.TTestContainer
+        :param plotter: Plotter
+        :type plotter: util.plot.Plotter
+        """
+
         np_train_Ts = np.array(self.train_Ts)
         # np_c_base = np.array([0, 153, 51]) / 255.0
         plotter.plot(x_axis=np_train_Ts,
@@ -249,7 +351,7 @@ class TTester:
                      y_scale='log',
                      line_styles='o-')
 
-        # Plot test results
+        # Plotting of test results
         for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
                                         data_container.get_titles(self.train_Ts),
                                         np_train_Ts):
@@ -329,12 +431,12 @@ class NfNuTester:
 
         # Plot results
         plotter = Plotter()
-        plotter.text_page('Neural network\'s Nf/Nu test:' +
+        plotter.text_page('Neural network Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nRandom seed -> ' + str(data_container.random_seed) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          '\nNeural network structure -> ' + str(self.hidden_layers) +
                           ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
                           '\nTrain T -> ' + str(data_container.train_T) + ' s' +
                           '\nValidation points -> ' + str(data_container.np_val_X.shape[0]) +
@@ -445,7 +547,7 @@ class ExhaustionTester:
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
                           '\nAdam epochs -> ' + str(self.adam_epochs) +
                           '\nL-BFGS iterations -> ' + str(self.max_lbfgs_iterations) +
-                          '\nNeural network\'s structure -> ' + str(self.hidden_layers) +
+                          '\nNeural network structure -> ' + str(self.hidden_layers) +
                           ' hidden layers of ' + str(self.units_per_layer) + ' neurons' +
                           '\nTrain T -> ' + str(data_container.train_T) + ' s' +
                           '\nTrain Nu -> ' + str(data_container.np_train_u_X.shape[0]) +
