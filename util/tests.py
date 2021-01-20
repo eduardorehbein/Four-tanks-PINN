@@ -237,7 +237,7 @@ class TTester:
         # Start time
         start_time = datetime.now()
         for train_T in self.train_Ts:
-            # Train data
+            # Training data
             np_train_u_X = data_container.get_train_u_X(train_T)
             np_train_u_Y = data_container.get_train_u_Y(train_T)
             np_train_f_X = data_container.get_train_f_X(train_T)
@@ -249,7 +249,7 @@ class TTester:
             X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
             Y_normalizer.parametrize(np_train_u_Y)
 
-            # Instance PINN
+            # PINN Instance
             if self.sys_params is None:
                 model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
                                             random_seed=self.random_seed)
@@ -257,14 +257,14 @@ class TTester:
                 model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
                                             X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
-            # Train
+            # Training
             print('Model training with T of ' + str(train_T) + ' seconds:')
             model.train(np_train_u_X, np_train_u_Y, np_train_f_X, train_T,
                         data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
                         data_container.np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
-            # Test
+            # Testing
             nn = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
 
             data_container.set_nn(train_T, nn)
@@ -373,8 +373,42 @@ class TTester:
 
 
 class NfNuTester:
+    """Nf/Nu proportion test class"""
+
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None, nfs_to_test=None, nus_to_test=None,
                  adam_epochs=500, max_lbfgs_iterations=2000, sys_params=None, random_seed=None):
+        """
+        It sets all the test parameters.
+
+        :param PINNModelClass: The class corresponding to the PINN model you want to test
+            (default is None)
+        :type PINNModelClass: util.pinn.PINN class reference
+        :param hidden_layers: Number of hidden layers in the neural network
+            (default is None)
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons per layer in the neural network
+            (default is None)
+        :type units_per_layer: int
+        :param nfs_to_test: Nfs to test
+            (default is None)
+        :type nfs_to_test: tuple or list
+        :param nus_to_test: Nus to test
+            (default is None)
+        :type nus_to_test: tuple or list
+        :param adam_epochs: Training Adam epochs
+            (default is 500)
+        :type adam_epochs: int
+        :param max_lbfgs_iterations: Training L-BFGS iterations
+            (default is 2000)
+        :type max_lbfgs_iterations: int
+        :param sys_params: PINN model system parameters
+            (default is None)
+        :type sys_params: dict
+        :param random_seed: Random seed
+            (default is None)
+        :type random_seed: int
+        """
+
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -392,11 +426,23 @@ class NfNuTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_subdirectory=None):
+        """
+        It trains a grid of models varying Nf and Nu based on the class attributes. After training these models with
+        data container's training data, the function validates them using data container's validation data and saves all
+        results if the results subdirectory parameter is not None, otherwise it just shows them.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.NfNuTestContainer
+        :param results_subdirectory: Directory under results folder where the results must be saved
+            (default is None)
+        :type results_subdirectory: str
+        """
+
         # Start time
         start_time = datetime.now()
         for nf in self.nfs_to_test:
             for nu in self.nus_to_test:
-                # Train data
+                # Training data
                 np_train_u_X = data_container.get_train_u_X(nf, nu)
                 np_train_u_Y = data_container.get_train_u_Y(nf, nu)
                 np_train_f_X = data_container.get_train_f_X(nf, nu)
@@ -408,7 +454,7 @@ class NfNuTester:
                 X_normalizer.parametrize(np.concatenate([np_train_u_X, np_train_f_X]))
                 Y_normalizer.parametrize(np_train_u_Y)
 
-                # Instance PINN
+                # PINN Instance
                 if self.sys_params is None:
                     model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
                                                 random_seed=self.random_seed)
@@ -416,20 +462,20 @@ class NfNuTester:
                     model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
                                                 X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
-                # Train
+                # Training
                 print('Model training with Nu = ' + str(nu) + ' and Nf = ' + str(nf) + ':')
                 model.train(np_train_u_X, np_train_u_Y, np_train_f_X, data_container.train_T,
                             data_container.np_val_X, data_container.np_val_ic, data_container.val_T,
                             data_container.np_val_Y,
                             adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
-                # Save plot data
+                # Saving plot data
                 data_container.set_train_u_loss(nf, nu, model.train_u_loss)
                 data_container.set_train_f_loss(nf, nu, model.train_f_loss)
                 data_container.set_train_total_loss(nf, nu, model.train_total_loss)
                 data_container.set_val_loss(nf, nu, model.validation_loss)
 
-        # Plot results
+        # Plotting results
         plotter = Plotter()
         plotter.text_page('Neural network Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
@@ -444,7 +490,7 @@ class NfNuTester:
                           '\nPlot scale -> Log 10')
         self.plot_graphs(data_container, plotter)
 
-        # Save or show results
+        # Saving or showing results
         if results_subdirectory is not None:
             now = datetime.now()
             directory_path = 'results/' + results_subdirectory + '/' + now.strftime(
@@ -459,6 +505,15 @@ class NfNuTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
+        """
+        It plots a heatmap of final losses for each type of loss saved in the given data container.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.NfNuTestContainer
+        :param plotter: Plotter
+        :type plotter: util.plot.Plotter
+        """
+
         # heatmap_colors = 'Oranges'
         plotter.plot_heatmap(data=np.log10(data_container.get_final_val_losses(self.nfs_to_test,
                                                                                self.nus_to_test)),
@@ -491,8 +546,36 @@ class NfNuTester:
 
 
 class ExhaustionTester:
+    """Neural network exhaustion test class"""
+
     def __init__(self, PINNModelClass=None, hidden_layers=None, units_per_layer=None,
                  adam_epochs=500, max_lbfgs_iterations=10000, sys_params=None, random_seed=None):
+        """
+        It sets all the test parameters.
+
+        :param PINNModelClass: The class corresponding to the PINN model you want to test
+            (default is None)
+        :type PINNModelClass: util.pinn.PINN class reference
+        :param hidden_layers: Number of hidden layers in the neural network
+            (default is None)
+        :type hidden_layers: int
+        :param units_per_layer: Number of neurons per layer in the neural network
+            (default is None)
+        :type units_per_layer: int
+        :param adam_epochs: Training Adam epochs
+            (default is 500)
+        :type adam_epochs: int
+        :param max_lbfgs_iterations: Training L-BFGS iterations
+            (default is 2000)
+        :type max_lbfgs_iterations: int
+        :param sys_params: PINN model system parameters
+            (default is None)
+        :type sys_params: dict
+        :param random_seed: Random seed
+            (default is None)
+        :type random_seed: int
+        """
+
         self.PINNModelClass = PINNModelClass
         self.sys_params = sys_params
 
@@ -507,6 +590,20 @@ class ExhaustionTester:
         self.dao = JsonDAO()
 
     def test(self, data_container, results_and_models_subdirectory=None):
+        """
+        It trains a model based on the class attributes. After training it with data container's training data, the
+        function validates the model using data container's validation data, tests using data container's test data and
+        saves all results and the model itself if the results and models subdirectory parameter is not None, otherwise
+        it just shows the results.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.ExhaustionTestContainer
+        :param results_and_models_subdirectory: Directory under results and models folders where the results must be
+            saved
+            (default is None)
+        :type results_and_models_subdirectory: str
+        """
+
         # Normalizers
         X_normalizer = Normalizer()
         Y_normalizer = Normalizer()
@@ -517,7 +614,7 @@ class ExhaustionTester:
         # Start time
         start_time = datetime.now()
 
-        # Instance PINN
+        # PINN Instance
         if self.sys_params is None:
             model = self.PINNModelClass(self.hidden_layers, self.units_per_layer, X_normalizer, Y_normalizer,
                                         random_seed=self.random_seed)
@@ -525,19 +622,19 @@ class ExhaustionTester:
             model = self.PINNModelClass(self.sys_params, self.hidden_layers, self.units_per_layer,
                                         X_normalizer, Y_normalizer, random_seed=self.random_seed)
 
-        # Train
+        # Training
         model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
                     data_container.train_T,
                     data_container.np_val_X, data_container.np_val_ic, data_container.val_T, data_container.np_val_Y,
                     self.adam_epochs, self.max_lbfgs_iterations)
 
-        # Load train results into the container
+        # Loading training results into the container
         data_container.val_loss = model.validation_loss
         data_container.train_total_loss = model.train_total_loss
         data_container.train_u_loss = model.train_u_loss
         data_container.train_f_loss = model.train_f_loss
 
-        # Test
+        # Testing
         model_prediction = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
         data_container.np_test_NN = model_prediction
 
@@ -559,9 +656,9 @@ class ExhaustionTester:
                           vertical_position=0.25)
         self.plot_graphs(data_container, plotter)
 
-        # Save model and results or show results
+        # Saving model and results or showing results
         if results_and_models_subdirectory is not None:
-            # Save results
+            # Results
             now = datetime.now()
             directory_path = 'results/' + results_and_models_subdirectory + '/' + now.strftime(
                 '%Y-%m-%d-%H-%M-%S') + '-exhaustion-test'
@@ -572,7 +669,7 @@ class ExhaustionTester:
             plotter.save_pdf(directory_path + '/results.pdf')
             self.dao.save(directory_path + '/data.json', data_container.get_results_dict())
 
-            # Save model
+            # Model
             model_dir = 'models/' + results_and_models_subdirectory + '/' + now.strftime('%Y-%m-%d-%H-%M-%S') + '-' + \
                         str(data_container.train_T) + 's-' + str(self.hidden_layers) + 'l-' + \
                         str(self.units_per_layer) + 'n-exhausted-model'
@@ -582,7 +679,16 @@ class ExhaustionTester:
             plotter.show()
 
     def plot_graphs(self, data_container, plotter):
-        # Plot train and validation losses
+        """
+        It plots each type of loss and the test results saved in the given data container.
+
+        :param data_container: Data container
+        :type data_container: util.data_container.ExhaustionTestContainer
+        :param plotter: Plotter
+        :type plotter: util.plot.Plotter
+        """
+
+        # Plotting training and validation losses
         loss_len = len(data_container.train_total_loss)
         loss_x_axis = np.linspace(1, loss_len, loss_len)
         # np_c_base = np.array([0, 255, 204]) / 255.0
@@ -601,7 +707,7 @@ class ExhaustionTester:
                      y_label=None,
                      y_scale='log')
 
-        # Plot test results
+        # Plotting test results
         np_test_U = data_container.get_np_test_U()
         plotter.plot(x_axis=data_container.np_test_t,
                      y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
