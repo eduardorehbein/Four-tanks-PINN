@@ -2,6 +2,8 @@ from util.data_container import ExhaustionTestContainer
 from util.tests import ExhaustionTester
 from util.plot import Plotter
 
+
+# Plotting of loaded data
 tester = ExhaustionTester()
 
 dictionary = tester.dao.load('results/van_der_pol/2020-10-25-04-19-43-exhaustion-test/data.json')

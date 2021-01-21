@@ -81,7 +81,7 @@ class Plotter:
         :type draw_styles: str or list
         :param np_c_base: RGB color base
             (default is np.array([200, 200, 200])/255)
-        :type np_c_base: numpy.ndarray
+        :type np_c_base: numpy.ndarray or None
         """
 
         if len(y_axis_list) != len(labels):
@@ -154,7 +154,7 @@ class Plotter:
         :type draw_styles: str or list
         :param np_c_base: RGB color base
             (default is np.array([200, 200, 200])/255)
-        :type np_c_base: numpy.ndarray
+        :type np_c_base: numpy.ndarray or None
         """
 
         # Figure and graphs
@@ -274,14 +274,14 @@ class Plotter:
         if not ax:
             ax = plt.gca()
 
-        # Plotting the heatmap
+        # Heatmap plot
         im = ax.imshow(data, **kwargs)
 
         plt.title(title)
         plt.xlabel(x_label)
         plt.ylabel(y_label)
 
-        # Creating colorbar
+        # Colorbar
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
 

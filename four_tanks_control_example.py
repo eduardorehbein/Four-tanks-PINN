@@ -27,7 +27,7 @@ prediction_horizon = 5*T
 sim_time = 1200.0
 outputs_to_control = [0, 1]
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -43,16 +43,16 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Instance PINN
+# PINN Instance
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=8,
                       units_per_layer=20)
 
-# Load model
+# Loading model
 model.load('models/four_tanks/2020-11-06-04-46-56-10dot0s-8l-20n-exhausted-model')
 model.trained_T = 10.0
 
-# Instance simulator
+# System simulator
 simulator = FourTanksSystem(sys_params)
 
 # Reference adjustment
@@ -64,12 +64,12 @@ for i in range(1, np_ref.shape[0]):
 # Control
 controller = PINNController(model, simulator)
 
-# Control using PINN
+# Control example using PINN
 np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T,
                                                               outputs_to_control)
 
-# Control using Runge-Kutta
+# Control example using Runge-Kutta
 np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
                                                                           np_min_v, np_max_v, np_min_h, np_max_h,
                                                                           sim_time, prediction_horizon, T,

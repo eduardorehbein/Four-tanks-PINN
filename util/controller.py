@@ -82,7 +82,7 @@ class PINNController:
         # Number of optimization points
         n = int(prediction_horizon / T)
 
-        # Optimizer's variables
+        # Optimizer variables
         cs_u = self.optimizer.variable(n, np_min_u.shape[1])
         cs_y = self.optimizer.variable(n, np_y0.shape[1])
 

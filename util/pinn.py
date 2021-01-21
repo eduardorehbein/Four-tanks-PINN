@@ -165,11 +165,11 @@ class PINN:
         :rtype: numpy.ndarray
         """
 
-        # Checking trained T
+        # Trained T checking
         if self.trained_T is None:
             raise Exception('The parameter "trained_T" must be set before a long signal prediction.')
 
-        # Detecting different simulations
+        # Detection of different simulations
         simulation_indexes = np.where(np_X[:, time_column] == 0.0)[0].tolist()
         simulation_indexes.append(np_X.shape[0])
 
@@ -193,10 +193,10 @@ class PINN:
                     previous_t = np_Z[i, time_column]
                     i = i + 1
 
-            # Rewriting time values to fit them in T
+            # Rewriting of time values to fit them in T
             np_Z[:, time_column] = np_Z[:, time_column] % min_T
 
-            # Calculating initial conditions
+            # Initial conditions calculus
             previous_t = np_Z[0, time_column]
             np_y0 = np.reshape(np_ic[k, :], (1, np_ic[k, :].size))
             new_columns = [np_y0]
@@ -210,7 +210,7 @@ class PINN:
                 previous_t = row[time_column]
                 new_columns.append(np_y0)
 
-            # Merging time/control inputs and initial conditions
+            # Merging of time/control inputs and initial conditions
             np_new_columns = np.concatenate(new_columns)
             if len(np_new_columns.shape) == 1:
                 np_new_columns = np.reshape(np_new_columns, (np_new_columns.shape[0], 1))
@@ -368,7 +368,7 @@ class PINN:
                 self.learning_rate = self.learning_rate / 2
                 self.set_opt_params(learning_rate=self.learning_rate, beta_1=0.9, beta_2=0.999, epsilon=1e-07)
 
-            # Network's gradients
+            # Network gradients
             with tf.GradientTape(persistent=True) as tape:
                 tf_total_loss, tf_u_loss, tf_f_loss = self.get_losses(tf_train_u_X, tf_train_u_Y, tf_train_f_X,
                                                                       u_loss_weight, f_loss_weight)
@@ -400,10 +400,10 @@ class PINN:
         # Epoch adjustment
         epoch = epoch - 1
 
-        # Setting best weights
+        # Updating the neural network with the best weights
         self.model.set_weights(best_weights)
 
-        # Printing final validation loss
+        # Final validation loss printing
         print('Validation loss at the end of Adam -> Epoch:', str(epoch), '-',
               'validation loss:', tf_best_val_loss.numpy())
 
@@ -453,7 +453,7 @@ class PINN:
         with tf.GradientTape(watch_accessed_variables=False, persistent=True) as f_tape:
             f_tape.watch(tf_X)
 
-            # Calculus of the neural network's output
+            # Neural network output calculus
             tf_NN = self.Y_normalizer.denormalize(self.model(tf_X))
 
             # Output decomposition

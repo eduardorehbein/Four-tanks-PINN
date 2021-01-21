@@ -4,11 +4,11 @@ import pandas as pd
 from util.pinn import FourTanksPINN
 from util.plot import Plotter
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -24,16 +24,16 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Instance PINN
+# PINN Instance
 model = FourTanksPINN(sys_params=sys_params,
                       hidden_layers=5,
                       units_per_layer=20)
 
-# Load model
+# Loading model
 model.load('models/four_tanks/2020-10-27-18-39-55-10dot0s-5l-20n-exhausted-model')
 model.trained_T = 10.0
 
-# Test data
+# Loading test data
 test_df = pd.read_csv('data/four_tanks/rand_seed_10_sim_time_350.0s_350_collocation_points.csv')
 
 np_test_t = test_df['t'].to_numpy()
@@ -46,7 +46,7 @@ np_test_ic = np.reshape(np_test_Y[0, :], (1, np_test_Y.shape[1]))
 test_T = 10.0
 np_test_NN = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
-# Plot test results
+# Plot
 plotter = Plotter()
 
 markevery = int(np_test_t.size / (np_test_t[-1] / test_T))

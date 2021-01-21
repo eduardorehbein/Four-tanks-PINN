@@ -7,11 +7,11 @@ from util.data_container import ExhaustionTestContainer
 from util.data_interface import TrainDataGenerator
 
 
-# Neural networks' parameters
+# Neural network parameters
 hidden_layers = 8
 units_per_layer = 20
 
-# Train data parameters
+# Training data parameters
 scenarios = 1000
 collocation_points = 100
 
@@ -20,7 +20,7 @@ np_highest_v = np.array([3.38, 3.38])
 np_lowest_h = np.array([0.2, 0.4, 0.06, 0.1])
 np_highest_h = np.array([13.0, 20.0, 3.3, 5.0])
 
-# Train parameters
+# Training parameters
 adam_epochs = 500
 max_lbfgs_iterations = 30000
 train_T = 10.0
@@ -32,10 +32,10 @@ test_T = val_T
 # Other parameters
 random_seed = 30
 
-# Directory under 'results' and 'models' where the plots and models are going to be saved
+# Directory under 'results' and 'models' where the plots and models will be saved
 results_and_models_subdirectory = 'four_tanks'
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -43,7 +43,7 @@ tf.config.threading.set_intra_op_parallelism_threads(8)
 np.random.seed(random_seed)
 tf.random.set_seed(random_seed)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -59,10 +59,10 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Load data into a container
+# Loading data into a container
 data_container = ExhaustionTestContainer()
 
-# Train data
+# Training data
 train_data_gen = TrainDataGenerator(np_lowest_u=np_lowest_v,
                                     np_highest_u=np_highest_v,
                                     np_lowest_y=np_lowest_h,

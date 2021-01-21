@@ -76,14 +76,14 @@ class StructTester:
         # Structural test
         for layers in self.layers_to_test:
             for neurons in self.neurons_per_layer_to_test:
-                # Instance PINN
+                # PINN Instance
                 if self.sys_params is None:
                     model = self.PINNModelClass(layers, neurons, X_normalizer, Y_normalizer, random_seed=None)
                 else:
                     model = self.PINNModelClass(self.sys_params, layers, neurons, X_normalizer, Y_normalizer,
                                                 random_seed=None)
 
-                # Train
+                # Model training
                 print('Model training with ' + str(layers) + ' hidden layers of ' + str(neurons) + ' neurons:')
                 model.train(data_container.np_train_u_X, data_container.np_train_u_Y, data_container.np_train_f_X,
                             data_container.train_T,
@@ -91,7 +91,7 @@ class StructTester:
                             data_container.np_val_Y,
                             self.adam_epochs, self.max_lbfgs_iterations)
 
-                # Save plot data
+                # Loading plot data into a container
                 data_container.set_train_u_loss(layers, neurons, model.train_u_loss)
                 data_container.set_train_f_loss(layers, neurons, model.train_f_loss)
                 data_container.set_train_total_loss(layers, neurons, model.train_total_loss)
@@ -100,7 +100,7 @@ class StructTester:
         # Ending time
         data_container.test_duration = str(datetime.now() - start_time)
 
-        # Plotting results
+        # Results plot
         plotter = Plotter()
         plotter.text_page('Neural network structural test:' +
                           '\nTest duration -> ' + data_container.test_duration +
@@ -264,7 +264,7 @@ class TTester:
                         data_container.np_val_Y,
                         adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
-            # Testing
+            # Test
             nn = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
 
             data_container.set_nn(train_T, nn)
@@ -276,7 +276,7 @@ class TTester:
             data_container.set_train_total_loss(train_T, model.train_total_loss)
             data_container.set_val_loss(train_T, model.validation_loss)
 
-        # Plotting of front page and losses
+        # Plot
         nu = data_container.get_train_u_X(self.train_Ts[0]).shape[0]
         nf = data_container.get_train_f_X(self.train_Ts[0]).shape[0]
         val_points = data_container.np_val_X.shape[0]
@@ -351,7 +351,7 @@ class TTester:
                      y_scale='log',
                      line_styles='o-')
 
-        # Plotting of test results
+        # Test results plot
         for nn, title, current_T in zip(data_container.get_nns(self.train_Ts),
                                         data_container.get_titles(self.train_Ts),
                                         np_train_Ts):
@@ -469,13 +469,13 @@ class NfNuTester:
                             data_container.np_val_Y,
                             adam_epochs=self.adam_epochs, max_lbfgs_iterations=self.max_lbfgs_iterations)
 
-                # Saving plot data
+                # Loading plot data into a container
                 data_container.set_train_u_loss(nf, nu, model.train_u_loss)
                 data_container.set_train_f_loss(nf, nu, model.train_f_loss)
                 data_container.set_train_total_loss(nf, nu, model.train_total_loss)
                 data_container.set_val_loss(nf, nu, model.validation_loss)
 
-        # Plotting results
+        # Results plot
         plotter = Plotter()
         plotter.text_page('Neural network Nf/Nu test:' +
                           '\nTest duration -> ' + str(datetime.now() - start_time) +
@@ -634,7 +634,7 @@ class ExhaustionTester:
         data_container.train_u_loss = model.train_u_loss
         data_container.train_f_loss = model.train_f_loss
 
-        # Testing
+        # Test
         model_prediction = model.predict(data_container.np_test_X, data_container.np_test_ic, data_container.test_T)
         data_container.np_test_NN = model_prediction
 
@@ -688,7 +688,7 @@ class ExhaustionTester:
         :type plotter: util.plot.Plotter
         """
 
-        # Plotting training and validation losses
+        # Training and validation losses plot
         loss_len = len(data_container.train_total_loss)
         loss_x_axis = np.linspace(1, loss_len, loss_len)
         # np_c_base = np.array([0, 255, 204]) / 255.0
@@ -707,7 +707,7 @@ class ExhaustionTester:
                      y_label=None,
                      y_scale='log')
 
-        # Plotting test results
+        # Test results plot
         np_test_U = data_container.get_np_test_U()
         plotter.plot(x_axis=data_container.np_test_t,
                      y_axis_list=[np_test_U[:, i] for i in range(np_test_U.shape[1])],
