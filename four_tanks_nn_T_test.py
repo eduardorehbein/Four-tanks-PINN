@@ -31,10 +31,10 @@ test_T = val_T
 # Other parameters
 random_seed = 30
 
-# Directory under 'results' where the plots are going to be saved
+# Directory under 'results' where the plots will be saved
 results_subdirectory = 'four_tanks'
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
@@ -42,7 +42,7 @@ tf.config.threading.set_intra_op_parallelism_threads(8)
 np.random.seed(random_seed)
 tf.random.set_seed(random_seed)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -58,7 +58,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Load data into a container
+# Loading data into a container
 data_container = TTestContainer()
 
 # Validation data
@@ -77,14 +77,14 @@ data_container.np_test_Y = np_test_Y
 data_container.np_test_ic = np.reshape(np_test_Y[0], (1, np_test_Y.shape[1]))
 data_container.test_T = test_T
 
-# Train data generator
+# Training data generator
 train_data_gen = TrainDataGenerator(np_lowest_u=np_lowest_v,
                                     np_highest_u=np_highest_v,
                                     np_lowest_y=np_lowest_h,
                                     np_highest_y=np_highest_h)
 
 for train_T in train_Ts_to_test:
-    # Train data
+    # Training data
     np_train_u_X, np_train_u_Y, np_train_f_X = train_data_gen.get_data(scenarios, collocation_points, train_T)
     data_container.set_train_u_X(train_T, np_train_u_X)
     data_container.set_train_u_Y(train_T, np_train_u_Y)

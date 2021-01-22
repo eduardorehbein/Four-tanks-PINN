@@ -5,11 +5,11 @@ from util.systems import FourTanksSystem
 from util.plot import Plotter
 
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -25,7 +25,7 @@ sys_params = {'g': 981.0,  # [cm/s^2]
               'k2': 3.35,  # [cm^3/Vs]
               }
 
-# Instance simulator
+# Simulator instance
 simulator = FourTanksSystem(sys_params)
 test_T = 10.0
 runge_kutta = simulator.get_runge_kutta(test_T)
@@ -44,7 +44,7 @@ for np_t, np_v, np_y0 in zip(np_test_t[:-1], np_test_v[:-1, :], np_test_Y[:-1, :
     cs_rk = runge_kutta(u=np_v, y0=np_y0)['yf']
     np_rk = np.append(np_rk, cs_rk, axis=0)
 
-# Plot test results
+# Plot
 plotter = Plotter()
 
 markevery = int(np_test_t.size / (np_test_t[-1] / test_T))

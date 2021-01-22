@@ -2,6 +2,7 @@ import numpy as np
 from util.plot import Plotter
 
 
+# System parameters
 g = 981.0  # [cm/s^2]
 a1 = 0.071  # [cm^2]
 a2 = 0.057  # [cm^2]
@@ -16,14 +17,18 @@ alpha2 = 0.5  # [adm]
 k1 = 3.33  # [cm^3/Vs]
 k2 = 3.35  # [cm^3/Vs]
 
+# Control constraints
 lowest_v = 0.5
 highest_v = 3.38
 
+# Control vectors
 var_v = np.linspace(lowest_v, highest_v, 50)
 base_v = np.linspace(lowest_v, highest_v, 5)
 
+# Levels dictionary
 Hs = {'var_v1': dict(), 'var_v2': dict()}
 
+# Equilibrium for each constant v2 varying v1
 for v2 in base_v:
     h4 = (1 / (2 * g)) * (((1 - alpha1) * k1 * var_v) / a4) ** 2
     h3 = (1 / (2 * g)) * (((1 - alpha2) * k2 * v2) / a3) ** 2
@@ -32,6 +37,7 @@ for v2 in base_v:
 
     Hs['var_v1'][v2] = np.array([h1, h2, h3, h4])
 
+# Equilibrium for each constant v1 varying v2
 for v1 in base_v:
     h4 = (1 / (2 * g)) * (((1 - alpha1) * k1 * v1) / a4) ** 2
     h3 = (1 / (2 * g)) * (((1 - alpha2) * k2 * var_v) / a3) ** 2
@@ -40,9 +46,10 @@ for v1 in base_v:
 
     Hs['var_v2'][v1] = np.array([h1, h2, h3, h4])
 
+# Plot
 plotter = Plotter()
 
-# Plots with v2 constant
+# Constant v2
 plotter.plot(var_v,
              [Hs['var_v1'][v2][0] for v2 in Hs['var_v1'].keys()],
              ['$v_2$ = ' + str(v2) for v2 in Hs['var_v1'].keys()],
@@ -68,7 +75,7 @@ plotter.plot(var_v,
              '$v_1$',
              '$h_4$')
 
-# Plots with v1 constant
+# Constant v1
 plotter.plot(var_v,
              [Hs['var_v2'][v1][0] for v1 in Hs['var_v2'].keys()],
              ['$v_1$ = ' + str(v1) for v1 in Hs['var_v2'].keys()],
@@ -96,6 +103,7 @@ plotter.plot(var_v,
 
 plotter.show()
 
+# Single scenario analysis
 v1 = 3.38
 v2 = 3.38
 
