@@ -29,22 +29,22 @@ collocation_points_per_T = 10
 prediction_horizon = 5*T
 sim_time = 1000.0
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a': 0.071,  # [cm^2]
               'A': 28.0,  # [cm^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Instance PINN
+# PINN Instance
 model = OneTankPINN(sys_params=sys_params, hidden_layers=2, units_per_layer=10)
 model.load('models/one_tank/2020-08-06-11-24-21-10s-2l-10n-best-model')
 
-# Instance simulator
+# Simulator
 simulator = OneTankSystem(sys_params)
 
 # Reference adjustment
@@ -56,11 +56,11 @@ for i in range(1, np_ref.shape[0]):
 # Controller
 controller = PINNController(model, simulator)
 
-# Control using PINN
+# PINN control example
 np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T)
 
-# Control using Runge-Kutta
+# Runge-Kutta control example
 np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
                                                                           np_min_v, np_max_v, np_min_h, np_max_h,
                                                                           sim_time, prediction_horizon, T,

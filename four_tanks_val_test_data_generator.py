@@ -3,6 +3,7 @@ import pandas as pd
 from util.systems import FourTanksSystem
 
 
+# Saving validation and test data in a CSV file
 # Parameters
 random_seed = 60
 
@@ -11,11 +12,13 @@ u_change_t = 10.0
 scenarios = 10
 collocation_points_per_v = 10
 
+# Constraints
 lowest_v = 0.5
 highest_v = 3.0
 lowest_h = 2.0
 highest_h = 20.0
 
+# File name
 if scenarios > 1:
     file_name = 'rand_seed_' + str(random_seed) + \
                 '_sim_time_' + str(sim_time) + 's_' + \
@@ -28,10 +31,10 @@ else:
                 str(int((sim_time / u_change_t) * (collocation_points_per_v if collocation_points_per_v > 2 else 1))) + \
                 '_collocation_points'
 
-# Set random seed
+# Random seed
 np.random.seed(random_seed)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a1': 0.071,  # [cm^2]
               'a2': 0.057,  # [cm^2]
@@ -55,7 +58,7 @@ np_v1s = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios, int(si
 np_v2s = np.random.uniform(low=lowest_v, high=highest_v, size=(scenarios, int(sim_time / u_change_t)))
 np_h0s = np.random.uniform(low=lowest_h, high=highest_h, size=(scenarios, 4))
 
-# Generate data
+# Data generation
 data = {'scenario': [],
         't': [],
         'v1': [],
@@ -98,7 +101,7 @@ for j in range(scenarios):
     data['h3'].append(np_h[:, 2])
     data['h4'].append(np_h[:, 3])
 
-# Save data
+# Saving data
 data['scenario'] = np.concatenate(data['scenario'])
 data['t'] = np.concatenate(data['t'])
 data['v1'] = np.concatenate(data['v1'])
