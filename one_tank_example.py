@@ -4,22 +4,22 @@ import pandas as pd
 from util.pinn import OneTankPINN
 from util.plot import Plotter
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# System parameters' dictionary
+# System parameters dictionary
 sys_params = {'g': 981.0,  # [cm/s^2]
               'a': 0.071,  # [cm^2]
               'A': 28.0,  # [cm^2]
               'k': 3.14  # [cm^3/Vs]
               }
 
-# Instance PINN
+# PINN Instance
 model = OneTankPINN(sys_params=sys_params, hidden_layers=2, units_per_layer=10)
 model.trained_T = 10.0
 
-# Load model
+# Loading model
 model.load('models/one_tank/2020-08-06-11-24-21-10s-2l-10n-best-model')
 
 # Test data
@@ -35,7 +35,7 @@ np_test_ic = np.reshape(np_test_y[0, :], (1, np_test_y.shape[1]))
 test_T = 10.0
 np_test_nn = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
-# Plot test results
+# Plot
 plotter = Plotter()
 
 markevery = int(np_test_t.size / (np_test_t[-1] / test_T))
