@@ -3,6 +3,7 @@ import pandas as pd
 from util.systems import OneTankSystem
 
 
+# Saving validation and test data in a CSV file
 # Parameters
 random_seed = 60
 
@@ -10,6 +11,7 @@ sim_time = 160.0
 v_change_t = 20.0
 collocation_points_per_v = 200
 
+# Constraints
 lowest_v = 0.5
 highest_v = 4.45
 lowest_h = 2.0
@@ -19,7 +21,7 @@ file_name = 'rand_seed_' + str(random_seed) + \
             '_sim_time_' + str(sim_time) + 's_' + \
             str(int((sim_time / v_change_t) * collocation_points_per_v)) + '_collocation_points'
 
-# Set random seed
+# Random seed
 np.random.seed(random_seed)
 
 # System simulator
@@ -34,7 +36,7 @@ simulator = OneTankSystem(sys_params)
 np_vs = np.random.uniform(low=lowest_v, high=highest_v, size=(int(sim_time / v_change_t),))
 np_h0 = (highest_h - lowest_h) * np.random.rand(1, 1) + lowest_h
 
-# Generate data
+# Data generation
 np_T = np.linspace(0, v_change_t, collocation_points_per_v)
 np_t = np_T
 
@@ -54,7 +56,7 @@ for i in range(1, int(sim_time / v_change_t)):
                      simulator.run(np_T, np_vs[i], np_h[-1], output_t0=False),
                      axis=0)
 
-# Save data
+# Saving data
 df = pd.DataFrame({'t': np_t,
                    'v': np_v[:, 0],
                    'h': np_h[:, 0]})
