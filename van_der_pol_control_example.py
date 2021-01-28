@@ -13,7 +13,7 @@ np_max_u = np.array([[1.0]])
 np_min_x = np.array([[-1.0, -1.0]])
 np_max_x = np.array([[1.0, 1.0]])
 
-# Initial condition
+# Initial conditions
 np_x0 = np.array([[0.0, 1.0]])
 
 # Reference
@@ -28,16 +28,16 @@ collocation_points_per_T = 10
 prediction_horizon = 5*T
 sim_time = 60.0
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# Load model
+# Loading model
 model = VanDerPolPINN(hidden_layers=4, units_per_layer=20)
 
 model.load('models/van_der_pol/2020-10-25-04-19-43-0dot5s-4l-20n-exhausted-model')
 
-# Instance simulator
+# Simulator
 simulator = VanDerPolSystem()
 
 # Reference adjustment
@@ -49,11 +49,11 @@ for i in range(1, np_ref.shape[0]):
 # Controller
 controller = PINNController(model, simulator)
 
-# Control using PINN
+# PINN control example
 np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_x0, np_min_u, np_max_u, np_min_x, np_max_x,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T)
 
-# Control using Runge-Kutta
+# Runge-Kutta control example
 np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_x0,
                                                                           np_min_u, np_max_u, np_min_x, np_max_x,
                                                                           sim_time, prediction_horizon, T,

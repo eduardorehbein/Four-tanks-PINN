@@ -64,12 +64,12 @@ for i in range(1, np_ref.shape[0]):
 # Control
 controller = PINNController(model, simulator)
 
-# Control example using PINN
+# PINN control example
 np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T,
                                                               outputs_to_control)
 
-# Control example using Runge-Kutta
+# Runge-Kutta control example
 np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
                                                                           np_min_v, np_max_v, np_min_h, np_max_h,
                                                                           sim_time, prediction_horizon, T,

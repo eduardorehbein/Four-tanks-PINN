@@ -4,15 +4,15 @@ import pandas as pd
 from util.pinn import VanDerPolPINN
 from util.plot import Plotter
 
-# Configure parallel threads
+# Parallel threads setup
 tf.config.threading.set_inter_op_parallelism_threads(8)
 tf.config.threading.set_intra_op_parallelism_threads(8)
 
-# Instance PINN
+# PINN Instance
 model = VanDerPolPINN(hidden_layers=4, units_per_layer=20)
 model.trained_T = 0.5
 
-# Load model
+# Loading model
 model.load('models/van_der_pol/2020-10-25-04-19-43-0dot5s-4l-20n-exhausted-model')
 
 # Test data
@@ -28,7 +28,7 @@ np_test_ic = np.reshape(np_test_y[0, :], (1, np_test_y.shape[1]))
 test_T = 0.5
 np_test_nn = model.predict(np_test_X, np_test_ic, prediction_T=test_T)
 
-# Plot test results
+# Plot
 plotter = Plotter()
 
 markevery = int(np_test_t.size / (np_test_t[-1] / test_T))
