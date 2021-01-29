@@ -3,6 +3,7 @@ import pandas as pd
 from util.systems import VanDerPolSystem
 
 
+# Saving validation and test data in a CSV file
 # Parameters
 random_seed = 10
 
@@ -11,11 +12,13 @@ u_change_t = 0.5
 scenarios = 1
 collocation_points_per_u = 10
 
+# Constraints
 lowest_u = -1.0
 highest_u = 1.0
 lowest_x = -3.0
 highest_x = 3.0
 
+# File name
 if scenarios > 1:
     file_name = 'rand_seed_' + str(random_seed) + \
                 '_sim_time_' + str(sim_time) + 's_' + \
@@ -28,7 +31,7 @@ else:
                 str(int((sim_time / u_change_t) * (collocation_points_per_u if collocation_points_per_u > 2 else 1))) + \
                 '_collocation_points'
 
-# Set random seed
+# Random seed
 np.random.seed(random_seed)
 
 # System simulator
@@ -38,7 +41,7 @@ simulator = VanDerPolSystem()
 np_us = np.random.uniform(low=lowest_u, high=highest_u, size=(scenarios, int(sim_time / u_change_t)))
 np_x0s = np.random.uniform(low=lowest_x, high=highest_x, size=(scenarios, 2))
 
-# Generate data
+# Data generation
 data = {'scenario': [],
         't': [],
         'u': [],
@@ -68,7 +71,7 @@ for j in range(scenarios):
     data['x1'].append(np_x[:, 0])
     data['x2'].append(np_x[:, 1])
 
-# Save data
+# Saving data
 data['scenario'] = np.concatenate(data['scenario'])
 data['t'] = np.concatenate(data['t'])
 data['u'] = np.concatenate(data['u'])
