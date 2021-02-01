@@ -81,9 +81,7 @@ savemat("../results/vanderpol/control.mat",
 )
 
 ## Plot
-import util.plot as pp
-
-plotter = pp.Plotter()
+plotter = Plotter()
 plotter.plot(x_axis=np_t,
              y_axis_list=[np_controls[:, 0], np_rk_controls[:, 0]],
              labels=['PINN', 'Runge-Kutta'],

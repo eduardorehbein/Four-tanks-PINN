@@ -4,27 +4,35 @@ from util.pinn import FourTanksPINN
 from util.systems import FourTanksSystem
 from util.plot import Plotter
 
+# TODO (by Eric):
+# - rever bounds for h3 and h4
+# - rever sinal de referencia, aumentar?
+
+# - to change branch: git switch develop
+# - git push --set-upstream origin develop
+# - https://stackoverflow.com/questions/14168677/merge-development-branch-with-master
 
 # Constraints
-np_min_v = np.array([[0.5, 0.5]])
-np_max_v = np.array([[3.0, 3.0]])
+np_min_v = np.array([[0.0, 0.0]])
+np_max_v = np.array([[5.0, 5.0]])
 
-np_min_h = np.array([[2.0, 2.0, 2.0, 2.0]])
-np_max_h = np.array([[20.0, 20.0, 20.0, 20.0]])
+np_min_h = np.array([[2.0, 2.0, 0.5, 0.5]])
+np_max_h = np.array([[20.0, 20.0, 12.0, 12.0]])
 
 # Inital condition
 np_h0 = np_min_h
 
 # Reference
-np_ref = np.array([[9.159582958982018, 14.211590549777885, 2.1452569119256757, 3.7846331863579774],
-                   [10.151255120853042, 15.750223780923415, 2.5530330191512176, 3.9140130625937135],
-                   [8.226164209850278, 12.763340653079485, 2.385667521229082, 2.7180646268011888]])
+#np_ref = np.array([[9.159582958982018, 14.211590549777885, 2.1452569119256757, 3.7846331863579774],
+#                   [10.151255120853042, 15.750223780923415, 2.5530330191512176, 3.9140130625937135],
+#                   [8.226164209850278, 12.763340653079485, 2.385667521229082, 2.7180646268011888]])
+np_ref = 10.0*np.random.rand(10,4) + 5.0
 
 # Controller and simulation parameters
 T = 10.0
 collocation_points_per_T = 10
 prediction_horizon = 5*T
-sim_time = 1200.0
+sim_time = 2400.0
 outputs_to_control = [0, 1]
 
 # System parameters' dictionary
@@ -83,9 +91,18 @@ rk_iae = np.sum(np.abs(np_new_ref[:, :2] - np_rk_states[:, :2]))
 print('PINN IAE:', pinn_iae)
 print('Runge-Kutta IAE', rk_iae)
 
-## - save control results
+# - save control results
 from scipy.io import savemat, loadmat
-savemat("../results/fourtanks/control.mat",
+#savemat("../results/fourtanks/control.mat",
+#        {'np_t': np_t, 'np_controls': np_controls,
+#         'np_rk_controls': np_rk_controls,
+#         'np_states': np_states,
+#         'np_rk_states': np_rk_states,
+#         'np_new_ref': np_new_ref,
+#        }
+#)
+
+savemat("control.mat",
         {'np_t': np_t, 'np_controls': np_controls,
          'np_rk_controls': np_rk_controls,
          'np_states': np_states,
@@ -94,26 +111,46 @@ savemat("../results/fourtanks/control.mat",
         }
 )
 
-# Plot
-plotter = Plotter()
-plotter.plot(x_axis=np_t,
-             y_axis_list=[np_controls[:, 0], np_controls[:, 1], np_rk_controls[:, 0], np_rk_controls[:, 1]],
-             labels=['PINN V1', 'PINN V2', 'RK V1', 'RK V2'],
-             title='Four tanks\' control signals',
-             x_label='Time',
-             y_label=None,
-             draw_styles='steps',
-             np_c_base=None)
-plotter.multiplot(x_axis=np_t,
-                  y_axis_matrices=[[np_states[:, 2], np_states[:, 3], np_rk_states[:, 2], np_rk_states[:, 3]],
-                                   [np_states[:, 0], np_states[:, 1], np_rk_states[:, 0], np_rk_states[:, 1],
-                                    np_new_ref[:, 0], np_new_ref[:, 1]]],
-                  labels_list=[['PINN H3', 'PINN H4', 'RK H3', 'RK H4'],
-                               ['PINN H1', 'PINN H2', 'RK H1', 'RK H2', None, None]],
-                  title='Four tanks\' levels',
-                  x_label='Time',
-                  y_labels_list=[None, None],
-                  line_styles=[['-', '-', '-', '-'],
-                               ['-', '-', '-', '-', '--', '--']],
-                  np_c_base=None)
+## Plot
+import matplotlib.pyplot as plt
+
+plotter = Plotter(fontsize=12)
+figsize=(5.4, 5.1)
+fig, (ax1, ax2, ax3) = plt.subplots(3, figsize=figsize, sharex=True)
+
+
+plotter.subplot(fig, ax1, x_axis=np_t,
+                y_axis_list=[np_states[:, 0], np_states[:, 1], np_new_ref[:, 0], np_new_ref[:, 1]],  
+                labels=['$h_1$', '$h_2$', None, None],
+                title='Controlled tank levels',
+                x_label=None,
+                y_label='$h_1$,$h_2$ (cm)',
+                line_styles=['-', '-', '--', '--'],
+                width=[-1, 2.5, 1.3, 1.3],
+                colors=['forestgreen', 'darkorange', 'k', [0.5]*3 ])
+ax1.set_ylim((7,17))
+
+plotter.subplot(fig, ax2, x_axis=np_t,
+                y_axis_list=[np_states[:, 2], np_states[:, 3]],  
+                labels=['$h_2$', '$h_3$'],
+                title='Constrained tank levels', 
+                x_label=None,
+                y_label='$h_3$,$h_4$ (cm)',
+                line_styles=['--', '--'],
+                width=[-1, 2.5],
+                colors=['forestgreen', 'darkorange'])
+
+plotter.subplot(fig, ax3, x_axis=np_t,
+                y_axis_list=[np_controls[:, 0], np_controls[:, 1]],
+                labels=['$u_1$', '$u_2$'], 
+                title=None, 
+                x_label='Time (s)',
+                y_label='pump voltage u (V)',
+                draw_styles='steps',
+                width=[1, 2],
+                colors=[  np.array([88,126,245])/255., 'darkblue' ]
+)
+
+plt.tight_layout()
 plotter.show()
+

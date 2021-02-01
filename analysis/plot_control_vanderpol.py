@@ -43,7 +43,7 @@ from scipy.io import savemat, loadmat
 #         }
 # )
 
-d = loadmat("../results/vanderpol/control.mat")
+d = loadmat("../../results/vanderpol/control.mat")
 np_t, np_controls, np_states, np_rk_controls, np_rk_states, np_new_ref = d['np_t'], d['np_controls'], d['np_states'], d['np_rk_controls'], d['np_rk_states'], d['np_new_ref']
 np_t = np_t.T
 
@@ -55,24 +55,33 @@ print('PINN IAE:', pinn_iae)
 print('Runge-Kutta IAE', rk_iae)
 
 ## Plot
-import util.plot as pp
+import matplotlib.pyplot as plt
 
-plotter = pp.Plotter()
-plotter.plot(x_axis=np_t,
-             y_axis_list=[np_controls[:, 0], np_rk_controls[:, 0]],
-             labels=['PINN', 'Runge-Kutta'],
-             title='Van der Pol control signal',
-             x_label='Time',
-             y_label=None,
-             draw_styles='steps',
-             np_c_base=None)
+plotter = Plotter(fontsize=12)
+figsize=(5.4, 3.9)
+fig, (ax1, ax2) = plt.subplots(2, figsize=figsize, sharex=True)
+
 # Obs: Here we have switched x1 and x2 to plot according to the text notation
-plotter.plot(x_axis=np_t,
-             y_axis_list=[np_states[:, 1], np_states[:, 0], np_rk_states[:, 1], np_rk_states[:, 0], np_new_ref[:, 1]],
-             labels=['PINN X1', 'PINN X2', 'RK X1', 'RK X2', None],
-             title='Van der Pol state vars',
-             x_label='Time',
-             y_label=None,
-             line_styles=['-', '-', '-', '-', '--'],
-             np_c_base=None)
+plotter.subplot(fig, ax1, x_axis=np_t,
+                y_axis_list=[np_states[:, 1], np_states[:, 0], np_new_ref[:, 1]],  # np_rk_states[:, 1], np_rk_states[:, 0]
+                labels=['$x_1$', '$x_2$', None],
+                title=None, #'Van der Pol
+                x_label=None,
+                y_label='$\mathbf{x}$',
+                line_styles=['-', '-', '--'],
+                width=[-1, 2.5, 1.3],
+                colors=['forestgreen', 'darkorange', 'k'])
+
+plotter.subplot(fig, ax2, x_axis=np_t,
+             y_axis_list=[np_controls[:, 0]], # np_rk_controls[:, 0]
+             labels=None, #['PINN', 'Runge-Kutta'],
+             title=None, #'Van der Pol control signal',
+             x_label='Time (s)',
+             y_label='u',
+                draw_styles='steps',
+                width=[1],
+                colors=[  np.array([88,126,245])/255. ]
+)
+
+plt.tight_layout()
 plotter.show()
