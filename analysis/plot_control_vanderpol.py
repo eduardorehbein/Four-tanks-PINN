@@ -43,7 +43,7 @@ from scipy.io import savemat, loadmat
 #         }
 # )
 
-d = loadmat("../results/vanderpol/control.mat")
+d = loadmat("../../results/vanderpol/control.mat")
 np_t, np_controls, np_states, np_rk_controls, np_rk_states, np_new_ref = d['np_t'], d['np_controls'], d['np_states'], d['np_rk_controls'], d['np_rk_states'], d['np_new_ref']
 np_t = np_t.T
 

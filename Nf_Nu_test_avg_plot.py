@@ -43,7 +43,7 @@ plotter = Plotter(fontsize=11)
 figsize=(4.5, 3.2)
 
 plotter.plot_heatmap(data=np.log10(plot_matrix),
-                     title='L2 error', # validation
+                     title='$\log$(MSE)', # validation
                      x_label='Nt',
                      y_label='Nf',
                      row_labels=nfs_to_test,
@@ -53,7 +53,7 @@ plotter.plot_heatmap(data=np.log10(plot_matrix),
 plotter.plot(x_axis=np.linspace(1, val_losses_len, val_losses_len),
              y_axis_list=y_axis_list,
              labels=labels,
-             title='L2 error',
+             title='MSE',
              x_label='Epoch',
              y_label=None,
              y_scale='log')

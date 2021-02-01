@@ -8,6 +8,9 @@ from util.plot import Plotter
 # - rever bounds for h3 and h4
 # - rever sinal de referencia, aumentar?
 
+# - to change branch: git switch develop
+# - git push --set-upstream origin develop
+# - https://stackoverflow.com/questions/14168677/merge-development-branch-with-master
 
 # Constraints
 np_min_v = np.array([[0.0, 0.0]])

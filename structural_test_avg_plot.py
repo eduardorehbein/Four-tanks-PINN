@@ -27,10 +27,10 @@ for path in paths:
     final_losses = data_container.get_final_val_losses(layers_to_test, neurons_per_layer_to_test)
     final_val_losses_matrixes.append(final_losses)
     
-    for layers in val_losses.keys():
+    for layers in val_losses_10.keys():
         val_losses_10[layers].append(np.array(data_container.get_val_loss(layers, neurons=10)[:val_losses_len]))
 
-    for layers in val_losses.keys():
+    for layers in val_losses_20.keys():
         val_losses_20[layers].append(np.array(data_container.get_val_loss(layers, neurons=20)[:val_losses_len]))
 
 for layers in val_losses_10.keys():
@@ -43,20 +43,20 @@ plotter = Plotter(fontsize=11)
 figsize=(4.5, 4)
 
 plotter.plot_heatmap(data=np.log10(plot_matrix),
-                     title='L2 error',  # validation
+                     title='$\log$(MSE)',  # validation
                      x_label='Neurons per Layer',
                      y_label='Number of Layers',
                      row_labels=layers_to_test,
                      col_labels=neurons_per_layer_to_test,
                      figsize=figsize)
-loss_len = len(val_losses[4])
+loss_len = len(val_losses_10[4])
 
 ## -
 
 plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
              y_axis_list=list(val_losses_10.values()),
-             labels=[str(layers) + 'L of 10N' for layers in val_losses.keys()],
-             title='L2 error',
+             labels=[str(layers) + 'L of 10N' for layers in val_losses_10.keys()],
+             title='MSE',
              x_label='Epoch',
              y_label=None,
              y_scale='log',
@@ -64,8 +64,8 @@ plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
 
 plotter.plot(x_axis=np.linspace(1, loss_len, loss_len),
              y_axis_list=list(val_losses_20.values()),
-             labels=[str(layers) + 'L of 20N' for layers in val_losses.keys()],
-             title='L2 error',
+             labels=[str(layers) + 'L of 20N' for layers in val_losses_20.keys()],
+             title='MSE',
              x_label='Epoch',
              y_label=None,
              y_scale='log',
