@@ -58,7 +58,8 @@ print('Runge-Kutta IAE', rk_iae)
 import matplotlib.pyplot as plt
 
 plotter = Plotter(fontsize=12)
-figsize=(5.4, 3.9)
+#figsize=(3.4,5.2) # w=5.4, h=3.9)
+figsize=(5.4,3.9) # w=5.4, h=3.9)
 fig, (ax1, ax2) = plt.subplots(2, figsize=figsize, sharex=True)
 
 # Obs: Here we have switched x1 and x2 to plot according to the text notation
@@ -70,7 +71,8 @@ plotter.subplot(fig, ax1, x_axis=np_t,
                 y_label='$\mathbf{x}$',
                 line_styles=['-', '-', '--'],
                 width=[-1, 2.5, 1.3],
-                colors=['forestgreen', 'darkorange', 'k'])
+                colors=[[0.1, 0.5, 1], [0.9, 0.5, 1], 'k'])
+                #colors=['forestgreen', 'darkorange', 'k'])
 
 plotter.subplot(fig, ax2, x_axis=np_t,
              y_axis_list=[np_controls[:, 0]], # np_rk_controls[:, 0]
@@ -83,5 +85,6 @@ plotter.subplot(fig, ax2, x_axis=np_t,
                 colors=[  np.array([88,126,245])/255. ]
 )
 
+#plt.xlim((0, 10))
 plt.tight_layout()
 plotter.show()

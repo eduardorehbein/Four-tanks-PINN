@@ -3,6 +3,7 @@ from util.controller import PINNController
 from util.pinn import FourTanksPINN
 from util.systems import FourTanksSystem
 from util.plot import Plotter
+import time
 
 # TODO (by Eric):
 # - rever bounds for h3 and h4
@@ -71,44 +72,43 @@ for i in range(1, np_ref.shape[0]):
 
 # Control
 controller = PINNController(model, simulator)
+controller.set_controle_inicial(np.array([0, 0, 0, 0]))
 
+
+t1 = time.time()
 # Control using PINN
 np_t, np_controls, np_new_ref, np_states = controller.control(np_adj_ref, np_h0, np_min_v, np_max_v, np_min_h, np_max_h,
                                                               sim_time, prediction_horizon, T, collocation_points_per_T,
                                                               outputs_to_control)
+tpinn = time.time()-t1
 
+t1 = time.time()
 # Control using Runge-Kutta
 np_rk_t, np_rk_controls, np_rk_new_ref, np_rk_states = controller.control(np_adj_ref, np_h0,
                                                                           np_min_v, np_max_v, np_min_h, np_max_h,
                                                                           sim_time, prediction_horizon, T,
                                                                           collocation_points_per_T,
                                                                           outputs_to_control, True)
+trk = time.time()-t1
 
 # IAEs
 pinn_iae = np.sum(np.abs(np_new_ref[:, :2] - np_states[:, :2]))
 rk_iae = np.sum(np.abs(np_new_ref[:, :2] - np_rk_states[:, :2]))
 
-print('PINN IAE:', pinn_iae)
-print('Runge-Kutta IAE', rk_iae)
+print('PINN IAE:', pinn_iae, '; time spent: ', tpinn)
+print('Runge-Kutta IAE', rk_iae, '; time spent: ', trk)
 
 # - save control results
 from scipy.io import savemat, loadmat
-#savemat("../results/fourtanks/control.mat",
-#        {'np_t': np_t, 'np_controls': np_controls,
-#         'np_rk_controls': np_rk_controls,
-#         'np_states': np_states,
-#         'np_rk_states': np_rk_states,
-#         'np_new_ref': np_new_ref,
-#        }
-#)
-
-savemat("control.mat",
-        {'np_t': np_t, 'np_controls': np_controls,
-         'np_rk_controls': np_rk_controls,
-         'np_states': np_states,
-         'np_rk_states': np_rk_states,
-         'np_new_ref': np_new_ref,
-        }
+savemat("../results/fourtanks/control.mat",
+       {'np_t': np_t, 'np_controls': np_controls,
+        'np_rk_controls': np_rk_controls,
+        'np_states': np_states,
+        'np_rk_states': np_rk_states,
+        'np_new_ref': np_new_ref,
+        'trk': trk,
+        'tpinn': tpinn
+       }
 )
 
 ## Plot

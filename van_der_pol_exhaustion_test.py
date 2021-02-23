@@ -6,6 +6,7 @@ from util.tests import ExhaustionTester
 from util.data_container import ExhaustionTestContainer
 from util.data_interface import TrainDataGenerator
 
+# this code will run Neural net training
 
 # Neural networks' parameters
 hidden_layers = 4

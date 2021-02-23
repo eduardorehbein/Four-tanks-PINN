@@ -48,6 +48,7 @@ for i in range(1, np_ref.shape[0]):
 
 # Controller
 controller = PINNController(model, simulator)
+controller.set_controle_inicial(0)
 
 # Control using PINN
 np_t, np_controls, np_new_ref, np_states = controller.control(

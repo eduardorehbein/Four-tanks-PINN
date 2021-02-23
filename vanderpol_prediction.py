@@ -72,19 +72,19 @@ plt.xlabel(x_label)
 
 linewidth = 1
 ax.plot(t, target[:,0], '-k', linewidth=linewidth)
-ax.plot(t, predictions[:,0], 'o-', color=[0.1, 0.5, 1],
+ax.plot(t, predictions[:,0], 'o-', color=[0.1, 0.5, 1],  # blue, x1
         linewidth=linewidth*1.2, markevery=markevery)
 
 ax.plot(t, target[:,1], '-', linewidth=linewidth)
-ax.plot(t, predictions[:,1], 'o-', color=[0.9, 0.5, 1],
+ax.plot(t, predictions[:,1], 'o-', color=[1, 0.5, 1],  # pinc, x2
         linewidth=linewidth*1.2, markevery=markevery)
 
 ax.set_ylabel('outputs $y_1$, $y_2$', fontsize=fontsize)
 
+c = [0.6]*3
+
 ax2 = ax.twinx()
 ax2.set_ylabel('input $u$', color=c)
-
-c = [0.6]*3
 ax2.plot(t, u, color=c, linewidth=2.3, linestyle='dashed', ds='steps')
 
 for tl in ax2.get_yticklabels():

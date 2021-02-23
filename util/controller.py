@@ -1,12 +1,14 @@
 import casadi as cs
 import numpy as np
 
+import pdb
 
 class PINNController:
     def __init__(self, pinn_model, system_simulator):
         self.weights = pinn_model.get_weights()[1:]
         self.X_normalizer = pinn_model.X_normalizer
         self.Y_normalizer = pinn_model.Y_normalizer
+        self.us = 0  # controle inicial - 1 variável
 
         self.system_simulator = system_simulator
 
@@ -24,6 +26,9 @@ class PINNController:
         cs_a = cs_a @ np_W + np_b
 
         return self.Y_normalizer.denormalize(cs_a)
+
+    def set_controle_inicial(self, us):
+        self.us = us
 
     def predict_horizon(self, last_u, np_ref, np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                         outputs_to_control=None, use_runge_kutta=False):
@@ -77,11 +82,17 @@ class PINNController:
         cost_ode = {'x':cost_function,'p':L_sym,'ode':L_sym} #integrator ode to compute cost function
         J = 0 #Cost function in optiomization variable terms
         if outputs_to_control is None:
+            L = 0
             for i in range(cs_y.shape[0]):
-                L = sum((cs_y[i, :] - np_ref[i, :]) ** 2) #Add terms to the lagrangian
-                cost_F = cs.integrator('F','cvodes',cost_ode,{'t0':0,'tf':T}) #implement cost function, integrated
-                J = cost_F(x0=J,p = L) #add result to optimization.
-
+                for j in range(cs_y.shape[1]):
+                    L = L + 10*(cs_y[i, j] - np_ref[i, j]) ** 2
+                    if i == 0:
+                        L = L + (cs_u[j] - last_u) ** 2
+                    if i >= 1:
+                        L = L + (cs_u[j] - cs_u[j-1]) ** 2
+                cost_F = cs.integrator('F','cvodes',cost_ode,{'t0':0,'tf':T})
+                result = cost_F(x0=0,p = L)
+                J = J + result['xf']
         else:
             # Peso 10 para o erro em relação ao controle
             L = 0
@@ -89,6 +100,7 @@ class PINNController:
                 for j in outputs_to_control:
                     L = L + 10*(cs_y[i, j] - np_ref[i, j]) ** 2
                     if i == 0:
+                        #print('debug', cs_u.shape, last_u.shape)
                         L = L + (cs_u[i , j] - last_u[j]) ** 2
                     if i >= 1:
                         L = L + (cs_u[i , j] - cs_u[i-1 , j]) ** 2
@@ -112,8 +124,7 @@ class PINNController:
         np_t = np_T
 
         np_states = np_y0
-        us = np.array([0, 0, 0, 0])
-        us = self.predict_horizon(us, np_ref[:n, :], np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
+        us = self.predict_horizon(self.us, np_ref[:n, :], np_y0, np_min_u, np_max_u, np_min_y, np_max_y, prediction_horizon, T,
                                   outputs_to_control, use_runge_kutta)
 
         np_controls = np.tile(us[0], (collocation_points_per_T, np_min_u.shape[1]))
